@@ -1,0 +1,52 @@
+---
+# Only the main Sass file needs front matter (the dashes are enough)
+---
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Roboto+Mono&display=swap');
+
+// Our variables
+$base-font-family: "Roboto", sans-serif !default;
+$code-font-family: "Roboto Mono", monospace !default;
+$base-font-size:   16px !default;
+$base-font-weight: 400 !default;
+$small-font-size:  $base-font-size * 0.875 !default;
+$base-line-height: 1.5 !default;
+
+$spacing-unit:     30px !default;
+
+// Brand colors (Extracted from agntcy/docs custom.css)
+$agntcy-blue:      #0251af;
+$agntcy-bg-light:  #eff3fc;
+$agntcy-text:      #1c1e21;
+
+$brand-color:      $agntcy-blue !default;
+$text-color:       $agntcy-text !default;
+$background-color: $agntcy-bg-light !default;
+$code-background-color: #e8eefb !default;
+
+$link-color:       $brand-color !default;
+
+$grey-color:       #828282 !default;
+$grey-color-light: lighten($grey-color, 40%) !default;
+$grey-color-dark:  darken($grey-color, 25%) !default;
+
+// Import partials from `minima`
+@import "minima";
+
+// Custom overrides
+.site-header {
+  background-color: $brand-color;
+  border-bottom: none;
+
+  .site-title, .site-nav .page-link {
+    color: #f3f6fd; // Light text on dark header
+  }
+
+  .site-title:visited, .site-nav .page-link:visited {
+    color: #f3f6fd;
+  }
+}
+
+.site-footer {
+  background-color: #e8eefb;
+}
