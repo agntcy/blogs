@@ -1,0 +1,39 @@
+# Copyright AGNTCY Contributors (https://github.com/agntcy)
+# SPDX-License-Identifier: CC-BY-4.0
+
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task -l
+
+  ##
+  ## Website
+  ##
+  build:
+    desc: Build content website
+    deps:
+      - deps
+    cmds:
+      - bundle exec jekyll build
+
+  run:
+    desc: Run content website in live editing mode
+    deps:
+      - deps
+    cmds:
+      - bundle exec jekyll serve --livereload --host 0.0.0.0
+
+  ##
+  ## Dependencies
+  ##
+  deps:
+    desc: Install dependencies
+    sources:
+      - Gemfile
+      - Gemfile.lock
+    generates:
+      - .bundle/config
+    cmds:
+      - bundle install
