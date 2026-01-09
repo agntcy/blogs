@@ -3,6 +3,6 @@ _site
 .jekyll-metadata
 .jekyll-cache
 .bundle/
+.task/
 vendor/
 .DS_Store
-

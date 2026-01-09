@@ -14,10 +14,22 @@ $base-line-height: 1.5 !default;
 
 $spacing-unit:     30px !default;
 
-// Brand colors (Extracted from agntcy/docs custom.css)
-$agntcy-blue:      #0251af;
-$agntcy-bg-light:  #eff3fc;
-$agntcy-text:      #1c1e21;
+// Dynamic content width - expands with viewport
+$content-width:    1400px !default;
+$on-palm:          600px !default;
+$on-laptop:        800px !default;
+
+// Brand colors - Light Mode (default scheme)
+$agntcy-blue:      #0251af;  // rgb(2, 81, 175)
+$agntcy-bg-light:  #eff3fc;  // rgb(239, 243, 252)
+$agntcy-text:      #1c1e21;  // rgb(28, 30, 33)
+$agntcy-text-light: #f3f6fd; // rgb(243, 246, 253)
+
+// Brand colors - Dark Mode (slate scheme)
+$slate-bg:         #03142b;  // rgb(3, 20, 43)
+$slate-accent:     #fbaf46;  // rgb(251, 175, 70)
+$slate-text:       #e3e3e3;  // rgb(227, 227, 227)
+$slate-code-bg:    #002a4d;  // rgb(0, 42, 77)
 
 $brand-color:      $agntcy-blue !default;
 $text-color:       $agntcy-text !default;
@@ -33,20 +45,342 @@ $grey-color-dark:  darken($grey-color, 25%) !default;
 // Import partials from `minima`
 @import "minima";
 
-// Custom overrides
-.site-header {
-  background-color: $brand-color;
-  border-bottom: none;
+// CSS Custom Properties for theming
+:root {
+  // Light mode (default)
+  --primary-fg-color: #f3f6fd;
+  --primary-bg-color: #0251af;
+  --accent-color: #0251af;
+  --text-color: #1c1e21;
+  --text-color-light: #1c1e21;
+  --text-color-lighter: rgba(0, 0, 0, 0.32);
+  --text-color-lightest: rgba(0, 0, 0, 0.07);
+  --bg-color: #eff3fc;
+  --bg-color-light: #e8eefb;
+  --bg-color-lighter: #eff3fc;
+  --bg-color-lightest: #f5f8fd;
+  --code-bg-color: #f6f8fa;
+  --code-fg-color: #1c1e21;
+  --footer-fg-color: #0251af;
+  --footer-bg-color: #e8eefb;
+  --link-color: #0251af;
+  --link-hover-color: #023d82;
+  --border-color: #dce2ee;
+  --header-bg-color: #eff3fc;
+  --header-text-color: #0251af;
+  --nav-active-bg: #dce2ee;
+  --search-bg: #ecedf0;
+  --search-placeholder: #9ea2a8;
+}
 
-  .site-title, .site-nav .page-link {
-    color: #f3f6fd; // Light text on dark header
+// Dark mode - triggered by data-theme attribute
+[data-theme="dark"] {
+  --primary-fg-color: #03142b;
+  --primary-bg-color: #fbaf46;
+  --accent-color: #fbaf46;
+  --text-color: #e3e3e3;
+  --text-color-light: #e3e3e3;
+  --text-color-lighter: #ededed;
+  --text-color-lightest: #03142b;
+  --bg-color: #03142b;
+  --bg-color-light: #002a4d;
+  --bg-color-lighter: #0c1f36;
+  --bg-color-lightest: #051a30;
+  --code-bg-color: #002a4d;
+  --code-fg-color: #f8f8f2;
+  --footer-fg-color: #fbaf46;
+  --footer-bg-color: #03142b;
+  --link-color: #fbaf46;
+  --link-hover-color: #fcc570;
+  --border-color: #0c1f36;
+  --header-bg-color: #03142b;
+  --header-text-color: #fbaf46;
+  --nav-active-bg: #0c1f36;
+  --search-bg: #002a4d;
+  --search-placeholder: #59616b;
+}
+
+// Base styles using CSS variables
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+a {
+  color: var(--link-color);
+
+  &:visited {
+    color: var(--link-color);
   }
 
-  .site-title:visited, .site-nav .page-link:visited {
-    color: #f3f6fd;
+  &:hover {
+    color: var(--link-hover-color);
   }
 }
 
+// Header
+.site-header {
+  background-color: var(--header-bg-color);
+  border-top: none;
+  border-bottom: none;
+  box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.1), 0 0.2rem 0.4rem rgba(0, 0, 0, 0.2);
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+
+  > .wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  .site-branding {
+    display: flex;
+    align-items: center;
+  }
+
+  .site-logo-link {
+    display: flex;
+    align-items: center;
+  }
+
+  .site-nav {
+    position: static;
+    float: none;
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+
+    .trigger {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
+
+  .site-nav .page-link {
+    color: var(--header-text-color);
+  }
+
+  .site-nav .page-link:visited {
+    color: var(--header-text-color);
+  }
+
+  .site-nav .page-link:hover {
+    color: var(--header-text-color);
+    opacity: 0.8;
+  }
+}
+
+// Logo styles
+.site-logo {
+  height: 32px;
+  width: auto;
+  vertical-align: middle;
+}
+
+.site-title-text {
+  margin-left: 0.5rem;
+  font-weight: 400;
+  font-size: 1.25rem;
+  color: var(--header-text-color);
+}
+
+// Light mode: show light logo, hide dark logo
+.logo-light {
+  display: inline-block;
+}
+
+.logo-dark {
+  display: none;
+}
+
+// Dark mode: show dark logo, hide light logo
+[data-theme="dark"] {
+  .logo-light {
+    display: none;
+  }
+
+  .logo-dark {
+    display: inline-block;
+  }
+}
+
+// Footer
 .site-footer {
-  background-color: #e8eefb;
+  background-color: var(--footer-bg-color);
+  color: var(--text-color);
+  box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.1), 0 0.2rem 0.4rem rgba(0, 0, 0, 0.2);
+
+  a {
+    color: var(--footer-fg-color);
+
+    &:hover {
+      color: var(--link-hover-color);
+    }
+  }
+
+  .footer-col-wrapper {
+    color: var(--text-color);
+  }
+}
+
+// Content wrapper
+.page-content {
+  background-color: var(--bg-color);
+}
+
+.wrapper {
+  background-color: transparent;
+  max-width: calc(100% - 4rem);
+  width: 100%;
+  
+  @media screen and (min-width: 1100px) {
+    max-width: 1100px;
+  }
+}
+
+// Post content
+.post-content {
+  color: var(--text-color);
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-color);
+  }
+}
+
+.post-title, .post-list-heading {
+  color: var(--text-color);
+}
+
+.post-meta {
+  color: var(--text-color-lighter);
+}
+
+.post-link {
+  color: var(--link-color);
+
+  &:hover {
+    color: var(--link-hover-color);
+  }
+}
+
+// Code blocks
+pre, code {
+  background-color: var(--code-bg-color);
+  color: var(--code-fg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+}
+
+pre {
+  padding: 1rem;
+  overflow-x: auto;
+
+  code {
+    border: none;
+    padding: 0;
+  }
+}
+
+// Tables
+table {
+  color: var(--text-color);
+  border-color: var(--border-color);
+
+  th, td {
+    border-color: var(--border-color);
+  }
+
+  th {
+    background-color: var(--bg-color-light);
+  }
+
+  tr:nth-child(even) {
+    background-color: var(--bg-color-light);
+  }
+}
+
+// Blockquotes
+blockquote {
+  color: var(--text-color-light);
+  border-left-color: var(--accent-color);
+  background-color: var(--bg-color-light);
+  padding: 0.5rem 1rem;
+  border-radius: 0 0.25rem 0.25rem 0;
+}
+
+// Navigation
+.site-nav {
+  @media screen and (max-width: 600px) {
+    background-color: var(--bg-color);
+    border-color: var(--border-color);
+
+    .page-link {
+      color: var(--text-color) !important;
+    }
+
+    .menu-icon > svg path {
+      fill: var(--header-text-color);
+    }
+  }
+}
+
+// Horizontal rules
+hr {
+  border-color: var(--border-color);
+}
+
+// Selection
+::selection {
+  background-color: var(--accent-color);
+  color: var(--primary-fg-color);
+}
+
+// Scrollbar styling for dark mode
+[data-theme="dark"] {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-color);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--bg-color-light);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+  }
+}
+
+// Theme toggle button
+.theme-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-left: 1rem;
+  color: var(--header-text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
 }
