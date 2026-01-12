@@ -1,17 +1,29 @@
 title: AGNTCY Blogs
 logo: /assets/images/logo-light.svg
 logo_dark: /assets/images/logo-dark.svg
-email: your-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
+  Building infrastructure for the Internet of Agents
 baseurl: "/blogs" # the subpath of your site, e.g. /blog
-url: "" # the base hostname & protocol for your site, e.g. http://example.com
-twitter_username: jekyllrb
-github_username:  jekyll
+url: "https://agntcy.org" # the base hostname & protocol for your site, e.g. http://example.com
+
+github_url: "https://github.com/agntcy"
+linkedin_url: "https://www.linkedin.com/company/agntcyproject"
+youtube_url: "https://www.youtube.com/@agntcy-lf"
+slack_url: "https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ"
+
+# Header navigation - explicitly list pages to show
+header_pages:
+  - archive.md
+  - about.md
+
+# Show excerpts on home page
+show_excerpts: true
+excerpt_separator: <!--more-->
 
 # Build settings
 theme: minima
 plugins:
   - jekyll-feed
+  - jekyll-paginate
+paginate: 5
+paginate_path: "/page/:num/"

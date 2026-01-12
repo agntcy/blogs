@@ -213,6 +213,7 @@ a {
 .site-footer {
   background-color: var(--footer-bg-color);
   color: var(--text-color);
+  border-top: none;
   box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.1), 0 0.2rem 0.4rem rgba(0, 0, 0, 0.2);
 
   a {
@@ -262,6 +263,85 @@ a {
 
 .post-link {
   color: var(--link-color);
+
+  &:hover {
+    color: var(--link-hover-color);
+  }
+}
+
+.post-excerpt {
+  color: var(--text-color-lighter);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+  line-height: 1.5;
+}
+
+// Archive page
+.archive-year {
+  color: var(--text-color);
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    padding: 0.4rem 0;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+}
+
+.archive-date {
+  color: var(--text-color-lighter);
+  font-size: 0.9rem;
+  min-width: 60px;
+  font-family: monospace;
+}
+
+.archive-link {
+  color: var(--link-color);
+
+  &:hover {
+    color: var(--link-hover-color);
+  }
+}
+
+// Post navigation (prev/next)
+.post-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  gap: 2rem;
+}
+
+.post-nav-prev,
+.post-nav-next {
+  flex: 1;
+  max-width: 45%;
+}
+
+.post-nav-next {
+  text-align: right;
+}
+
+.post-nav-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-color-lighter);
+  margin-bottom: 0.25rem;
+}
+
+.post-navigation a {
+  color: var(--link-color);
+  font-weight: 500;
 
   &:hover {
     color: var(--link-hover-color);
@@ -383,4 +463,70 @@ hr {
     width: 20px;
     height: 20px;
   }
+}
+
+// Pagination
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.pagination-link {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  color: var(--link-color);
+  background-color: var(--bg-color-light);
+  transition: background-color 0.2s ease;
+
+  &:hover:not(.disabled) {
+    background-color: var(--accent-color);
+    color: var(--primary-fg-color);
+  }
+
+  &.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.pagination-info {
+  color: var(--text-color-lighter);
+  font-size: 0.9rem;
+}
+
+// Footer layout - 3 columns
+.site-footer .footer-col-wrapper {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.site-footer .footer-col {
+  flex: 1;
+  min-width: 200px;
+}
+
+.site-footer .footer-col:last-child {
+  text-align: right;
+}
+
+.footer-heading {
+  margin-bottom: 0.5rem;
+}
+
+.footer-copyright {
+  color: var(--text-color-lighter);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.footer-description {
+  color: var(--text-color);
+  margin: 0;
 }
