@@ -83,5 +83,3 @@ DEPENDENCIES
   minima
   public_suffix (< 6.0)
 
-BUNDLED WITH
-   1.17.2
