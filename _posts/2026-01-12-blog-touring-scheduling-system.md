@@ -1,4 +1,4 @@
-d---
+---
 layout: post
 title:  "Building Autonomous Services: A Tourist Scheduling System Multi-Agent Demo"
 date:   2026-01-12 12:00:00 +0000
@@ -480,16 +480,20 @@ All tourist requests have been matched, ...
 
 Here is a glimpse of the system in action:
 
-<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-  <img src="figures/frontend2.png" alt="Dashboard Screenshot 2" width="45%">
-  <img src="figures/frontend3.png" alt="Dashboard Screenshot 3" width="45%">
-  <img src="figures/frontend4.png" alt="Dashboard Screenshot 4" width="45%">
-  <img src="figures/frontend5.png" alt="Dashboard Screenshot 5" width="45%">
+
+<div style="text-align: center; margin-top: 10px;">
+  <img src="/blogs/assets/figures/frontend1.png" alt="Dashboard Main View" width="80%">
 </div>
 
 <div style="text-align: center; margin-top: 10px;">
-  <img src="figures/frontend1.png" alt="Dashboard Main View" width="80%">
+  <img src="/blogs/assets/figures/frontend4.png" alt="Dashboard Main View" width="80%">
 </div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="/blogs/assets/figures/frontend2.png" alt="Dashboard Screenshot 2" style="width: 35%; height: auto;">
+  <img src="/blogs/assets/figures/frontend3.png" alt="Dashboard Screenshot 3" style="width: 35%; height: auto;">
+</div>
+
 
 ## ☸️ Deploying to Kubernetes
 
