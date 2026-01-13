@@ -278,6 +278,7 @@ To generate the output below, we first ensure a clean environment, start the inf
 Here is what a successful run looks like:
 
 ```text
+[RUN] Inferred MODEL_PROVIDER=azure from AZURE_OPENAI_API_KEY
 =======================================================
 Tourist Scheduling System
 =======================================================
@@ -286,17 +287,46 @@ Tourist Scheduling System
 [RUN] Scheduler: http://localhost:10000
 [RUN] Dashboard: http://localhost:10021
 [RUN] Guides: 2 | Tourists: 3
-...
+[RUN] Duration: 1 minutes
+[RUN] SLIM: http://localhost:46357
+[RUN] Jaeger: http://localhost:16686
+=======================================================
+[RUN] Starting scheduler agent...
+[RUN] Scheduler PID: 54557 -> /Users/lumuscar/Projects/agntcy/agentic-apps/tourist_scheduling_system/scheduler_agent.log
+[RUN] Starting dashboard agent...
+[RUN] Dashboard PID: 54633 -> /Users/lumuscar/Projects/agntcy/agentic-apps/tourist_scheduling_system/ui_agent.log
+[RUN] Waiting for Scheduler on port 10000...
+[OK] Scheduler ready
+[RUN] Checking Dashboard health...
+[OK] Dashboard healthy
+=======================================================
 [OK] Agents running!
    📊 Dashboard: http://localhost:10021
    🗓️  Scheduler: http://localhost:10000
    🔍 Jaeger: http://localhost:16686
 
+Logs:
+   tail -f /Users/lumuscar/Projects/agntcy/agentic-apps/tourist_scheduling_system/scheduler_agent.log
+   tail -f /Users/lumuscar/Projects/agntcy/agentic-apps/tourist_scheduling_system/ui_agent.log
+=======================================================
+[RUN] Running demo simulation...
+13:47:29 | INFO | Logs will be written to: /Users/lumuscar/Projects/agntcy/agentic-apps/tourist_scheduling_system/logs
+13:47:29 | INFO | OTLP trace exporter configured: http://localhost:4318/v1/traces
+13:47:29 | INFO | File trace exporter configured: /Users/lumuscar/Projects/agntcy/agentic-apps/tourist_scheduling_system/traces/traces_20260113_134729.jsonl
+13:47:29 | INFO | OpenTelemetry tracing initialized for service: tourist-scheduling-demo
+13:47:29 | INFO | OpenTelemetry tracing enabled
 ======================================================================
 🎯 Simulation Mode
 ======================================================================
 
-🔄 Iteration 1...
+Sending demo traffic to running agents:
+  • Scheduler: http://localhost:10000
+  • Dashboard: http://localhost:10021
+  • 2 guides, 3 tourists
+  • Duration: 1 minutes
+
+
+🔄 Iteration 1 (approx 0 min remaining)...
 📝 Registering 2 guides...
    🗺️ Guide silvia1_b1: shopping, history, adventure @ $85/hr
    🗺️ Guide elisa2_b1: nightlife @ $95/hr
@@ -304,19 +334,121 @@ Tourist Scheduling System
 📝 Registering 3 tourists...
    🧳 Tourist amelia1_b1: wine, museums, architecture @ $175/hr budget
    🧳 Tourist charlotte2_b1: architecture, museums, wine @ $167/hr budget
+   🧳 Tourist james3_b1: architecture @ $174/hr budget
 
 🔄 Running scheduling algorithm...
-   The scheduling algorithm has successfully completed...
+   The scheduling algorithm has successfully completed, resulting in 3 assignments. Here's the summary of the matches made:
 
+1. **Tourist**: amelia1_b1
+   - **Guide**: silvia1_b1
+   - **Time Window**: 09...
 📤 Creating 2 assignments...
    🔗 amelia1_b1 ↔ silvia1_b1
    🔗 charlotte2_b1 ↔ elisa2_b1
    ✅ Sent 2 assignments
 
 📊 Getting final status...
-   - Total Assignments Completed: 3
-   - Tourist Satisfaction: 100%
-   - Guide Utilization: 50%
+   Here is the current schedule status:
+
+- **Total Tourist Requests:** 3
+- **Total Guide Offers:** 2
+- **Total Assignments Completed:** 3
+- **Tourist Satisfaction:** 100%
+- **Guide Utilization:** 50%
+- **Pending Tourist Requests:** 0
+- **Available Guides:** 1
+
+All tourist requests have been successfull...
+
+✅ Batch 1 complete!
+   Dashboard updates: 17 successful, 0 failed
+   ⏳ Next iteration in 2.4s...
+
+🔄 Iteration 2 (approx 0 min remaining)...
+📝 Registering 2 guides...
+   🗺️ Guide riccardo1_b2: shopping @ $100/hr
+   🗺️ Guide valentina2_b2: architecture, food, shopping @ $91/hr
+
+📝 Registering 3 tourists...
+   🧳 Tourist william1_b2: architecture, entertainment, photography @ $136/hr budget
+   🧳 Tourist chloe2_b2: adventure, music, culture @ $102/hr budget
+   🧳 Tourist emma3_b2: architecture, entertainment, photography @ $163/hr budget
+
+🔄 Running scheduling algorithm...
+   The scheduling algorithm has successfully matched tourists with guides. Here are the results:
+
+1. **Amelia** has been matched with guide **Valentina** from 2025-06-01 09:00 to 17:00 focusing on catego...
+📤 Creating 2 assignments...
+   🔗 william1_b2 ↔ riccardo1_b2
+   🔗 chloe2_b2 ↔ valentina2_b2
+   ✅ Sent 2 assignments
+
+📊 Getting final status...
+   The current schedule status is as follows:
+
+- **Total Tourists**: 6
+- **Total Guides**: 4
+- **Total Assignments Completed**: 6
+- **Tourist Satisfaction**: 100%
+- **Guide Utilization**: 50%
+- **Pending Tourist Requests**: 0
+- **Available Guides**: 2
+
+All tourist requests have been fulfilled, and ther...
+
+✅ Batch 2 complete!
+   Dashboard updates: 17 successful, 0 failed
+   ⏳ Next iteration in 2.6s...
+
+🔄 Iteration 3 (approx 0 min remaining)...
+📝 Registering 2 guides...
+   🗺️ Guide lorenzo1_b3: history, art @ $79/hr
+   🗺️ Guide riccardo2_b3: wine, food @ $109/hr
+
+📝 Registering 3 tourists...
+   🧳 Tourist benjamin1_b3: music, shopping, photography @ $181/hr budget
+   🧳 Tourist luna2_b3: entertainment, architecture, adventure @ $157/hr budget
+   🧳 Tourist evelyn3_b3: nightlife, museums, adventure @ $106/hr budget
+
+🔄 Running scheduling algorithm...
+   The scheduling algorithm has successfully matched 9 tourists with guides. Here are the details of the assignments:
+
+1. **Tourist ID: amelia1_b1**
+   - Guide ID: valentina2_b2
+   - Time Window: 2025-06...
+📤 Creating 2 assignments...
+   🔗 benjamin1_b3 ↔ lorenzo1_b3
+   🔗 luna2_b3 ↔ riccardo2_b3
+   ✅ Sent 2 assignments
+
+📊 Getting final status...
+   Here is the current schedule status:
+
+- **Total Tourist Requests**: 9
+- **Total Guide Offers**: 6
+- **Total Completed Assignments**: 9
+- **Tourist Satisfaction**: 100%
+- **Guide Utilization**: 33.3%
+- **Pending Tourist Requests**: 0
+- **Available Guides**: 4
+
+All tourist requests have been matched, ...
+
+✅ Batch 3 complete!
+   Dashboard updates: 17 successful, 0 failed
+   ⏳ Next iteration in 4.3s...
+
+⏱️  Duration elapsed!
+
+✅ Simulation complete!
+[OK] Demo complete!
+
+[RUN] Dashboard still running at http://localhost:10021
+[RUN] Press Ctrl+C to stop agents.
+[WARN] Shutting down...
+[RUN] Stopping PID 54557
+[RUN] Stopping PID 54633
+[OK] Stopped
 ```
 
 ## ☸️ Deploying to Kubernetes
