@@ -17,6 +17,33 @@
 
     <script src="{{ "/assets/js/theme-toggle.js" | relative_url }}"></script>
 
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      mermaid.initialize({ startOnLoad: false });
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              // We need the raw text. If kramdown/rouge puts it in a code block, use that.
+              const codeBlock = element.querySelector('code');
+              const graphDefinition = codeBlock ? codeBlock.textContent : element.textContent;
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.textContent = graphDefinition;
+
+              element.replaceWith(newDiv);
+          });
+
+          // Run mermaid on all .mermaid elements
+          await mermaid.run();
+      });
+    </script>
+
   </body>
 
 </html>
