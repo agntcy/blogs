@@ -213,6 +213,7 @@ a {
 .site-footer {
   background-color: var(--footer-bg-color);
   color: var(--text-color);
+  border-top: none;
   box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.1), 0 0.2rem 0.4rem rgba(0, 0, 0, 0.2);
 
   a {
@@ -268,6 +269,85 @@ a {
   }
 }
 
+.post-excerpt {
+  color: var(--text-color-lighter);
+  font-size: 0.95rem;
+  margin-top: 0.25rem;
+  line-height: 1.5;
+}
+
+// Archive page
+.archive-year {
+  color: var(--text-color);
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+  font-size: 1.5rem;
+}
+
+.archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    padding: 0.4rem 0;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+}
+
+.archive-date {
+  color: var(--text-color-lighter);
+  font-size: 0.9rem;
+  min-width: 60px;
+  font-family: monospace;
+}
+
+.archive-link {
+  color: var(--link-color);
+
+  &:hover {
+    color: var(--link-hover-color);
+  }
+}
+
+// Post navigation (prev/next)
+.post-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  gap: 2rem;
+}
+
+.post-nav-prev,
+.post-nav-next {
+  flex: 1;
+  max-width: 45%;
+}
+
+.post-nav-next {
+  text-align: right;
+}
+
+.post-nav-label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-color-lighter);
+  margin-bottom: 0.25rem;
+}
+
+.post-navigation a {
+  color: var(--link-color);
+  font-weight: 500;
+
+  &:hover {
+    color: var(--link-hover-color);
+  }
+}
+
 // Code blocks
 pre, code {
   background-color: var(--code-bg-color);
@@ -283,6 +363,121 @@ pre {
   code {
     border: none;
     padding: 0;
+    background-color: transparent;
+  }
+}
+
+// Syntax highlighting wrapper
+.highlight {
+  background-color: var(--code-bg-color);
+  border-radius: 0.25rem;
+  position: relative;
+  
+  pre {
+    background-color: var(--code-bg-color);
+    border: none;
+    margin: 0;
+  }
+}
+
+// Code copy button
+.copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.4rem;
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-color-lighter);
+  
+  &:hover {
+    background-color: var(--accent-color);
+    color: var(--primary-fg-color);
+    border-color: var(--accent-color);
+  }
+  
+  &.copied {
+    background-color: #22863a;
+    color: white;
+    border-color: #22863a;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.highlight:hover .copy-button,
+pre:hover > .copy-button {
+  opacity: 1;
+}
+
+// Ensure pre blocks can contain the copy button
+pre:not(.highlight pre) {
+  position: relative;
+}
+
+// Light mode syntax highlighting (GitHub-inspired)
+.highlight {
+  .c, .c1, .cm, .cs { color: #6a737d; } // Comments
+  .k, .kc, .kd, .kn, .kp, .kr, .kt { color: #d73a49; } // Keywords
+  .n, .nb, .nc, .nd, .ne, .nf, .ni, .nl, .nn, .no, .nt, .nv { color: #24292e; } // Names
+  .na { color: #6f42c1; } // Name attribute
+  .nc { color: #6f42c1; } // Name class
+  .nf { color: #6f42c1; } // Name function
+  .s, .s1, .s2, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx { color: #032f62; } // Strings
+  .m, .mf, .mh, .mi, .mo, .il { color: #005cc5; } // Numbers
+  .o, .ow { color: #d73a49; } // Operators
+  .p { color: #24292e; } // Punctuation
+  .gd { color: #b31d28; background-color: #ffeef0; } // Diff deleted
+  .gi { color: #22863a; background-color: #f0fff4; } // Diff inserted
+  .err { color: #b31d28; background-color: transparent; } // Error
+}
+
+// Dark mode syntax highlighting (Monokai-inspired)
+[data-theme="dark"] {
+  .highlight {
+    background-color: var(--code-bg-color);
+    
+    pre, code {
+      background-color: var(--code-bg-color);
+      color: #f8f8f2;
+    }
+  }
+  
+  // Rouge syntax highlighting classes
+  .highlight {
+    .c, .c1, .cm, .cs { color: #75715e; } // Comments
+    .k, .kc, .kd, .kn, .kp, .kr, .kt { color: #66d9ef; } // Keywords
+    .n, .nb, .nc, .nd, .ne, .nf, .ni, .nl, .nn, .no, .nt, .nv { color: #f8f8f2; } // Names
+    .na { color: #a6e22e; } // Name attribute
+    .nc { color: #a6e22e; } // Name class
+    .nf { color: #a6e22e; } // Name function
+    .s, .s1, .s2, .sb, .sc, .sd, .se, .sh, .si, .sr, .ss, .sx { color: #e6db74; } // Strings
+    .m, .mf, .mh, .mi, .mo, .il { color: #ae81ff; } // Numbers
+    .o, .ow { color: #f92672; } // Operators
+    .p { color: #f8f8f2; } // Punctuation
+    .gd { color: #f92672; } // Diff deleted
+    .gi { color: #a6e22e; } // Diff inserted
+    .gh { color: #75715e; } // Diff header
+    .gu { color: #75715e; } // Diff subheader
+    .bp { color: #f8f8f2; } // Built-in pseudo
+    .err { color: #f92672; background-color: transparent; } // Error
+    .w { color: #f8f8f2; } // Whitespace
+  }
+  
+  // Inline code
+  code:not([class]) {
+    background-color: var(--code-bg-color);
+    color: #e6db74;
   }
 }
 
@@ -383,4 +578,70 @@ hr {
     width: 20px;
     height: 20px;
   }
+}
+
+// Pagination
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.pagination-link {
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  text-decoration: none;
+  color: var(--link-color);
+  background-color: var(--bg-color-light);
+  transition: background-color 0.2s ease;
+
+  &:hover:not(.disabled) {
+    background-color: var(--accent-color);
+    color: var(--primary-fg-color);
+  }
+
+  &.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.pagination-info {
+  color: var(--text-color-lighter);
+  font-size: 0.9rem;
+}
+
+// Footer layout - 3 columns
+.site-footer .footer-col-wrapper {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.site-footer .footer-col {
+  flex: 1;
+  min-width: 200px;
+}
+
+.site-footer .footer-col:last-child {
+  text-align: right;
+}
+
+.footer-heading {
+  margin-bottom: 0.5rem;
+}
+
+.footer-copyright {
+  color: var(--text-color-lighter);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.footer-description {
+  color: var(--text-color);
+  margin: 0;
 }
