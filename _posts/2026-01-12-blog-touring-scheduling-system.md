@@ -1,4 +1,4 @@
----
+d---
 layout: post
 title:  "Building Autonomous Services: A Tourist Scheduling System Multi-Agent Demo"
 date:   2026-01-12 12:00:00 +0000
@@ -171,7 +171,17 @@ Start the infrastructure and run the demo:
 source run.sh --transport slim --tracing
 ```
 
-You can now access the **Dashboard** at `http://localhost:10021` to watch the agents coordinate in real-time. Use `http://localhost:16686` to view the distinct traces of their interactions in Jaeger.
+### Step 4: Visualization (Optional)
+
+While the system provides a basic dashboard at `http://localhost:10021`, you can launch the rich Flutter frontend for a better experience:
+
+```bash
+cd frontend
+./setup.sh
+flutter run -d web-server --web-port 8080
+```
+
+Open `http://localhost:8080` to see the live system. Use `http://localhost:16686` to view the distinct traces of their interactions in Jaeger.
 
 ## 📁 Project Structure
 
@@ -241,7 +251,22 @@ source run.sh \
   --tourists 5 \
   --provider google
 ```
+### 🖥️ Running the Frontend (Optional)
 
+For a richer, visual experience, the system includes a modern Flutter-based dashboard.
+
+**Prerequisites:**
+*   [Flutter SDK](https://docs.flutter.dev/get-started/install) installed.
+
+**Launch Instructions:**
+1.  Ensure the backend agents are running (see above).
+2.  Open a new terminal and run:
+    ```bash
+    cd frontend
+    ./setup.sh
+    flutter run -d web-server --web-port 8080
+    ```
+3.  Open `http://localhost:8080` to view the live dashboard.
 ## �📊 Observability: Logs and Traces
 
 Debugging distributed agents can be challenging. To solve this, the system includes a comprehensive telemetry stack powered by **OpenTelemetry** and **Jaeger**.
@@ -451,6 +476,21 @@ All tourist requests have been matched, ...
 [OK] Stopped
 ```
 
+### 📸 Dashboard Screenshots
+
+Here is a glimpse of the system in action:
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+  <img src="figures/frontend2.png" alt="Dashboard Screenshot 2" width="45%">
+  <img src="figures/frontend3.png" alt="Dashboard Screenshot 3" width="45%">
+  <img src="figures/frontend4.png" alt="Dashboard Screenshot 4" width="45%">
+  <img src="figures/frontend5.png" alt="Dashboard Screenshot 5" width="45%">
+</div>
+
+<div style="text-align: center; margin-top: 10px;">
+  <img src="figures/frontend1.png" alt="Dashboard Main View" width="80%">
+</div>
+
 ## ☸️ Deploying to Kubernetes
 
 Moving from local development to a production-like environment is seamless. The system comes with ready-to-use Kubernetes manifests and helper scripts.
@@ -529,6 +569,14 @@ To deploy the full dependency stack on a fresh cluster:
     ./spawn-agents.sh 5 tourists
     ./spawn-agents.sh 3 guides
     ```
+
+6.  **Access the Dashboard**:
+    The deployment automatically spins up the frontend. Retrieve its external address:
+
+    ```bash
+    kubectl get svc frontend -n $NAMESPACE
+    ```
+    Open the provided External-IP in your browser to watch the system in action.
 
 ## Conclusion
 
