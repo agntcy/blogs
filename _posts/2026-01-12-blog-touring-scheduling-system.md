@@ -141,12 +141,22 @@ uv sync
 
 ### Step 2: Configuration
 
-Export your LLM credentials. For example, using Google Gemini:
+Export your LLM credentials.
 
+**For Google Gemini:**
 ```bash
 export MODEL_PROVIDER="gemini"
 export GOOGLE_GEMINI_API_KEY="your-google-api-key"
+# Optional: Specify model
 export MODEL_NAME="gemini/gemini-3-pro-preview"
+```
+
+**Or for Azure OpenAI:**
+```bash
+export MODEL_PROVIDER="azure"
+export AZURE_OPENAI_API_KEY="your-key"
+export AZURE_OPENAI_ENDPOINT="https://your-endpoint.openai.azure.com"
+export AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o"
 ```
 
 ### Step 3: Launch
@@ -195,18 +205,42 @@ tourist_scheduling_system/
 
 The repository includes a set of bash scripts to simplify this process:
 
-*   `setup.sh`: This is the master switch for your local infrastructure. It uses `docker-compose` logic (without requiring the file itself in some modes) to spin up:
-    *   **SLIM Node**: A local SLIM transport node for secure messaging.
-    *   **Jaeger**: All-in-one container for tracing.
-    *   **Agent Directory**: The service registry.
-    *   **Zot**: An OCI registry used by the Directory.
-    *   *Usage*: `./setup.sh start` to boot everything up, `./setup.sh stop` to tear it down.
+#### `setup.sh`
+This is your infrastructure manager. It spins up the necessary containers for SLIM, Jaeger, and the Directory.
+*   **Start Infrastructure**: `./setup.sh start`
+*   **Stop Infrastructure**: `./setup.sh stop`
+*   **Clean Up**: `./setup.sh clean` (removes containers and volumes)
 
-*   `run.sh`: The main entry point for running the agent demo. It handles:
-    *   **Environment Setup**: Exports necessary variables like `SLIM_ENDPOINT` and `OTEL_EXPORTER_OTLP_ENDPOINT`.
-    *   **Agent Process Management**: Launches the Scheduler, UI, and simulated Guide/Tourist agents as background processes.
-    *   **Cleanup**: Traps exit signals to kill all child processes when you quit.
-    *   *Usage*: `source run.sh --transport slim --tracing` (Use `source` to keep the environment variables in your shell).
+#### `run.sh`
+This script launches the actual Multi-Agent System. It runs the Scheduler, Dashboard, and simulated Guides and Tourists.
+
+**Basic Usage:**
+```bash
+# Run with SLIM secure transport
+source run.sh --transport slim
+
+# Run with open HTTP transport
+source run.sh --transport http
+```
+
+**Advanced Parameters:**
+*   `--tracing`: Enable OpenTelemetry tracing (requires `./setup.sh start` first).
+*   `--guides N`: Simulate N guide agents (default: 2).
+*   `--tourists N`: Simulate N tourist agents (default: 3).
+*   `--duration N`: Run the demo for N minutes (0 = run once).
+*   `--real-agents`: Use fully autonomous ADK agents instead of simplified simulators.
+*   `--provider [azure|google]`: Switch LLM providers dynamically.
+
+**Example: Scale Up Test**
+To run a larger simulation with 5 tourists and 5 guides using Gemini Pro, with full tracing:
+```bash
+source run.sh \
+  --transport slim \
+  --tracing \
+  --guides 5 \
+  --tourists 5 \
+  --provider google
+```
 
 ## �📊 Observability: Logs and Traces
 
