@@ -263,6 +263,62 @@ In addition to traces, each agent process generates detailed structured logs. Th
 
 Logs are written to the `logs/` directory locally or streamed to standard output in Docker/Kubernetes environments, making them easy to collect with tools like Fluentd or Promtail.
 
+## 🖥️ Sample Output
+
+When you run the system, you'll see the infrastructure spin up, followed by the agents coming online. The demo runner will then simulate a stream of tourists and guides entering the system.
+
+To generate the output below, we first ensure a clean environment, start the infrastructure, and then execute the demo runner:
+
+```bash
+./setup.sh clean
+./setup.sh start --tracing
+./run.sh --transport slim --tracing --duration 1
+```
+
+Here is what a successful run looks like:
+
+```text
+=======================================================
+Tourist Scheduling System
+=======================================================
+[RUN] Transport: slim
+[RUN] Tracing: true
+[RUN] Scheduler: http://localhost:10000
+[RUN] Dashboard: http://localhost:10021
+[RUN] Guides: 2 | Tourists: 3
+...
+[OK] Agents running!
+   📊 Dashboard: http://localhost:10021
+   🗓️  Scheduler: http://localhost:10000
+   🔍 Jaeger: http://localhost:16686
+
+======================================================================
+🎯 Simulation Mode
+======================================================================
+
+🔄 Iteration 1...
+📝 Registering 2 guides...
+   🗺️ Guide silvia1_b1: shopping, history, adventure @ $85/hr
+   🗺️ Guide elisa2_b1: nightlife @ $95/hr
+
+📝 Registering 3 tourists...
+   🧳 Tourist amelia1_b1: wine, museums, architecture @ $175/hr budget
+   🧳 Tourist charlotte2_b1: architecture, museums, wine @ $167/hr budget
+
+🔄 Running scheduling algorithm...
+   The scheduling algorithm has successfully completed...
+
+📤 Creating 2 assignments...
+   🔗 amelia1_b1 ↔ silvia1_b1
+   🔗 charlotte2_b1 ↔ elisa2_b1
+   ✅ Sent 2 assignments
+
+📊 Getting final status...
+   - Total Assignments Completed: 3
+   - Tourist Satisfaction: 100%
+   - Guide Utilization: 50%
+```
+
 ## ☸️ Deploying to Kubernetes
 
 Moving from local development to a production-like environment is seamless. The system comes with ready-to-use Kubernetes manifests and helper scripts.
