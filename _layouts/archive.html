@@ -1,0 +1,28 @@
+---
+layout: default
+---
+
+<div class="archive">
+  <h1 class="page-heading">{{ page.title }}</h1>
+
+  {{ content }}
+
+  {%- assign posts_by_year = site.posts | group_by_exp: "post", "post.date | date: '%Y'" -%}
+
+  {%- for year in posts_by_year -%}
+    <h2 class="archive-year">{{ year.name }}</h2>
+    <ul class="archive-list">
+      {%- for post in year.items -%}
+      <li>
+        <span class="archive-date">{{ post.date | date: "%b %d" }}</span>
+        <a class="archive-link" href="{{ post.url | relative_url }}">{{ post.title | escape }}</a>
+      </li>
+      {%- endfor -%}
+    </ul>
+  {%- endfor -%}
+
+  {%- if site.posts.size == 0 -%}
+    <p>No posts yet.</p>
+  {%- endif -%}
+</div>
+
