@@ -21,7 +21,11 @@
     <script type="module">
       import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
 
-      mermaid.initialize({ startOnLoad: false });
+      async function renderMermaid() {
+        const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'default';
+        mermaid.initialize({ startOnLoad: false, theme: theme });
+        await mermaid.run();
+      }
 
       document.addEventListener('DOMContentLoaded', async () => {
           // Find all code blocks with language-mermaid
@@ -29,19 +33,50 @@
 
           // Transform them into div.mermaid
           elements.forEach(element => {
-              // We need the raw text. If kramdown/rouge puts it in a code block, use that.
-              const codeBlock = element.querySelector('code');
-              const graphDefinition = codeBlock ? codeBlock.textContent : element.textContent;
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
 
               const newDiv = document.createElement('div');
               newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
               newDiv.textContent = graphDefinition;
 
-              element.replaceWith(newDiv);
+              container.replaceWith(newDiv);
           });
 
-          // Run mermaid on all .mermaid elements
-          await mermaid.run();
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
       });
     </script>
 
