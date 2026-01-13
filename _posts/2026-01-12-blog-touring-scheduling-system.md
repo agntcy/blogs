@@ -1,35 +1,55 @@
 ---
 layout: post
-title:  "The Future of Travel: Building a Multi-Agent Ecosystem with Google ADK"
+title:  "The Future of Travel: Building a Multi-Agent Ecosystem with the Internet of Agents"
 date:   2026-01-12 12:00:00 +0000
 categories: [agents, kubernetes, demo, slim, open-telemetry]
 tags: [multi-agent-systems, adk, python, docker]
 mermaid: true
 ---
 
-Imagine a travel agency that never sleeps. A world where tourists get personalized itineraries in seconds, guides find the perfect clients instantly, and complex logistics are solved without a single human phone call.
+Imagine a travel agency that never sleeps. A world where tourists get
+personalized itineraries in seconds, guides find the perfect clients instantly,
+and complex logistics are solved without a single human phone call.
 
-This isn't science fiction—it's the power of **Multi-Agent Systems**. And to prove it, we've built the **Tourist Scheduling System**, a reference implementation that uses Google's **[Agent Development Kit (ADK)](https://google.github.io/adk-docs/)** to turn this vision into code.
+This isn't science fiction—it's the power of **Multi-Agent Systems**. And to
+prove it, we've built the **Tourist Scheduling System**, a reference
+implementation that uses Google's **[Agent Development Kit
+(ADK)](https://google.github.io/adk-docs/)** to turn this vision into code.
 
-In this deep dive, we'll peel back the layers of a fully distributed AI ecosystem. We'll show you how independent agents—representing tourists and guides—negotiate, coordinate, and solve problems in real-time, powered by secure communication and dynamic discovery.
+In this deep dive, we'll peel back the layers of a fully distributed AI
+ecosystem. We'll show you how independent agents—representing tourists and
+guides—negotiate, coordinate, and solve problems in real-time, powered by secure
+communication and dynamic discovery.
 
 ## 🌍 The Concept: A Digital Marketplace
 
-The Tourist Scheduling System models a bustling travel marketplace. Instead of rigid algorithms, we have autonomous agents acting with intent:
+The Tourist Scheduling System models a bustling travel marketplace. Instead of
+rigid algorithms, we have autonomous agents acting with intent:
 
-*   **Tourist Agents**: The demanding travelers. They have budgets, specific interests (like "Architecture" or "Food"), and tight schedules.
-*   **Guide Agents**: The local experts. They have specialties, hourly rates, and limited availability.
-*   **Scheduler Agent**: The ultimate matchmaker. It's the central hub that listens to everyone and orchestrates the perfect itinerary.
+*   **Tourist Agents**: The demanding travelers. They have budgets, specific
+*   interests (like "Architecture" or "Food"), and tight schedules.
+*   **Guide Agents**: The local experts. They have specialties, hourly rates,
+*   and limited availability.
+*   **Scheduler Agent**: The ultimate matchmaker. It's the central hub that
+*   listens to everyone and orchestrates the perfect itinerary.
 
-This goes beyond a simple chat simulation. It's a living, breathing distributed system featuring **Dynamic Service Discovery**, **[Secure Agent-to-Agent (A2A) Communication](https://a2a-protocol.org)** via [Secure Layer for Intelligent Messaging (SLIM)](https://docs.agntcy.org/messaging/slim-core/), and full observability with **[OpenTelemetry](https://opentelemetry.io/)**.
+This goes beyond a simple chat simulation. It's a living, breathing distributed
+system featuring **Dynamic Service Discovery**, **[Secure Agent-to-Agent (A2A)
+Communication](https://a2a-protocol.org)** via [Secure Layer for Intelligent
+Messaging (SLIM)](https://docs.agntcy.org/messaging/slim-core/), and full
+observability with **[OpenTelemetry](https://opentelemetry.io/)**.
 
-## ⚙️ How It Works: The Agentic Web
+## ⚙️ How It Works: The Internet of Agents
 
-We didn't just want agents that chat; we wanted agents that *work*. To achieve this, we combined the intelligence of LLMs with the reliability of distributed systems engineering.
+We didn't just want agents that chat; we wanted agents that *work*. To achieve
+this, we combined the intelligence of LLMs with the reliability of distributed
+systems engineering.
 
 ### 1. The Hub-and-Spoke Architecture
 
-The system operates on a hub-and-spoke model. The **Scheduler Agent** sits at the center, not as a dictator, but as a coordinator, managing the flow of information between the transient Tourists and Guides.
+The system operates on a hub-and-spoke model. The **Scheduler Agent** sits at
+the center, not as a dictator, but as a coordinator, managing the flow of
+information between the transient Tourists and Guides.
 
 ```mermaid
 graph TD
@@ -67,19 +87,39 @@ graph TD
 
 ### 2. Anatomy of an Agent
 
-Each agent in our system is a specialized Python class inheriting from ADK's `LlmAgent`. But an agent is only as good as its tools.
+Each agent in our system is a specialized Python class inheriting from [ADK](https://github.com/google/adk-python)'s
+`LlmAgent`. But an agent is only as good as its tools.
 
 #### The Scheduler: The Brains of the Operation
-The Scheduler Agent (`src/agents/scheduler_agent.py`) is the heavy lifter. Instead of a single prompt doing everything, we equipped it with precise **Tools**:
-*   **Request Parser** (`register_tourist_request`): Translates "I want a cheap art tour on Monday" into structured JSON constraints.
-*   **Guide Onboarding** (`register_guide_offer`): Registers new guides, capturing their niche expertise and rates.
-*   **The Matchmaker** (`run_scheduling`): Executes a greedy matching algorithm that optimizes for budget and interest overlap.
-*   **Status Reporter** (`get_schedule_status`): Provides real-time visibility into the system's state.
+The Scheduler Agent (`src/agents/scheduler_agent.py`) is the heavy lifter.
+Instead of a single prompt doing everything, we equipped it with precise
+**Tools**:
+*   **Request Parser** (`register_tourist_request`): Translates "I want a cheap
+*   art tour on Monday" into structured JSON constraints.
+*   **Guide Onboarding** (`register_guide_offer`): Registers new guides,
+*   capturing their niche expertise and rates.
+*   **The Matchmaker** (`run_scheduling`): Executes a greedy matching algorithm
+*   that optimizes for budget and interest overlap.
+*   **Status Reporter** (`get_schedule_status`): Provides real-time visibility
+*   into the system's state.
+
+#### The Dashboard Agent: The Face
+While the Scheduler handles the logic, the **Dashboard Agent**
+(`src/agents/ui_agent.py`) translates the system's state for human consumption.
+It communicates with the Flutter frontend using the **[A2UI
+(Agent-to-UI)](https://github.com/google/A2UI)** protocol. This standardizes
+how agents stream generative UI components to client applications, allowing for
+dynamic, rich interfaces that update in real-time.
 
 #### The A2A Protocol
 How do these agents find each other?
-1.  **Discovery**: No hard-coded IPs here. Agents publish their "Business Cards" to the **Agent Directory** and look up the Scheduler dynamically.
-2.  **Transport**: They communicate via the A2A protocol. We use **SLIM** (Secure Real-Time Interactive Messaging) to ensure every message is encrypted and authenticated via MLS. It's like a VIP line for your AI agents.
+1.  **Discovery**: No hard-coded IPs here. Agents publish their "Business Cards"
+to the **[Agent Directory](https://github.com/agntcy/dir)** and look up the Scheduler dynamically.
+2.  **Transport**: They communicate via the [A2A
+protocol](https://github.com/a2aproject/a2a-python). We use
+**[SLIM](https://github.com/agntcy/slim)**
+(Secure Real-Time Interactive Messaging) to ensure every message is encrypted
+and authenticated via MLS. It's like a VIP line for your AI agents.
 
 ### 3. The Live Performance
 
@@ -115,16 +155,26 @@ sequenceDiagram
 
 ## 🌟 Why This Matters
 
-We aren't just building chat-bots; we are building **Digital Employees**. The Tourist Scheduling System showcases the pillars of enterprise agentic architecture:
+We aren't just building chat-bots; we are building **Digital Employees**. The
+Tourist Scheduling System showcases the pillars of enterprise agentic
+architecture:
 
-1.  **No Hard-Coding**: Thanks to **Dynamic Discovery**, you can spin up 100 new Guide agents, and the system adapts instantly. No config file updates required.
-2.  **Zero-Trust Security**: With **SLIM**, security isn't an afterthought. Every connection is mutually authenticated and encrypted. You know exactly who is talking to whom.
-3.  **X-Ray Vision**: Distributed tracing with **Jaeger** lets you see the "thought process" of your entire swarm. Pinpoint latency and debug negotiation failures with surgical precision.
-4.  **Human Command Center**: The **Dashboard** keeps humans in the loop, providing a real-time view of the marketplace without requiring micromanagement.
+1.  **No Hard-Coding**: Thanks to **Dynamic Discovery**, you can spin up 100 new
+Guide agents, and the system adapts instantly. No config file updates required.
+2.  **Zero-Trust Security**: With **SLIM**, security isn't an afterthought.
+Every connection is mutually authenticated and encrypted. You know exactly who
+is talking to whom.
+3.  **X-Ray Vision**: Distributed tracing with **Jaeger** lets you see the
+"thought process" of your entire swarm. Pinpoint latency and debug negotiation
+failures with surgical precision.
+4.  **Human Command Center**: The **Dashboard** keeps humans in the loop,
+providing a real-time view of the marketplace without requiring micromanagement.
 
 ## 🚀 Hands-On: Run the System Locally
 
-Ready to conduct? Getting this system up and running on your local machine is straightforward. We use Docker to host the heavy infrastructure (SLIM, Jaeger, Directory) while running the agents as agile local processes.
+Ready to conduct? Getting this system up and running on your local machine is
+straightforward. We use Docker to host the heavy infrastructure (SLIM, Jaeger,
+Directory) while running the agents as agile local processes.
 
 ### Prerequisites
 *   Python 3.12+
@@ -180,7 +230,8 @@ source run.sh --transport slim --tracing
 
 ### Step 4: Visualization (Optional)
 
-While the system provides a basic dashboard at `http://localhost:10021`, you can launch the rich Flutter frontend for a better experience:
+While the system provides a basic dashboard at `http://localhost:10021`, you can
+launch the rich Flutter frontend for a better experience:
 
 ```bash
 cd frontend
@@ -188,11 +239,14 @@ cd frontend
 flutter run -d web-server --web-port 8080
 ```
 
-Open `http://localhost:8080` to see the live system. Use `http://localhost:16686` to view the distinct traces of their interactions in Jaeger.
+Open `http://localhost:8080` to see the live system. Use
+`http://localhost:16686` to view the distinct traces of their interactions in
+Jaeger.
 
 ## 📁 Project Structure
 
-It's helpful to understand how the project is organized. Here's a look at the key directories:
+It's helpful to understand how the project is organized. Here's a look at the
+key directories:
 
 ```
 tourist_scheduling_system/
@@ -223,13 +277,15 @@ tourist_scheduling_system/
 The repository includes a set of bash scripts to simplify this process:
 
 #### `setup.sh`
-This is your infrastructure manager. It spins up the necessary containers for SLIM, Jaeger, and the Directory.
+This is your infrastructure manager. It spins up the necessary containers for
+SLIM, Jaeger, and the Directory.
 *   **Start Infrastructure**: `./setup.sh start`
 *   **Stop Infrastructure**: `./setup.sh stop`
 *   **Clean Up**: `./setup.sh clean` (removes containers and volumes)
 
 #### `run.sh`
-This script launches the actual Multi-Agent System. It runs the Scheduler, Dashboard, and simulated Guides and Tourists.
+This script launches the actual Multi-Agent System. It runs the Scheduler,
+Dashboard, and simulated Guides and Tourists.
 
 **Basic Usage:**
 ```bash
@@ -249,7 +305,8 @@ source run.sh --transport http
 *   `--provider [azure|google]`: Switch LLM providers dynamically.
 
 **Example: Scale Up Test**
-To run a larger simulation with 5 tourists and 5 guides using Gemini Pro, with full tracing:
+To run a larger simulation with 5 tourists and 5 guides using Gemini Pro, with
+full tracing:
 ```bash
 source run.sh \
   --transport slim \
@@ -260,7 +317,8 @@ source run.sh \
 ```
 ### 🖥️ Running the Frontend (Optional)
 
-For a richer, visual experience, the system includes a modern Flutter-based dashboard.
+For a richer, visual experience, the system includes a modern Flutter-based
+dashboard.
 
 **Prerequisites:**
 *   [Flutter SDK](https://docs.flutter.dev/get-started/install) installed.
@@ -276,30 +334,43 @@ For a richer, visual experience, the system includes a modern Flutter-based dash
 3.  Open `http://localhost:8080` to view the live dashboard.
 ## 📊 Observability: Logs and Traces
 
-Debugging distributed agents can be challenging. To solve this, the system includes a comprehensive telemetry stack powered by **OpenTelemetry** and **Jaeger**.
+Debugging distributed agents can be challenging. To solve this, the system
+includes a comprehensive telemetry stack powered by **OpenTelemetry** and
+**Jaeger**.
 
 ### Distributed Tracing
 
-When you enable tracing (via the `--tracing` flag or the SLIM configuration), every agent interaction is recorded as a "span" in a distributed trace.
+When you enable tracing (via the `--tracing` flag or the SLIM configuration),
+every agent interaction is recorded as a "span" in a distributed trace.
 
-*   **Global Context**: See the entire request lifecycle, starting from the Tourist's initial request to the Scheduler, through the internal tool calls (`register_tourist_request`), and finally to the Guide's confirmation.
-*   **Performance Bottlenecks**: Identify which part of the negotiation process is slow (e.g., latency in LLM generation vs. network transport).
-*   **Error Diagnosis**: Pinpoint exactly where a negotiation failed (e.g., did the Guide reject the budget, or did the Scheduler fail to find a match?).
+*   **Global Context**: See the entire request lifecycle, starting from the
+*   Tourist's initial request to the Scheduler, through the internal tool calls
+*   (`register_tourist_request`), and finally to the Guide's confirmation.
+*   **Performance Bottlenecks**: Identify which part of the negotiation process
+*   is slow (e.g., latency in LLM generation vs. network transport).
+*   **Error Diagnosis**: Pinpoint exactly where a negotiation failed (e.g., did
+*   the Guide reject the budget, or did the Scheduler fail to find a match?).
 
 ### Structured Logging
 
-In addition to traces, each agent process generates detailed structured logs. These logs capture:
+In addition to traces, each agent process generates detailed structured logs.
+These logs capture:
 *   **Agent Decisions**: Why did an agent choose a specific tool?
 *   **LLM Prompts & Completions**: What exact text was sent to the model and what did it return?
 *   **State Changes**: Updates to the schedule, new bookings, and status transitions.
 
-Logs are written to the `logs/` directory locally or streamed to standard output in Docker/Kubernetes environments, making them easy to collect with tools like Fluentd or Promtail.
+Logs are written to the `logs/` directory locally or streamed to standard output
+in Docker/Kubernetes environments, making them easy to collect with tools like
+Fluentd or Promtail.
 
 ## 🖥️ Sample Output
 
-When you run the system, you'll see the infrastructure spin up, followed by the agents coming online. The demo runner will then simulate a stream of tourists and guides entering the system.
+When you run the system, you'll see the infrastructure spin up, followed by the
+agents coming online. The demo runner will then simulate a stream of tourists
+and guides entering the system.
 
-To generate the output below, we first ensure a clean environment, start the infrastructure, and then execute the demo runner:
+To generate the output below, we first ensure a clean environment, start the
+infrastructure, and then execute the demo runner:
 
 ```bash
 ./setup.sh clean
@@ -502,7 +573,8 @@ Here is a glimpse of the system in action:
 
 ## ☸️ Deploying to Kubernetes
 
-Moving from local development to a production-like environment is seamless. The system comes with ready-to-use Kubernetes manifests and helper scripts.
+Moving from local development to a production-like environment is seamless. The
+system comes with ready-to-use Kubernetes manifests and helper scripts.
 
 ### Deployment Helper Scripts
 
@@ -546,7 +618,8 @@ To deploy the full dependency stack on a fresh cluster:
     ```
 
 3.  **Configure Credentials**:
-    Create the namespace and export your API keys. The deployment script will read these environment variables and create the Kubernetes secrets for you.
+    Create the namespace and export your API keys. The deployment script will
+    read these environment variables and create the Kubernetes secrets for you.
     ```bash
     kubectl create namespace $NAMESPACE
 
@@ -562,7 +635,8 @@ To deploy the full dependency stack on a fresh cluster:
     ```
 
 4.  **Deploy**:
-    You can deploy using the standard HTTP transport or the secure SLIM transport. To deploy with the default HTTP transport:
+    You can deploy using the standard HTTP transport or the secure SLIM
+    transport. To deploy with the default HTTP transport:
     ```bash
     ./deploy.sh http
     ```
@@ -580,17 +654,45 @@ To deploy the full dependency stack on a fresh cluster:
     ```
 
 6.  **Access the Dashboard**:
-    The deployment automatically spins up the frontend. Retrieve its external address:
+    The deployment automatically spins up the frontend. Retrieve its external
+    address:
 
     ```bash
     kubectl get svc frontend -n $NAMESPACE
     ```
     Open the provided External-IP in your browser to watch the system in action.
 
-## The Future is Agentic
 
-The Tourist Scheduling System proves that building complex, multi-agent workflows doesn't have to be chaotic. By leveraging standardized protocols like **SLIM** and robust observability tools, we've transformed a complex coordination problem into a structured, scalable system.
+## The Power of Protocols
 
-This isn't just about scheduling tours. It's about a future where software services don't just wait for API calls—they actively cooperate to solve your problems.
+The Tourist Scheduling System proves that building complex, multi-agent
+workflows requires more than just smart LLMs—it requires a robust foundation of
+standard protocols. This demo acts as a blueprint for that future by bringing
+together four critical pillars:
 
-**Ready to start building?** Check out the full source code in the [repository](https://github.com/agntcy/agentic-apps) and join the revolution!
+1.  **[MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/python-sdk)**: Providing a universal way for agents to
+interface with tools and data sources.
+2.  **[A2A (Agent-to-Agent)](https://github.com/a2aproject/a2a-python)**: Defining a common language for negotiation and
+task coordination.
+3.  **[Agent Directory](https://github.com/agntcy/dir)**: Enabling dynamic service discovery so the mesh can
+self-organize.
+4.  **[SLIM (Secure Real-Time Interactive Messaging)](https://github.com/agntcy/slim)**: Ensuring that every
+interaction is encrypted and authenticated.
+
+By combining these standards, we move from isolated chatbots to a true
+**Internet of Agents**—where software services actively cooperate to solve your
+problems.
+
+**Ready to start building?** Check out the full source code in the
+[repository](https://github.com/agntcy/agentic-apps) and join the revolution!
+
+## 📚 References
+
+*   [Tourist Scheduling System Source Code](https://github.com/agntcy/agentic-apps)
+*   [Agent Directory](https://github.com/agntcy/dir)
+*   [SLIM (Secure Layer for Intelligent Messaging)](https://github.com/agntcy/slim)
+*   [A2A Protocol (Python)](https://github.com/a2aproject/a2a-python)
+*   [Model Context Protocol (Python SDK)](https://github.com/modelcontextprotocol/python-sdk)
+*   [Google ADK (Python)](https://github.com/google/adk-python)
+*   [Flutter GenUI](https://github.com/flutter/genui)
+*   [Google A2UI](https://github.com/google/A2UI)
