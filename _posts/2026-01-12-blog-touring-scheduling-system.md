@@ -9,7 +9,7 @@ mermaid: true
 
 Imagine a travel agency that never sleeps. A world where tourists get personalized itineraries in seconds, guides find the perfect clients instantly, and complex logistics are solved without a single human phone call.
 
-This isn't science fiction—it's the power of **Multi-Agent Systems**. And to prove it, we've built the **Tourist Scheduling System**, a reference implementation that uses Google's **Agent Development Kit (ADK)** to turn this vision into code.
+This isn't science fiction—it's the power of **Multi-Agent Systems**. And to prove it, we've built the **Tourist Scheduling System**, a reference implementation that uses Google's **[Agent Development Kit (ADK)](https://google.github.io/adk-docs/)** to turn this vision into code.
 
 In this deep dive, we'll peel back the layers of a fully distributed AI ecosystem. We'll show you how independent agents—representing tourists and guides—negotiate, coordinate, and solve problems in real-time, powered by secure communication and dynamic discovery.
 
@@ -21,7 +21,7 @@ The Tourist Scheduling System models a bustling travel marketplace. Instead of r
 *   **Guide Agents**: The local experts. They have specialties, hourly rates, and limited availability.
 *   **Scheduler Agent**: The ultimate matchmaker. It's the central hub that listens to everyone and orchestrates the perfect itinerary.
 
-This goes beyond a simple chat simulation. It's a living, breathing distributed system featuring **Service Discovery**, **Secure Transport (SLIM)**, and **Enterprise-Grade Observability**.
+This goes beyond a simple chat simulation. It's a living, breathing distributed system featuring **Dynamic Service Discovery**, **[Secure Agent-to-Agent (A2A) Communication](https://a2a-protocol.org)** via [Secure Layer for Intelligent Messaging (SLIM)](https://docs.agntcy.org/messaging/slim-core/), and full observability with **[OpenTelemetry](https://opentelemetry.io/)**.
 
 ## ⚙️ How It Works: The Agentic Web
 
@@ -76,10 +76,10 @@ The Scheduler Agent (`src/agents/scheduler_agent.py`) is the heavy lifter. Inste
 *   **The Matchmaker** (`run_scheduling`): Executes a greedy matching algorithm that optimizes for budget and interest overlap.
 *   **Status Reporter** (`get_schedule_status`): Provides real-time visibility into the system's state.
 
-#### The Protocol: Speaking the Same Language
+#### The A2A Protocol
 How do these agents find each other?
 1.  **Discovery**: No hard-coded IPs here. Agents publish their "Business Cards" to the **Agent Directory** and look up the Scheduler dynamically.
-2.  **Transport**: They communicate via the **Agent-to-Agent (A2A)** protocol. We use **SLIM** (Secure Real-Time Interactive Messaging) to ensure every message is encrypted and authenticated via MLS. It's like a VIP line for your AI agents.
+2.  **Transport**: They communicate via the A2A protocol. We use **SLIM** (Secure Real-Time Interactive Messaging) to ensure every message is encrypted and authenticated via MLS. It's like a VIP line for your AI agents.
 
 ### 3. The Live Performance
 
@@ -274,7 +274,7 @@ For a richer, visual experience, the system includes a modern Flutter-based dash
     flutter run -d web-server --web-port 8080
     ```
 3.  Open `http://localhost:8080` to view the live dashboard.
-## �📊 Observability: Logs and Traces
+## 📊 Observability: Logs and Traces
 
 Debugging distributed agents can be challenging. To solve this, the system includes a comprehensive telemetry stack powered by **OpenTelemetry** and **Jaeger**.
 
@@ -506,7 +506,7 @@ Moving from local development to a production-like environment is seamless. The 
 
 ### Deployment Helper Scripts
 
-Located in `scripts/`, these helper scripts automate complex K8s tasks:
+Located in `scripts/`, these helper scripts automate complex Kubernetes tasks:
 
 *   `scripts/directory.sh`: Deploys the **Agent Directory** via Helm. It handles downloading the chart, configuring persistence, and optionally registering the workload with SPIRE for identity.
 *   `scripts/spire.sh`: Installs **SPIRE** (SPIFFE Runtime Environment) to provide secure identities for SLIM. It sets up the Server and Agent (DaemonSet) on your cluster.
