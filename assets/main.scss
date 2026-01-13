@@ -371,12 +371,58 @@ pre {
 .highlight {
   background-color: var(--code-bg-color);
   border-radius: 0.25rem;
+  position: relative;
   
   pre {
     background-color: var(--code-bg-color);
     border: none;
     margin: 0;
   }
+}
+
+// Code copy button
+.copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.4rem;
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--border-color);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-color-lighter);
+  
+  &:hover {
+    background-color: var(--accent-color);
+    color: var(--primary-fg-color);
+    border-color: var(--accent-color);
+  }
+  
+  &.copied {
+    background-color: #22863a;
+    color: white;
+    border-color: #22863a;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.highlight:hover .copy-button,
+pre:hover > .copy-button {
+  opacity: 1;
+}
+
+// Ensure pre blocks can contain the copy button
+pre:not(.highlight pre) {
+  position: relative;
 }
 
 // Light mode syntax highlighting (GitHub-inspired)
