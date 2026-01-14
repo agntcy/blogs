@@ -1009,6 +1009,160 @@ To deploy the full dependency stack on a fresh cluster:
     Open the provided External-IP in your browser to watch the system in action.
 
 
+### 📊 Real-world Deployment
+
+When deployed to a cluster, the system efficiently manages dozens of concurrent agent processes.
+
+**Test Environment:**
+The following metrics and logs were captured from a deployment on a **6-node
+Kubernetes cluster** (Nodes `tf-kubeflow-node-0` through `tf-kubeflow-node-5`).
+In this topology:
+*   **SLIM DaemonSet**: A `slim-node` pod runs on every worker node, providing a
+   local, low-latency secure gateway for any agent scheduled on that machine.
+*   **Agent Distribution**: Guide and Tourist agents are scheduled across the
+   fleet, communicating seamlessly over the mesh regardless of their physical
+   location.
+
+To demonstrate the reproducibility of the environment, we first perform a full
+cleanup and re-deployment of the core infrastructure.
+
+**1. Infrastructure Cleanup & Installation:**
+We start by cleaning up any existing resources to ensure a fresh state. We execute the following commands to remove previous agent jobs, the application deployment, and the infrastructure layers:
+
+```bash
+# Clean up agent jobs and application deployment
+./deploy/k8s/spawn-agents.sh clean
+./deploy/k8s/deploy.sh clean
+
+# Clean up core infrastructure
+./scripts/directory.sh uninstall
+./scripts/slim-controller.sh uninstall
+```
+
+**Agent Directory Cleanup:**
+
+```text
+[WARN] Cleaning up all Agent Directory resources in namespace lumuscar-jobs...
+[INFO] Uninstalling Helm release dir...
+release "dir" uninstalled
+[INFO] Removing Helm release secrets...
+[INFO] Cleanup complete
+```
+
+**SLIM Controller Cleanup:**
+```text
+[WARN] Cleaning up all SLIM controller resources in namespace lumuscar-jobs...
+[INFO] Uninstalling Helm release slim-controller...
+release "slim-controller" uninstalled
+[INFO] Removing Helm release secrets...
+[INFO] Cleanup complete
+```
+
+**Agent Directory Installation:**
+```text
+[INFO] Installing Agent Directory in namespace lumuscar-jobs...
+[INFO] Installing new release...
+NAME: dir
+STATUS: deployed
+DESCRIPTION: Install complete
+[INFO] Waiting for Agent Directory to be ready...
+deployment "dir-apiserver" successfully rolled out
+```
+
+**SLIM Controller Installation:**
+```text
+[INFO] Installing SLIM controller in namespace lumuscar-jobs...
+[INFO] Installing new release...
+NAME: slim-controller
+STATUS: deployed
+DESCRIPTION: Install complete
+[INFO] Waiting for SLIM controller to be ready...
+deployment "slim-control" successfully rolled out
+```
+
+**2. Application Deployment:**
+With the infrastructure ready, we deploy the Tourist Scheduling System agents using the SLIM transport.
+
+```text
+[INFO] Deploying Tourist Scheduling System with SLIM transport...
+[INFO] Namespace: lumuscar-jobs
+[INFO] Deploying scheduler agent...
+deployment.apps/scheduler-agent created
+service/scheduler-agent created
+[INFO] Deploying UI dashboard agent...
+deployment.apps/ui-dashboard-agent created
+[INFO] Deployment complete with SLIM transport!
+[INFO] Agents will communicate via SLIM gateway at:
+[INFO]   Host: slim-node
+[INFO]   Port: 46357
+```
+
+**3. Running State:**
+Here is a snapshot of the cluster running a full simulation with multiple guide
+and tourist agents spawned as Kubernetes Jobs alongside the SLIM DaemonSet
+infrastructure.
+
+**Active Pods (SLIM Nodes & Agents):**
+```text
+NAME                              READY   STATUS      RESTARTS     AGE     IP             NODE
+dir-apiserver-7f85dd58d5-tmf6j    1/1     Running     0            49m     10.1.196.203   tf-kubeflow-node-0
+slim-node-9f2v5                   1/1     Running     0            8d      10.1.37.211    tf-kubeflow-node-3
+slim-node-bm249                   1/1     Running     0            8d      10.1.69.243    tf-kubeflow-node-5
+slim-node-gzh72                   1/1     Running     0            8d      10.1.86.4      tf-kubeflow-node-1
+guide-agent-g1005-vdz59           1/1     Running     0            28s     10.1.196.206   tf-kubeflow-node-0
+guide-agent-g1007-f6xzb           1/1     Running     0            24s     10.1.196.208   tf-kubeflow-node-0
+guide-agent-g1014-qg4cj           1/1     Running     0            9s      10.1.196.195   tf-kubeflow-node-0
+scheduler-agent-69cbc8485f-lw6ht  1/1     Running     0            5m36s   10.1.196.232   tf-kubeflow-node-0
+...
+```
+
+**Job Execution Status:**
+```text
+NAME                  COMPLETIONS   DURATION   AGE
+guide-agent-g1001     1/1           34s        38s
+guide-agent-g1003     0/1           34s        34s
+guide-agent-g1005     0/1           29s        29s
+guide-agent-g1007     0/1           25s        25s
+guide-agent-g1008     0/1           23s        23s
+guide-agent-g1011     0/1           17s        17s
+...
+```
+
+**Agent Logs (Guide Agent):**
+The agent automatically initializes, discovers the scheduler, and begins negotiation.
+```text
+[Guide g1005] Starting with ADK (transport: slim)...
+[Guide g1005] Connecting to SLIM at http://slim-node:46357
+[Guide g1005] Using SLIM ID: agntcy/tourist_scheduling/guide_g1005
+INFO:slimrpc.common:agntcy/tourist_scheduling/guide_g1005/ce1d336764105c0d Connected to http://slim-node:46357
+[Guide g1005] SLIM client factory created successfully
+INFO:agents.guide_agent:[Guide g1005] Using SLIM transport to scheduler topic: agntcy/tourist_scheduling/scheduler
+[Guide g1005] Sending offer...
+User > Please register guide offer:
+- Guide ID: g1005
+- Categories: photography, art
+- Available from: 2025-06-01T09:00:00
+- Available until: 2025-06-01T14:00:00
+- Hourly rate: $42.0
+- Max group size: 3
+```
+
+**Agent Logs (Scheduler Agent):**
+The scheduler receives offers, negotiates with tourists, and updates the dashboard in real-time.
+```text
+INFO:agents.tools:[Scheduler] Created 7 assignments
+INFO:slimrpc.server:sending response for session 531412045 with code 0
+INFO:core.slim_transport:[SLIM] agntcy/tourist_scheduling/scheduler/8191387809365850102 received session: 1242699209
+INFO:slimrpc.server:new session from agntcy/tourist_scheduling/guide_g1170/f9fba0e58e4f85a8 to agntcy/tourist_scheduling/scheduler-a2a.v1.A2AService-SendMessage/71ada7d012b777f6
+INFO:agents.tools:[Scheduler] Registered guide offer: g1170
+INFO:agents.tools:[ADK Scheduler] Sending update to dashboard: http://ui-dashboard-agent:80/api/update
+INFO:agents.tools:[ADK Scheduler] ✅ Sent update to dashboard: guide_offer
+INFO:agents.tools:[ADK Scheduler] Sending update to dashboard: http://ui-dashboard-agent:80/api/update
+INFO:agents.tools:[ADK Scheduler] ✅ Sent update to dashboard: communication_event
+INFO:slimrpc.server:sending response for session 1242699209 with code 0
+```
+
+
 ## The Power of Protocols
 
 The Tourist Scheduling System proves that building complex, multi-agent
