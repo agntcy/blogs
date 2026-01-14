@@ -155,6 +155,9 @@ sequenceDiagram
 
 ## 🛠️ Under the Hood: The Code
 
+The full source code for this demo is available in the **[Tourist Scheduling
+System
+repository](https://github.com/agntcy/agentic-apps/tree/main/tourist_scheduling_system)**.
 Let's look at the actual code powering these agents. Using the **Google ADK**,
 we can define agents that are both autonomous and collaborative, interacting via
 well-defined interfaces.
@@ -201,7 +204,7 @@ def get_scheduler_agent(model_config, ...):
     return scheduler_agent
 ```
 
-### 2. Auto-Discovery with `RemoteA2aAgent` (Client-Side)
+### 2. Auto-Discovery with RemoteA2aAgent (Client-Side)
 
 This abstraction decouples the agent's logic from network complexity. The agent
 simply expresses an intent to communicate, and the framework handles the
@@ -244,7 +247,9 @@ async def create_tourist_agent(...):
 
 ### 3. The Data Contracts (A2A Agent Card)
 
-Protocols only work if everyone agrees on the data format. This JSON document is the "Business Card" of the agent. It defines the `skills` (what it can do) and the inputs/outputs it expects.
+Protocols only work if everyone agrees on the data format. This JSON document is
+the "Business Card" of the agent. It defines the `skills` (what it can do) and
+the inputs/outputs it expects.
 
 ```json
 /* a2a_cards/guide_agent.json */
@@ -303,8 +308,11 @@ their capabilities to a central Directory, agents become instantly discoverable
 to the entire fleet, enabling a truly scalable and self-organizing marketplace.
 
 Before any discovery can happen, agents must announce themselves. We use the
-**Agent Directory SDK** to publish an "Agent Card"—a standardized JSON document
-describing identity, capabilities, and pricing.
+**Agent Directory SDK** to publish a **Directory Record** (often called an
+*"Agent Card" in the context of the directory). Note that this is distinct from
+*the *A2A Agent Card* mentioned earlier; while the A2A Card defines the
+**protocol* interface, this Directory Record serves as the *registration entry*
+*used for lookup and routing.
 
 ```python
 # from publish_card.py
@@ -687,7 +695,10 @@ infrastructure, and then execute the demo runner:
 ./run.sh --transport slim --tracing --duration 1
 ```
 
-Here is what a successful run looks like:
+Here is what a successful run looks like. In the log output below, you can see
+the startup sequence of the Scheduler and Dashboard, followed by the "Simulation
+Mode" where simulated Tourists and Guides register themselves and begin
+negotiating bookings in real-time.
 
 ```text
 [RUN] Inferred MODEL_PROVIDER=azure from AZURE_OPENAI_API_KEY
@@ -864,7 +875,11 @@ All tourist requests have been matched, ...
 ```
 ### 📸 Dashboard Screenshots
 
-Here is a glimpse of the system in action:
+The dashboard provides a real-time window into the agent marketplace.
+
+**1. The Live Graph View**: This view visualizes the active agents (Tourists,
+*Guides, Scheduler) and the messages flowing between them. The lines animate to
+*show the negotiation process as it happens.
 
 
 <div style="text-align: center; margin-top: 10px;">
@@ -889,9 +904,15 @@ system comes with ready-to-use Kubernetes manifests and helper scripts.
 
 Located in `scripts/`, these helper scripts automate complex Kubernetes tasks:
 
-*   `scripts/directory.sh`: Deploys the **Agent Directory** via Helm. It handles downloading the chart, configuring persistence, and optionally registering the workload with SPIRE for identity.
-*   `scripts/spire.sh`: Installs **SPIRE** (SPIFFE Runtime Environment) to provide secure identities for SLIM. It sets up the Server and Agent (DaemonSet) on your cluster.
-*   `scripts/slim-controller.sh` & `scripts/slim-node.sh`: Deploy the **SLIM Control Plane** and **Data Plane**. These scripts manage the necessary `StatefulSets` and config maps to get the secure transport layer running.
+*   `scripts/directory.sh`: Deploys the **Agent Directory** via Helm. It handles
+*   downloading the chart, configuring persistence, and optionally registering
+*   the workload with SPIRE for identity.
+*   `scripts/spire.sh`: Installs **SPIRE** (SPIFFE Runtime Environment) to
+*   provide secure identities for SLIM. It sets up the Server and Agent
+*   (DaemonSet) on your cluster.
+*   `scripts/slim-controller.sh` & `scripts/slim-node.sh`: Deploy the **SLIM
+*   Control Plane** and **Data Plane**. These scripts manage the necessary
+*   `StatefulSets` and config maps to get the secure transport layer running.
 
 To deploy the full dependency stack on a fresh cluster:
 ```bash
