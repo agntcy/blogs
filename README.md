@@ -5,11 +5,11 @@ mission is to share technical insights, deep-dives, and updates about the
 open-source projects and technologies developed at **AGNTCY**, including:
 
 *   **[Agent Directory](https://github.com/agntcy/dir)**: The trusted registry
-*   for discovering and verifying AI agents.
-*   **[OASF (Open Agent Safety Framework)](https://github.com/oasf/oasf)**:
-*   Standards and tooling for responsible and safe agentic systems.
-*   **[Slim](https://github.com/agntcy/slim)**: A lightweight, efficient
-*   framework for building production-ready AI agents.
+for discovering and verifying AI agents.
+*   **[OASF (Open Agent Safety Framework)](https://github.com/oasf/oasf)**: 
+Standards and tooling for responsible and safe agentic systems.
+*   **[Slim](https://github.com/agntcy/slim)**: A lightweight, efficient 
+framework for building production-ready AI agents.
 
 ## Local Development
 
