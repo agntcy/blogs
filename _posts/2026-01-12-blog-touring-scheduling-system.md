@@ -242,7 +242,31 @@ async def create_tourist_agent(...):
     return tourist_agent
 ```
 
-### 3. Joining the Secure Mesh (SLIM)
+### 3. The Data Contracts (A2A Agent Card)
+
+Protocols only work if everyone agrees on the data format. This JSON document is the "Business Card" of the agent. It defines the `skills` (what it can do) and the inputs/outputs it expects.
+
+```json
+/* a2a_cards/guide_agent.json */
+{
+  "name": "Tour Guide Agent",
+  "skills": [
+    {
+      "id": "offer_tour",
+      "name": "Offer Tour Services",
+      "description": "Submits a tour offer to the scheduler...",
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/plain"]
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "stateTransitionHistory": false
+  }
+}
+```
+
+### 4. Joining the Secure Mesh (SLIM)
 
 Security is often the hardest part of distributed systems. SLIM abstracts this
 away by providing a "dial-tone" for secure messaging. By simply initializing
@@ -272,7 +296,7 @@ async def run_tourist_agent(local_id: str):
     # ...
 ```
 
-### 4. Publishing to the Directory
+### 5. Publishing to the Directory
 
 In a dynamic ecosystem, static configuration files are brittle. By publishing
 their capabilities to a central Directory, agents become instantly discoverable
@@ -280,8 +304,7 @@ to the entire fleet, enabling a truly scalable and self-organizing marketplace.
 
 Before any discovery can happen, agents must announce themselves. We use the
 **Agent Directory SDK** to publish an "Agent Card"—a standardized JSON document
-describing identity, capabilities, and other attributes like cost, pricing
-but also provenance.
+describing identity, capabilities, and pricing.
 
 ```python
 # from publish_card.py
@@ -315,7 +338,7 @@ def publish_card(card_data: dict):
     print(f"Agent successfully published with CID: {cid}")
 ```
 
-### 5. Pulling Cards from the Directory
+### 6. Pulling Cards from the Directory
 
 This runtime lookup capability is what makes the system resilient. Agents can
 come and go, change IPs, or update their pricing, and their peers will always
@@ -354,20 +377,105 @@ def fetch_agent_card(agent_name: str):
     return None
 ```
 
+### 7. The Conversation: Agents in Action
+
+How do these agents actually talk to each other? Let's look at the two main
+communication patterns in the system.
+
+**1. Client-Server Pattern (Tourist → Scheduler)**
+
+The Tourist Agent treats the Scheduler as a "sub-agent." It doesn't need to know
+the low-level details of HTTP or SLIM; it just knows the Scheduler is a helpful
+entity it can talk to.
+
+```python
+# From src/agents/tourist_agent.py
+
+# 1. We create a proxy for the remote Scheduler Agent
+scheduler_remote = RemoteA2aAgent(
+    name="scheduler",
+    description="The tourist scheduling coordinator that handles tour requests",
+    # The 'agent_card' tells us HOW to connect (URL or SLIM topic)
+    agent_card=agent_card,
+    client=client,
+)
+
+# 2. We add it as a sub-agent to the Tourist
+tourist_agent = LlmAgent(
+    name=f"tourist_{tourist_id}",
+    instruction="You are a tourist... communicate with the scheduler sub-agent.",
+    sub_agents=[scheduler_remote],
+)
+```
+
+**2. Fire-and-Forget Pattern (Scheduler → UI Agent)**
+
+When the Scheduler processes a request, it pushes real-time updates to the
+Dashboard (UI Agent). This allows the frontend to react instantly—drawing new
+nodes on the graph or updating the schedule view—without the Scheduler waiting
+for a response.
+
+```python
+# From src/agents/tools.py
+
+def register_tourist_request(tourist_id, preferences, ...):
+    # 1. Update internal state
+    request = TouristRequest(tourist_id=tourist_id, ...)
+    _scheduler_state.tourist_requests.append(request)
+
+    # 2. Notify the UI Agent immediately
+    # This sends a raw event that the UI Agent converts into visual elements
+    send_to_ui_agent({
+        "type": "tourist_request",
+        "tourist_id": tourist_id,
+        "preferences": preferences,
+        "budget": budget,
+        "availability": {
+            "start": availability_start,
+            "end": availability_end,
+        }
+    })
+
+    return {"status": "registered"}
+```
+
+### 8. The UI Protocol (A2UI)
+
+Instead of hardcoding widgets, the Dashboard Agent streams "Generative UI"
+updates. This schema defines valid operations like `render`, `update`, or
+`append`, allowing the frontend to dynamically construct the view based on the
+agent's internal state.
+
+```python
+# src/agents/a2ui_schema.py
+A2UI_SCHEMA = """
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "operation": {
+        "type": "string",
+        "enum": ["render", "update", "append", "delete"]
+      },
+      "componentName": { "type": "string" },
+      "data": { "type": "object" }
+    },
+    "required": ["operation"]
+  }
+}
+"""
+```
+
 ## 🌟 Why This Matters
 
-We aren't just building chat-bots; we are building **Digital Employees**. The
-Tourist Scheduling System showcases the pillars of enterprise agentic
-architecture:
-
-1.  **No Hard-Coding**: Thanks to **Dynamic Discovery**, you can spin up 100 new
-Guide agents, and the system adapts instantly. No config file updates required.
-2.  **Zero-Trust Security**: With **SLIM**, security isn't an afterthought.
-Every connection is mutually authenticated and encrypted. You know exactly who
-is talking to whom.
-3.  **X-Ray Vision**: Distributed tracing with **Jaeger** (or other OTel
-backends) lets you see the "thought process" of your entire swarm. Pinpoint
-latency and debug negotiation failures with surgical precision.
+1.  **Decoupled Architecture**: Agents don’t need to know *where* other agents
+are running, just *what* they can do.
+2.  **Secure Communication**: **SLIM** ensures that every message is encrypted
+and authenticated. You know exactly who is talking to whom.
+3.  **X-Ray Vision**: Distributed tracing with **Jaeger** lets you see the
+"thought process" of your entire swarm. Pinpoint latency and debug negotiation
+failures with surgical precision.
 4.  **Human Command Center**: The **Dashboard** keeps humans in the loop,
 providing a real-time view of the marketplace without requiring micromanagement.
 
