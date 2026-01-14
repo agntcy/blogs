@@ -153,6 +153,207 @@ sequenceDiagram
     S->>G: "New booking confirmed."
 ```
 
+## 🛠️ Under the Hood: The Code
+
+Let's look at the actual code powering these agents. Using the **Google ADK**,
+we can define agents that are both autonomous and collaborative, interacting via
+well-defined interfaces.
+
+### 1. Giving Agents Skills (Server-Side)
+
+By giving the LLM agency through tools, we transform it from a passive chatbot
+into an active system controller capable of executing complex business logic
+deterministically.
+
+The **Scheduler Agent** isn't just a text generator; it's a function caller. We
+give it specific `tools`—Python functions that modify the system state (like
+registering a request or running the matching algorithm). The LLM determines
+*when* and *how* to call them based on the conversation context.
+
+```python
+# From src/agents/scheduler_agent.py
+
+from google.adk.agents.llm_agent import LlmAgent
+# We import the actual python functions that perform the business logic
+from src.agents.tools import (
+    register_tourist_request,
+    register_guide_offer,
+    run_scheduling,
+    get_schedule_status,
+    clear_scheduler_state
+)
+
+def get_scheduler_agent(model_config, ...):
+    scheduler_agent = LlmAgent(
+        model=LiteLlm(model_config),
+        # We explicitly pass the tools this agent can use
+        tools=[
+            register_tourist_request,
+            register_guide_offer,
+            run_scheduling,
+            get_schedule_status,
+            clear_scheduler_state
+        ],
+        # System instructions guide the agent on tool usage
+        system_instructions=SCHEDULER_INSTRUCTIONS,
+        # ...
+    )
+    return scheduler_agent
+```
+
+### 2. Auto-Discovery with `RemoteA2aAgent` (Client-Side)
+
+This abstraction decouples the agent's logic from network complexity. The agent
+simply expresses an intent to communicate, and the framework handles the
+underlying discovery, transport negotiation, and message routing, whether over
+local HTTP or a secure mesh.
+
+How does a Tourist Agent know how to "talk" to the Scheduler? It uses the
+`RemoteA2aAgent`. This class handles the **discovery** of the remote agent's
+capabilities (via its Agent Card) and facilitates the conversation.
+
+In **HTTP mode**, discovery is direct via a URL. In **SLIM mode**, discovery
+works via a topic string, allowing for location-transparent routing over the
+secure mesh.
+
+```python
+# From src/agents/tourist_agent.py
+from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
+
+async def create_tourist_agent(...):
+    # Determine how to find the scheduler based on transport mode
+    if transport_mode == "http":
+        scheduler_url = os.getenv("SCHEDULER_URL", "http://localhost:8000")
+        agent_card = f"{scheduler_url.rstrip('/')}/.well-known/agent-card.json"
+    else:
+        # For SLIM, we use a minimal card with the topic string
+        scheduler_topic = os.getenv("SCHEDULER_SLIM_TOPIC", "agntcy/tourist_scheduling/scheduler/0")
+        agent_card = minimal_slim_agent_card(scheduler_topic)
+
+    # The RemoteA2aAgent acts as a proxy for the remote scheduler
+    scheduler_agent = RemoteA2aAgent(
+        agent_card=agent_card,
+        client=client,  # HTTP or SLIM client
+        # ...
+    )
+
+    # We add the remote scheduler as a "sub-agent" so the tourist can call it
+    tourist_agent.add_sub_agent("scheduler", scheduler_agent)
+    return tourist_agent
+```
+
+### 3. Joining the Secure Mesh (SLIM)
+
+Security is often the hardest part of distributed systems. SLIM abstracts this
+away by providing a "dial-tone" for secure messaging. By simply initializing
+this client, the agent automatically gains mutual authentication and end-to-end
+encryption without managing complex certificate chains manually.
+
+When running in **SLIM mode**, we need to configure the secure transport. This
+snippet shows how the Tourist Agent initializes its connection to the secure
+mesh using a `SLIMConfig` tailored with a unique local ID. This establishes the
+MLS context for secure A2A checks.
+
+```python
+# From src/agents/tourist_agent.py
+from src.core.slim_transport import SLIMConfig, create_slim_client_factory
+
+async def run_tourist_agent(local_id: str):
+    # ...
+    if transport_mode == "slim":
+        # Configure the Secure Layer for Intelligent Messaging
+        config = SLIMConfig(
+            server_address=os.getenv("SLIM_SERVER_ADDRESS", "127.0.0.1:3000"),
+            local_id=local_id,  # Unique ID for this specific tourist instance
+            connect_timeout=10.0
+        )
+        # Create an encrypted, authenticated client factory
+        client_factory = await create_slim_client_factory(config)
+    # ...
+```
+
+### 4. Publishing to the Directory
+
+In a dynamic ecosystem, static configuration files are brittle. By publishing
+their capabilities to a central Directory, agents become instantly discoverable
+to the entire fleet, enabling a truly scalable and self-organizing marketplace.
+
+Before any discovery can happen, agents must announce themselves. We use the
+**Agent Directory SDK** to publish an "Agent Card"—a standardized JSON document
+describing identity, capabilities, and other attributes like cost, pricing
+but also provenance.
+
+```python
+# from publish_card.py
+from agntcy.dir_sdk.client import Client
+from agntcy.dir_sdk.models import core_v1, routing_v1
+from google.protobuf.struct_pb2 import Struct
+from google.protobuf.json_format import ParseDict
+
+def publish_card(card_data: dict):
+    # Initialize the Directory Client (defaults to localhost:8888)
+    client = Client()
+
+    # 1. Wrap the card JSON in a Record structure
+    data_struct = Struct()
+    ParseDict(card_data, data_struct)
+    record = core_v1.Record(data=data_struct)
+
+    # 2. Push the record to the immutable store
+    # This returns a Content ID (CID) for the unique data blob
+    refs = client.push([record])
+    cid = refs[0].cid
+
+    # 3. Publish the CID to the routing table
+    # This makes the agent discoverable by its UUID or alias
+    pub_req = routing_v1.PublishRequest(
+        record_refs=routing_v1.RecordRefs(
+            refs=[core_v1.RecordRef(cid=cid)]
+        )
+    )
+    client.publish(pub_req)
+    print(f"Agent successfully published with CID: {cid}")
+```
+
+### 5. Pulling Cards from the Directory
+
+This runtime lookup capability is what makes the system resilient. Agents can
+come and go, change IPs, or update their pricing, and their peers will always
+find the most up-to-date connection details via the Directory.
+
+Conversely, when an agent needs to find a peer, it can query the Directory
+instead of relying on local config files. This snippet demonstrates searching
+for an agent by its published name to retrieve its live Agent Card.
+
+```python
+# From src/core/a2a_cards.py
+from agntcy.dir_sdk.client import Client
+from agntcy.dir_sdk.models import search_v1
+from google.protobuf.json_format import MessageToDict
+
+def fetch_agent_card(agent_name: str):
+    client = Client()
+
+    # Search for the record by its 'name' field
+    query = search_v1.RecordQuery(
+        type=search_v1.RECORD_QUERY_TYPE_NAME,
+        value=agent_name  # e.g., "Tourist Scheduling Coordinator"
+    )
+
+    # Execute the search
+    req = search_v1.SearchRecordsRequest(queries=[query], limit=1)
+    results = client.search_records(req)
+
+    if results:
+        record = results[0].record
+        # Convert the protobuf Struct back to a Python dict
+        card_data = MessageToDict(record.data)
+        print(f"Found card for {agent_name}: {card_data}")
+        return card_data
+
+    return None
+```
+
 ## 🌟 Why This Matters
 
 We aren't just building chat-bots; we are building **Digital Employees**. The
@@ -164,9 +365,9 @@ Guide agents, and the system adapts instantly. No config file updates required.
 2.  **Zero-Trust Security**: With **SLIM**, security isn't an afterthought.
 Every connection is mutually authenticated and encrypted. You know exactly who
 is talking to whom.
-3.  **X-Ray Vision**: Distributed tracing with **Jaeger** lets you see the
-"thought process" of your entire swarm. Pinpoint latency and debug negotiation
-failures with surgical precision.
+3.  **X-Ray Vision**: Distributed tracing with **Jaeger** (or other OTel
+backends) lets you see the "thought process" of your entire swarm. Pinpoint
+latency and debug negotiation failures with surgical precision.
 4.  **Human Command Center**: The **Dashboard** keeps humans in the loop,
 providing a real-time view of the marketplace without requiring micromanagement.
 
