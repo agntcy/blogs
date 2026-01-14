@@ -1011,11 +1011,12 @@ To deploy the full dependency stack on a fresh cluster:
 
 ### 📊 Real-world Deployment
 
-When deployed to a cluster, the system efficiently manages dozens of concurrent agent processes.
+When deployed to a cluster, the system efficiently manages dozens of concurrent
+agent processes.
 
 **Test Environment:**
 The following metrics and logs were captured from a deployment on a **6-node
-Kubernetes cluster** (Nodes `tf-kubeflow-node-0` through `tf-kubeflow-node-5`).
+Kubernetes cluster** (Nodes `tf-node-0` through `tf-node-5`).
 In this topology:
 *   **SLIM DaemonSet**: A `slim-node` pod runs on every worker node, providing a
    local, low-latency secure gateway for any agent scheduled on that machine.
@@ -1027,7 +1028,9 @@ To demonstrate the reproducibility of the environment, we first perform a full
 cleanup and re-deployment of the core infrastructure.
 
 **1. Infrastructure Cleanup & Installation:**
-We start by cleaning up any existing resources to ensure a fresh state. We execute the following commands to remove previous agent jobs, the application deployment, and the infrastructure layers:
+We start by cleaning up any existing resources to ensure a fresh state. We
+execute the following commands to remove previous agent jobs, the application
+deployment, and the infrastructure layers:
 
 ```bash
 # Clean up agent jobs and application deployment
@@ -1081,7 +1084,8 @@ deployment "slim-control" successfully rolled out
 ```
 
 **2. Application Deployment:**
-With the infrastructure ready, we deploy the Tourist Scheduling System agents using the SLIM transport.
+With the infrastructure ready, we deploy the Tourist Scheduling System agents
+using the SLIM transport.
 
 ```text
 [INFO] Deploying Tourist Scheduling System with SLIM transport...
@@ -1105,14 +1109,14 @@ infrastructure.
 **Active Pods (SLIM Nodes & Agents):**
 ```text
 NAME                              READY   STATUS      RESTARTS     AGE     IP             NODE
-dir-apiserver-7f85dd58d5-tmf6j    1/1     Running     0            49m     10.1.196.203   tf-kubeflow-node-0
-slim-node-9f2v5                   1/1     Running     0            8d      10.1.37.211    tf-kubeflow-node-3
-slim-node-bm249                   1/1     Running     0            8d      10.1.69.243    tf-kubeflow-node-5
-slim-node-gzh72                   1/1     Running     0            8d      10.1.86.4      tf-kubeflow-node-1
-guide-agent-g1005-vdz59           1/1     Running     0            28s     10.1.196.206   tf-kubeflow-node-0
-guide-agent-g1007-f6xzb           1/1     Running     0            24s     10.1.196.208   tf-kubeflow-node-0
-guide-agent-g1014-qg4cj           1/1     Running     0            9s      10.1.196.195   tf-kubeflow-node-0
-scheduler-agent-69cbc8485f-lw6ht  1/1     Running     0            5m36s   10.1.196.232   tf-kubeflow-node-0
+dir-apiserver-7f85dd58d5-tmf6j    1/1     Running     0            49m     10.1.196.203   tf-node-0
+slim-node-9f2v5                   1/1     Running     0            8d      10.1.37.211    tf-node-3
+slim-node-bm249                   1/1     Running     0            8d      10.1.69.243    tf-node-5
+slim-node-gzh72                   1/1     Running     0            8d      10.1.86.4      tf-node-1
+guide-agent-g1005-vdz59           1/1     Running     0            28s     10.1.196.206   tf-node-0
+guide-agent-g1007-f6xzb           1/1     Running     0            24s     10.1.196.208   tf-node-0
+guide-agent-g1014-qg4cj           1/1     Running     0            9s      10.1.196.195   tf-node-0
+scheduler-agent-69cbc8485f-lw6ht  1/1     Running     0            5m36s   10.1.196.232   tf-node-0
 ...
 ```
 
