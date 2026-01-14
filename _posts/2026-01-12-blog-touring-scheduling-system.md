@@ -27,11 +27,11 @@ The Tourist Scheduling System models a bustling travel marketplace. Instead of
 rigid algorithms, we have autonomous agents acting with intent:
 
 *   **Tourist Agents**: The demanding travelers. They have budgets, specific
-*   interests (like "Architecture" or "Food"), and tight schedules.
+    interests (like "Architecture" or "Food"), and tight schedules.
 *   **Guide Agents**: The local experts. They have specialties, hourly rates,
-*   and limited availability.
+    and limited availability.
 *   **Scheduler Agent**: The ultimate matchmaker. It's the central hub that
-*   listens to everyone and orchestrates the perfect itinerary.
+    listens to everyone and orchestrates the perfect itinerary.
 
 This goes beyond a simple chat simulation. It's a living, breathing distributed
 system featuring **Dynamic Service Discovery**, **[Secure Agent-to-Agent (A2A)
@@ -95,13 +95,13 @@ The Scheduler Agent (`src/agents/scheduler_agent.py`) is the heavy lifter.
 Instead of a single prompt doing everything, we equipped it with precise
 **Tools**:
 *   **Request Parser** (`register_tourist_request`): Translates "I want a cheap
-*   art tour on Monday" into structured JSON constraints.
+    art tour on Monday" into structured JSON constraints.
 *   **Guide Onboarding** (`register_guide_offer`): Registers new guides,
-*   capturing their niche expertise and rates.
+    capturing their niche expertise and rates.
 *   **The Matchmaker** (`run_scheduling`): Executes a greedy matching algorithm
-*   that optimizes for budget and interest overlap.
+    that optimizes for budget and interest overlap.
 *   **Status Reporter** (`get_schedule_status`): Provides real-time visibility
-*   into the system's state.
+    into the system's state.
 
 #### The Dashboard Agent: The Face
 While the Scheduler handles the logic, the **Dashboard Agent**
@@ -286,9 +286,11 @@ MLS context for secure A2A checks.
 ```python
 # From src/agents/tourist_agent.py
 from src.core.slim_transport import SLIMConfig, create_slim_client_factory
+from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
 
 async def run_tourist_agent(local_id: str):
     # ...
+    # 1. Initialize SLIM Client
     if transport_mode == "slim":
         # Configure the Secure Layer for Intelligent Messaging
         config = SLIMConfig(
@@ -298,6 +300,20 @@ async def run_tourist_agent(local_id: str):
         )
         # Create an encrypted, authenticated client factory
         client_factory = await create_slim_client_factory(config)
+
+    # 2. Use it in RemoteA2aAgent
+    # The A2A loop now happens over the encrypted SLIM mesh
+    scheduler_remote = RemoteA2aAgent(
+        agent_card=minimal_slim_agent_card(scheduler_topic),
+        a2a_client_factory=client_factory,  # Inject the secure transport factory
+        # ...
+    )
+
+    # 3. Agents communicate securely by default
+    response = await tourist_agent.send_message(
+        "I need a tour guide...",
+        connection=scheduler_remote
+    )
     # ...
 ```
 
@@ -309,10 +325,10 @@ to the entire fleet, enabling a truly scalable and self-organizing marketplace.
 
 Before any discovery can happen, agents must announce themselves. We use the
 **Agent Directory SDK** to publish a **Directory Record** (often called an
-*"Agent Card" in the context of the directory). Note that this is distinct from
-*the *A2A Agent Card* mentioned earlier; while the A2A Card defines the
-**protocol* interface, this Directory Record serves as the *registration entry*
-*used for lookup and routing.
+**Agent Card** in the context of the directory). Note that this is distinct from
+the **A2A Agent Card** mentioned earlier; while the A2A Card defines the
+protocol interface, this Directory Record serves as the **registration entry**
+used for lookup and routing.
 
 ```python
 # from publish_card.py
