@@ -645,3 +645,92 @@ hr {
   color: var(--text-color);
   margin: 0;
 }
+
+// Mermaid diagram theming with agntcy colors
+.mermaid {
+  background-color: transparent;
+  
+  // Sequence diagram styling
+  .actor {
+    fill: var(--accent-color) !important;
+    stroke: var(--accent-color) !important;
+  }
+  
+  .actor-line {
+    stroke: var(--text-color-lighter) !important;
+  }
+  
+  text.actor {
+    fill: var(--primary-fg-color) !important;
+  }
+  
+  .messageLine0, .messageLine1 {
+    stroke: var(--text-color) !important;
+  }
+  
+  .messageText {
+    fill: var(--text-color) !important;
+  }
+  
+  .labelBox {
+    fill: var(--bg-color-light) !important;
+    stroke: var(--border-color) !important;
+  }
+  
+  .labelText, .loopText {
+    fill: var(--text-color) !important;
+  }
+  
+  .loopLine {
+    stroke: var(--accent-color) !important;
+  }
+  
+  .activationBox {
+    fill: var(--bg-color-light) !important;
+    stroke: var(--accent-color) !important;
+  }
+  
+  .note {
+    fill: var(--bg-color-light) !important;
+    stroke: var(--border-color) !important;
+  }
+  
+  .noteText {
+    fill: var(--text-color) !important;
+  }
+  
+  // Graph/flowchart styling
+  .node rect, .node circle, .node polygon {
+    stroke-width: 2px;
+  }
+  
+  .edgeLabel {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+  }
+  
+  .edgePath .path {
+    stroke: var(--text-color-lighter) !important;
+  }
+  
+  marker {
+    fill: var(--text-color-lighter) !important;
+  }
+  
+  .cluster rect {
+    fill: var(--bg-color-light) !important;
+    stroke: var(--border-color) !important;
+  }
+  
+  .cluster text {
+    fill: var(--text-color) !important;
+  }
+}
+
+// Dark mode specific mermaid overrides
+[data-theme="dark"] .mermaid {
+  // Ensure sequence diagram text is visible
+  .sequenceNumber {
+    fill: var(--primary-fg-color) !important;
+  }
+}

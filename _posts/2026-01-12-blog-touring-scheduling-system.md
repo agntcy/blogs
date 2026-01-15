@@ -53,8 +53,8 @@ information between the transient Tourists and Guides.
 
 ```mermaid
 graph TD
-    classDef infra fill:#2d4059,stroke:#007ACC,stroke-width:2px,color:#fff;
-    classDef agents fill:#007ACC,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef infra fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef agents fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
 
     subgraph "Infrastructure"
         Dir[Agent Directory<br/>Service Registry]:::infra
