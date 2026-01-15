@@ -907,16 +907,16 @@ The dashboard provides a real-time window into the agent marketplace.
 
 
 <div style="text-align: center; margin-top: 10px;">
-  <img src="/blogs/assets/figures/frontend1.png" alt="Dashboard Main View" width="80%">
+  <img src="/assets/figures/frontend1.png" alt="Dashboard Main View" width="80%">
 </div>
 
 <div style="text-align: center; margin-top: 10px;">
-  <img src="/blogs/assets/figures/frontend4.png" alt="Dashboard Main View" width="80%">
+  <img src="/assets/figures/frontend4.png" alt="Dashboard Main View" width="80%">
 </div>
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-  <img src="/blogs/assets/figures/frontend2.png" alt="Dashboard Screenshot 2" style="width: 35%; height: auto;">
-  <img src="/blogs/assets/figures/frontend3.png" alt="Dashboard Screenshot 3" style="width: 35%; height: auto;">
+  <img src="/assets/figures/frontend2.png" alt="Dashboard Screenshot 2" style="width: 35%; height: auto;">
+  <img src="/assets/figures/frontend3.png" alt="Dashboard Screenshot 3" style="width: 35%; height: auto;">
 </div>
 
 ## ☸️ Deploying to Kubernetes
