@@ -35,7 +35,7 @@ rigid algorithms, we have autonomous agents acting with intent:
 
 This goes beyond a simple chat simulation. It's a living, breathing distributed
 system featuring **Dynamic Service Discovery**, **[Secure Agent-to-Agent (A2A)
-Communication](https://a2a-protocol.org)** via [Secure Layer for Intelligent
+Communication](https://a2a-protocol.org)** via [Secure Realtime Interactive
 Messaging (SLIM)](https://docs.agntcy.org/messaging/slim-core/), and full
 observability with **[OpenTelemetry](https://opentelemetry.io/)**.
 
