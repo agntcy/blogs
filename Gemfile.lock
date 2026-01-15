@@ -90,6 +90,3 @@ DEPENDENCIES
   minima
   mutex_m
   public_suffix (< 6.0)
-
-BUNDLED WITH
-  4.0.3
