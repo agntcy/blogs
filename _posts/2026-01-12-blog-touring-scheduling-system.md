@@ -1,7 +1,9 @@
 ---
 layout: post
 title:  "The Future of Travel: Building a Multi-Agent Ecosystem with the Internet of Agents"
-date:   2026-01-12 12:00:00 +0000
+date:   2026-01-15 12:00:00 +0000
+author: Luca Muscariello
+author_url: https://github.com/muscariello
 categories: [agents, kubernetes, demo, slim, open-telemetry]
 tags: [multi-agent-systems, adk, python, docker]
 mermaid: true
