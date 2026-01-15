@@ -118,7 +118,7 @@ to the **[Agent Directory](https://github.com/agntcy/dir)** and look up the Sche
 2.  **Transport**: They communicate via the [A2A
 protocol](https://github.com/a2aproject/a2a-python). We use
 **[SLIM](https://github.com/agntcy/slim)**
-(Secure Real-Time Interactive Messaging) to ensure every message is encrypted
+(Secure Low Latency Interactive Messaging) to ensure every message is encrypted
 and authenticated via MLS. It's like a VIP line for your AI agents.
 
 ### 3. The Live Performance
