@@ -35,7 +35,7 @@ Use the `Taskfile` to manage common operations:
     ```bash
     task run
     ```
-    The site will be available at [http://0.0.0.0:4000/blogs/](http://0.0.0.0:4000/blogs/).
+    The site will be available at [http://0.0.0.0:4000/](http://0.0.0.0:4000/).
 
 3.  **Build the static site**:
     ```bash

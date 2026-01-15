@@ -1,7 +1,9 @@
 ---
 layout: post
 title:  "The Future of Travel: Building a Multi-Agent Ecosystem with the Internet of Agents"
-date:   2026-01-12 12:00:00 +0000
+date:   2026-01-15 12:00:00 +0000
+author: Luca Muscariello
+author_url: https://github.com/muscariello
 categories: [agents, kubernetes, demo, slim, open-telemetry]
 tags: [multi-agent-systems, adk, python, docker]
 mermaid: true
@@ -53,8 +55,8 @@ information between the transient Tourists and Guides.
 
 ```mermaid
 graph TD
-    classDef infra fill:#2d4059,stroke:#007ACC,stroke-width:2px,color:#fff;
-    classDef agents fill:#007ACC,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef infra fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef agents fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
 
     subgraph "Infrastructure"
         Dir[Agent Directory<br/>Service Registry]:::infra
@@ -907,16 +909,16 @@ The dashboard provides a real-time window into the agent marketplace.
 
 
 <div style="text-align: center; margin-top: 10px;">
-  <img src="/blogs/assets/figures/frontend1.png" alt="Dashboard Main View" width="80%">
+  <img src="/assets/figures/frontend1.png" alt="Dashboard Main View" width="80%">
 </div>
 
 <div style="text-align: center; margin-top: 10px;">
-  <img src="/blogs/assets/figures/frontend4.png" alt="Dashboard Main View" width="80%">
+  <img src="/assets/figures/frontend4.png" alt="Dashboard Main View" width="80%">
 </div>
 
 <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
-  <img src="/blogs/assets/figures/frontend2.png" alt="Dashboard Screenshot 2" style="width: 35%; height: auto;">
-  <img src="/blogs/assets/figures/frontend3.png" alt="Dashboard Screenshot 3" style="width: 35%; height: auto;">
+  <img src="/assets/figures/frontend2.png" alt="Dashboard Screenshot 2" style="width: 35%; height: auto;">
+  <img src="/assets/figures/frontend3.png" alt="Dashboard Screenshot 3" style="width: 35%; height: auto;">
 </div>
 
 ## ☸️ Deploying to Kubernetes
