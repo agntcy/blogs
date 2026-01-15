@@ -930,15 +930,9 @@ system comes with ready-to-use Kubernetes manifests and helper scripts.
 
 Located in `scripts/`, these helper scripts automate complex Kubernetes tasks:
 
-*   `scripts/directory.sh`: Deploys the **Agent Directory** via Helm. It handles
-*   downloading the chart, configuring persistence, and optionally registering
-*   the workload with SPIRE for identity.
-*   `scripts/spire.sh`: Installs **SPIRE** (SPIFFE Runtime Environment) to
-*   provide secure identities for SLIM. It sets up the Server and Agent
-*   (DaemonSet) on your cluster.
-*   `scripts/slim-controller.sh` & `scripts/slim-node.sh`: Deploy the **SLIM
-*   Control Plane** and **Data Plane**. These scripts manage the necessary
-*   `StatefulSets` and config maps to get the secure transport layer running.
+* `scripts/directory.sh`: Deploys the **Agent Directory** via Helm. It handles downloading the chart, configuring persistence, and optionally registering the workload with SPIRE for identity.
+* `scripts/spire.sh`: Installs **SPIRE** (SPIFFE Runtime Environment) to provide secure identities for SLIM. It sets up the Server and Agent (DaemonSet) on your cluster.
+* `scripts/slim-controller.sh` & `scripts/slim-node.sh`: Deploy the **SLIM Control Plane** and **Data Plane**. These scripts manage the necessary `StatefulSets` and config maps to get the secure transport layer running.
 
 To deploy the full dependency stack on a fresh cluster:
 ```bash
