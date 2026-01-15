@@ -371,7 +371,6 @@ pre {
 .highlight {
   background-color: var(--code-bg-color);
   border-radius: 0.25rem;
-  position: relative;
   
   pre {
     background-color: var(--code-bg-color);
@@ -380,7 +379,19 @@ pre {
   }
 }
 
-// Code copy button
+// Code copy button container - wraps around code blocks for fixed button positioning
+.code-block-wrapper {
+  position: relative;
+  
+  // Ensure child elements don't create new stacking contexts that hide the button
+  .highlight,
+  > pre {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// Code copy button - absolutely positioned on the wrapper (not inside scrollable area)
 .copy-button {
   position: absolute;
   top: 0.5rem;
@@ -396,6 +407,7 @@ pre {
   align-items: center;
   justify-content: center;
   color: var(--text-color-lighter);
+  z-index: 100;
   
   &:hover {
     background-color: var(--accent-color);
@@ -415,14 +427,8 @@ pre {
   }
 }
 
-.highlight:hover .copy-button,
-pre:hover > .copy-button {
+.code-block-wrapper:hover > .copy-button {
   opacity: 1;
-}
-
-// Ensure pre blocks can contain the copy button
-pre:not(.highlight pre) {
-  position: relative;
 }
 
 // Light mode syntax highlighting (GitHub-inspired)

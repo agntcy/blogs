@@ -5,13 +5,20 @@
     const codeBlocks = document.querySelectorAll('.highlight, pre:not(.highlight pre)');
     
     codeBlocks.forEach((block) => {
-      // Skip if already has a copy button
-      if (block.querySelector('.copy-button')) return;
+      // Skip if already wrapped
+      if (block.parentElement && block.parentElement.classList.contains('code-block-wrapper')) return;
       
-      // Create wrapper if needed for positioning
-      if (!block.classList.contains('code-block-wrapper')) {
-        block.style.position = 'relative';
-      }
+      // Skip mermaid diagrams
+      if (block.classList.contains('mermaid') || 
+          block.classList.contains('language-mermaid') ||
+          block.querySelector('.language-mermaid') ||
+          block.querySelector('code.language-mermaid')) return;
+      
+      // Create wrapper for fixed button positioning (outside scrollable area)
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block-wrapper';
+      block.parentNode.insertBefore(wrapper, block);
+      wrapper.appendChild(block);
       
       // Create copy button
       const button = document.createElement('button');
@@ -29,8 +36,8 @@
       
       // Add click handler
       button.addEventListener('click', async () => {
-        const code = block.querySelector('code') || block.querySelector('pre');
-        const text = code ? code.textContent : block.textContent;
+        const code = block.querySelector('code') || block.querySelector('pre') || block;
+        const text = code.textContent;
         
         try {
           await navigator.clipboard.writeText(text);
@@ -51,7 +58,9 @@
         }
       });
       
-      block.appendChild(button);
+      // Insert button BEFORE the code block (as first child of wrapper)
+      // This ensures it's not inside the scrollable area
+      wrapper.insertBefore(button, block);
     });
   }
   
@@ -62,4 +71,3 @@
     init();
   }
 })();
-
