@@ -42,7 +42,7 @@ observability with **[OpenTelemetry](https://opentelemetry.io/)**.
 ## ⚙️ How It Works: The Internet of Agents
 
 We didn't just want agents that chat; we wanted agents that *work*. To achieve
-this, we combined the intelligence of LLMs with the reliability of distributed
+this, we combined  LLMs with the reliability of distributed
 systems engineering.
 
 ### 1. The Hub-and-Spoke Architecture
@@ -361,6 +361,14 @@ def publish_card(card_data: dict):
     client.publish(pub_req)
     print(f"Agent successfully published with CID: {cid}")
 ```
+
+The Directory provides more than just discovery—it provides **Trust**. Built on
+top of an **[OCI (Open Container Initiative)](https://opencontainers.org/)**
+compliant registry, it employs **sigstore-based provenance**. Crucially, the
+record itself remains lightweight; signatures and public keys are linked to the
+record using **OCI referrers**. This allows consuming agents to cryptographically
+verify the origin and integrity of the service they are about to contact,
+preventing spoofing attacks in the open mesh.
 
 ### 6. Pulling Cards from the Directory
 
@@ -1180,7 +1188,7 @@ interface with tools and data sources.
 task coordination.
 3.  **[Agent Directory](https://github.com/agntcy/dir)**: Enabling dynamic service discovery so the mesh can
 self-organize.
-4.  **[SLIM (Secure Real-Time Interactive Messaging)](https://github.com/agntcy/slim)**: Ensuring that every
+4.  **[SLIM (Secure Low Latency Interactive Messaging)](https://github.com/agntcy/slim)**: Ensuring that every
 interaction is encrypted and authenticated.
 
 By combining these standards, we move from isolated chatbots to a true
@@ -1194,7 +1202,7 @@ problems.
 
 *   [Tourist Scheduling System Source Code](https://github.com/agntcy/agentic-apps)
 *   [Agent Directory](https://github.com/agntcy/dir)
-*   [SLIM (Secure Layer for Intelligent Messaging)](https://github.com/agntcy/slim)
+*   [SLIM (Secure Low Latency Interactive Messaging)](https://github.com/agntcy/slim)
 *   [A2A Protocol (Python)](https://github.com/a2aproject/a2a-python)
 *   [Model Context Protocol (Python SDK)](https://github.com/modelcontextprotocol/python-sdk)
 *   [Google ADK (Python)](https://github.com/google/adk-python)
