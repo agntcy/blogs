@@ -20,7 +20,7 @@ The [SLIM Go bindings](https://github.com/agntcy/slim-bindings-go) wrap a Rust l
 - **Cross-compilation becomes painful**
 - **Build times increase significantly**
 
-But there's an even bigger challenge: **end-user distribution**. We wanted to ensure that applications built using our Go library could be distributed as single, self-contained binaries—without requiring end users to install any native libraries on their systems.
+But there's an even bigger challenge: **end-user distribution**. We wanted to ensure that applications built using our Go library could be distributed as single, self-contained binaries—without requiring end users to install additional native libraries on their systems.
 
 This is a common pain point: you want the performance and safety of Rust/C++ with the simplicity of Go's distribution model, while maintaining Go's promise of "compile once, run anywhere" binaries.
 
@@ -91,9 +91,23 @@ The foundation of our approach is using **static libraries** (`.a` files). This 
 ┌─────────────────────────────────────────────────────────┐
 │  Build Time (Developer Machine)                         │
 ├─────────────────────────────────────────────────────────┤
-│  ✓ Needs: libslim_bindings_*.a                         │
+│  ✓ Needs: libslim_bindings_*.a (static library)        │
 │  ✓ Needs: Go compiler + CGO enabled                    │
-│  ✓ Links native code into Go binary                    │
+│  ✓ Needs: C compiler (for CGO)                         │
+│  ✓ Statically links SLIM code into Go binary           │
+└─────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+                    [go build -o myapp]
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  Output: myapp (single binary)                          │
+├─────────────────────────────────────────────────────────┤
+│  Contains:                                              │
+│  • Go code                                              │
+│  • SLIM native code (embedded from .a file)             │
+│  • Links to standard system libraries only              │
 └─────────────────────────────────────────────────────────┘
                             │
                             ▼
@@ -101,15 +115,17 @@ The foundation of our approach is using **static libraries** (`.a` files). This 
 │  Deployment (End User Machine)                          │
 ├─────────────────────────────────────────────────────────┤
 │  ✓ Only needs: myapp (single binary)                   │
-│  ✗ Does NOT need: Any .so/.dylib/.dll files            │
-│  ✗ Does NOT need: SLIM installed                       │
-│  ✗ Does NOT need: Any native libraries                 │
+│  ✓ Only needs: Standard OS libraries (glibc, etc.)     │
+│  ✗ Does NOT need: libslim_bindings_*.a                 │
+│  ✗ Does NOT need: .so/.dylib/.dll files                │
+│  ✗ Does NOT need: SLIM installed separately            │
+│  ✗ Does NOT need: Any project-specific libraries       │
 └─────────────────────────────────────────────────────────┘
 ```
 
 **Why Static Linking?**
-- **Self-contained binaries**: All native code is embedded in the Go executable
-- **No runtime dependencies**: End users don't need to install anything
+- **Self-contained binaries**: All SLIM native code is embedded in the Go executable
+- **No additional runtime dependencies**: End users don't need to install additional libraries (beyond standard system libraries like glibc)
 - **Version consistency**: No risk of library version mismatches at runtime
 - **Simplified deployment**: True "compile once, deploy anywhere" for the target platform
 
@@ -290,7 +306,7 @@ Then continue with your build:
 # 3. Build your application (native code gets statically linked)
 go build -o myapp
 
-# 4. Deploy the single binary (no runtime dependencies!)
+# 4. Deploy the single binary (no additional runtime dependencies!)
 ./myapp
 ```
 
@@ -379,7 +395,7 @@ We use this two-repository approach because Go uses code repositories for distri
 
 ## Advantages of This Approach
 
-1. **No Runtime Dependencies**: End users don't need any native libraries installed—binaries are self-contained
+1. **No Additional Runtime Dependencies**: End users don't need to install additional native libraries—binaries are self-contained (standard system libraries like glibc are still required)
 2. **No Build Toolchain Required for Developers**: Developers don't need Rust, C compilers (beyond what CGO needs), or complex build dependencies
 3. **Fast Installation**: Download pre-compiled static libraries instead of compiling from source
 4. **Version Pinning**: Go modules naturally version-pin the setup tool and library version together
@@ -429,7 +445,7 @@ We use this two-repository approach because Go uses code repositories for distri
 
 Distributing C artifacts for Go modules requires balancing simplicity, security, and deployment models. Our approach using **static linking** with GitHub Releases and a setup tool provides:
 
-- **Zero runtime dependencies** for end users
+- **No additional runtime dependencies** for end users (beyond standard system libraries)
 - **Developer-friendly** installation process  
 - **Fast** download and setup
 - **Transparent** and auditable
