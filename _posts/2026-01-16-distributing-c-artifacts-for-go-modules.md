@@ -67,8 +67,8 @@ We then developed a two-part solution for the build-time requirements:
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Extracts to Cache Directory:                           │
-│  ~/.cache/slim-bindings/                                │
+│  Extracts to $GOPATH Cache Directory:                   │
+│  $GOPATH/.cgo-cache/slim-bindings/                      │
 │    libslim_bindings_aarch64_apple_darwin.a              │
 └─────────────────────────────────────────────────────────┘
                             │
@@ -76,7 +76,7 @@ We then developed a two-part solution for the build-time requirements:
 ┌─────────────────────────────────────────────────────────┐
 │  CGO Flags Reference Cache Location:                    │
 │  #cgo darwin,arm64 LDFLAGS:                             │
-│    -L${SRCDIR}/../../.cache/slim-bindings               │
+│    -L${SRCDIR}/../../../../.cgo-cache/slim-bindings     │
 │    -lslim_bindings_aarch64_darwin                       │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -148,33 +148,33 @@ func GetTarget(goos, arch string) string {
 
 ### 3. Cache Directory Strategy
 
-We use the XDG Base Directory standard for cache location:
+We store the static libraries in `$GOPATH/.cgo-cache/slim-bindings`. This keeps our artifacts separate from Go's protected module cache while still being relative to `$GOPATH`, which allows us to navigate safely from the module cache where the source is stored by `go get` when using the libraries as a downstream dependency.
 
 ```go
 func GetCacheDir() (string, error) {
-    cacheHome := os.Getenv("XDG_CACHE_HOME")
-    if cacheHome == "" {
-        home, err := os.UserHomeDir()
-        if err != nil {
-            return "", err
-        }
-
-        switch runtime.GOOS {
-        case "windows":
-            cacheHome = filepath.Join(home, "AppData", "Local")
-        default:
-            cacheHome = filepath.Join(home, ".cache")
-        }
+    // Get GOPATH using build.Default which handles the default correctly
+    gopath := build.Default.GOPATH
+    if gopath == "" {
+        return "", fmt.Errorf("GOPATH is not set")
     }
 
-    return filepath.Join(cacheHome, "slim-bindings"), nil
+    // Use our own .cgo-cache directory within GOPATH
+    // We can't use pkg/mod/* because those directories are readonly/protected by lockfiles
+    return filepath.Join(gopath, ".cgo-cache", "slim-bindings"), nil
 }
 ```
 
-**Cache Locations by Platform:**
-- **Linux**: `~/.cache/slim-bindings/`
-- **macOS**: `~/.cache/slim-bindings/`
-- **Windows**: `%LOCALAPPDATA%\slim-bindings\`
+**Why $GOPATH/.cgo-cache Instead of pkg/mod?**
+- **Write permissions**: The `pkg/mod` directories are readonly and protected by lockfiles
+- **Separation of concerns**: Our CGO artifacts are separate from Go's module cache
+- **Consistency**: Go module cache is always relative to `$GOPATH`
+- **Non-home installations**: `$GOPATH` can be set to any location (e.g., `/opt/go`, `/usr/local/go`)
+- **Build environment isolation**: Works in Docker, CI/CD, and custom build environments
+- **Standard Go tooling**: Uses `build.Default.GOPATH` which respects Go's default behavior
+
+**Cache Location:**
+- **Path**: `$GOPATH/.cgo-cache/slim-bindings/`
+- **Example**: If `GOPATH=/opt/go`, libraries are in `/opt/go/.cgo-cache/slim-bindings/`
 
 ### 4. CGO Linker Flags for Static Linking
 
@@ -183,11 +183,11 @@ The Go source file includes platform-specific CGO directives that reference the 
 ```go
 /*
 #cgo CFLAGS: -I${SRCDIR}
-#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/../../../../../../.cache/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_linux_gnu -lm
-#cgo linux,arm64 LDFLAGS: -L${SRCDIR}/../../../../../../.cache/slim-bindings -L${SRCDIR} -lslim_bindings_aarch64_linux_gnu -lm
-#cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/../../../../../../.cache/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_darwin -Wl,-undefined,dynamic_lookup
-#cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/../../../../../../.cache/slim-bindings -L${SRCDIR} -lslim_bindings_aarch64_darwin -Wl,-undefined,dynamic_lookup
-#cgo windows,amd64 LDFLAGS: -L${SRCDIR}/../../../../../../AppData/Local/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_windows_gnu -lws2_32 -lbcrypt -ladvapi32 -luserenv -lntdll -lgcc_eh -lgcc -lkernel32 -lole32
+#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/../../../../.cgo-cache/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_linux_gnu -lm
+#cgo linux,arm64 LDFLAGS: -L${SRCDIR}/../../../../.cgo-cache/slim-bindings -L${SRCDIR} -lslim_bindings_aarch64_linux_gnu -lm
+#cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/../../../../.cgo-cache/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_darwin -Wl,-undefined,dynamic_lookup
+#cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/../../../../.cgo-cache/slim-bindings -L${SRCDIR} -lslim_bindings_aarch64_darwin -Wl,-undefined,dynamic_lookup
+#cgo windows,amd64 LDFLAGS: -L${SRCDIR}/../../../../.cgo-cache/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_windows_gnu -lws2_32 -lbcrypt -ladvapi32 -luserenv -lntdll -lgcc_eh -lgcc -lkernel32 -lole32
 #include <slim_bindings.h>
 */
 import "C"
@@ -195,7 +195,7 @@ import "C"
 
 **Key Points:**
 - `${SRCDIR}` is a CGO variable that points to the directory containing the Go source file
-- We use relative paths to traverse up to the home directory, then down to `.cache`
+- We use relative paths to traverse up to `$GOPATH`, then down to `.cgo-cache/slim-bindings`
 - Platform-specific flags ensure the correct library variant is linked
 - The `-l` flag links against `.a` files (static archives), not dynamic libraries
 - The linker automatically embeds the static library code into the final Go binary
@@ -203,7 +203,7 @@ import "C"
 
 **Static Linking in Action:**
 When you run `go build`, CGO:
-1. Finds `libslim_bindings_*.a` in the cache directory
+1. Finds `libslim_bindings_*.a` in the `$GOPATH/.cgo-cache/slim-bindings/` directory
 2. Extracts all object files from the static archive
 3. Links them directly into your Go binary
 4. Results in a single executable with no external native library dependencies
@@ -292,7 +292,7 @@ Target:   aarch64-apple-darwin
    Platform: aarch64-apple-darwin
    URL:      https://github.com/agntcy/slim/releases/download/...
    Extracted: libslim_bindings_aarch64_apple_darwin.a (12.3 MB)
-✅ Library installed to: /Users/username/.cache/slim-bindings
+✅ Library installed to: $GOPATH/.cgo-cache/slim-bindings
 
 ✅ Setup complete! You can now build Go projects using SLIM bindings.
 ```
