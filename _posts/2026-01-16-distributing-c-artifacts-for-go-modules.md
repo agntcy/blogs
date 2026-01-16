@@ -390,17 +390,6 @@ Platforms:
 **Pros:** Can be automatic
 **Cons:** Security concerns with running arbitrary scripts, harder to audit
 
-## Future Improvements
-
-We're considering several enhancements:
-
-1. **Automatic Setup Check**: Add init code that verifies the library is installed and prints helpful error messages
-2. **Checksums**: Include SHA256 checksums in release notes for verification
-3. **Signature Verification**: Sign releases with GPG or sigstore for supply chain security
-4. **Auto-Detection of Musl**: Better detection of musl-based Linux systems
-5. **Vendoring Option**: Allow optional embedding of libraries for airgapped environments
-6. **Module Tooling**: Investigate go:embed or go:generate approaches for automation
-
 ## Conclusion
 
 Distributing C artifacts for Go modules requires balancing simplicity, security, and deployment models. Our approach using **static linking** with GitHub Releases and a setup tool provides:
