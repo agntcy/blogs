@@ -1,0 +1,351 @@
+---
+layout: post
+title: "Distributing C Artifacts for Go Modules: A Practical Approach"
+date: 2026-01-16 10:00:00 +0000
+author: Sam Betts
+categories: technical
+tags: [go, cgo, rust, slim, bindings, artifacts]
+---
+
+When building Go modules that depend on C/C++/Rust libraries via CGO, one of the biggest challenges is distribution. How do you ensure users can simply `go get` your module without needing complex build toolchains? This post explores our solution for distributing pre-compiled C artifacts for Go modules, using the SLIM Go bindings as a case study.
+
+<!--more-->
+
+## The Challenge: CGO Dependencies
+
+The [SLIM Go bindings](https://github.com/agntcy/slim-bindings-go) wrap a Rust library that provides secure messaging capabilities. While Go's CGO makes it possible to call native libraries, it creates a distribution problem:
+
+- **Users need a C compiler** (gcc, clang, etc.)
+- **They need the native library** already built for their platform
+- **Cross-compilation becomes painful**
+- **Build times increase significantly**
+
+This is a common pain point: you want the performance and safety of Rust/C++ with the simplicity of Go's distribution model.
+
+## Our Solution: GitHub Releases + Setup Tool
+
+We developed a two-part solution:
+
+1. **Pre-compiled libraries hosted on GitHub Releases**
+2. **A lightweight setup tool users run once**
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  User runs: go get github.com/agntcy/slim-bindings-go  │
+└─────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  User runs: go run .../cmd/slim-bindings-setup          │
+└─────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+         ┌──────────────────┴──────────────────┐
+         │  Setup Tool Detects Platform         │
+         │  - OS: darwin/linux/windows          │
+         │  - Arch: amd64/arm64                 │
+         └──────────────────┬──────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  Downloads from GitHub Release:                         │
+│  github.com/agntcy/slim/releases/download/              │
+│    slim-bindings-libs-v0.7.2/                           │
+│    slim-bindings-aarch64-apple-darwin.zip               │
+└─────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  Extracts to Cache Directory:                           │
+│  ~/.cache/slim-bindings/                                │
+│    libslim_bindings_aarch64_apple_darwin.a              │
+└─────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────┐
+│  CGO Flags Reference Cache Location:                    │
+│  #cgo darwin,arm64 LDFLAGS:                             │
+│    -L${SRCDIR}/../../.cache/slim-bindings               │
+│    -lslim_bindings_aarch64_darwin                       │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Implementation Details
+
+### 1. Platform Detection
+
+The setup tool automatically detects the user's platform:
+
+```go
+func GetTarget(goos, arch string) string {
+    if goos == "" {
+        goos = runtime.GOOS
+    }
+    if arch == "" {
+        arch = runtime.GOARCH
+    }
+
+    switch goos {
+    case "darwin":
+        if arch == "arm64" {
+            return "aarch64-apple-darwin"
+        }
+        return "x86_64-apple-darwin"
+    case "linux":
+        if arch == "arm64" {
+            return "aarch64-unknown-linux-gnu"
+        }
+        return "x86_64-unknown-linux-gnu"
+    case "windows":
+        return "x86_64-pc-windows-gnu"
+    }
+    return fmt.Sprintf("%s-unknown-%s", arch, goos)
+}
+```
+
+### 2. Cache Directory Strategy
+
+We use the XDG Base Directory standard for cache location:
+
+```go
+func GetCacheDir() (string, error) {
+    cacheHome := os.Getenv("XDG_CACHE_HOME")
+    if cacheHome == "" {
+        home, err := os.UserHomeDir()
+        if err != nil {
+            return "", err
+        }
+
+        switch runtime.GOOS {
+        case "windows":
+            cacheHome = filepath.Join(home, "AppData", "Local")
+        default:
+            cacheHome = filepath.Join(home, ".cache")
+        }
+    }
+
+    return filepath.Join(cacheHome, "slim-bindings"), nil
+}
+```
+
+**Cache Locations by Platform:**
+- **Linux**: `~/.cache/slim-bindings/`
+- **macOS**: `~/.cache/slim-bindings/`
+- **Windows**: `%LOCALAPPDATA%\slim-bindings\`
+
+### 3. CGO Linker Flags
+
+The Go source file includes platform-specific CGO directives that reference the cache directory:
+
+```go
+/*
+#cgo CFLAGS: -I${SRCDIR}
+#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/../../../../../../.cache/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_linux_gnu -lm
+#cgo linux,arm64 LDFLAGS: -L${SRCDIR}/../../../../../../.cache/slim-bindings -L${SRCDIR} -lslim_bindings_aarch64_linux_gnu -lm
+#cgo darwin,amd64 LDFLAGS: -L${SRCDIR}/../../../../../../.cache/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_darwin -Wl,-undefined,dynamic_lookup
+#cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/../../../../../../.cache/slim-bindings -L${SRCDIR} -lslim_bindings_aarch64_darwin -Wl,-undefined,dynamic_lookup
+#cgo windows,amd64 LDFLAGS: -L${SRCDIR}/../../../../../../AppData/Local/slim-bindings -L${SRCDIR} -lslim_bindings_x86_64_windows_gnu -lws2_32 -lbcrypt -ladvapi32 -luserenv -lntdll -lgcc_eh -lgcc -lkernel32 -lole32
+#include <slim_bindings.h>
+*/
+import "C"
+```
+
+**Key Points:**
+- `${SRCDIR}` is a CGO variable that points to the directory containing the Go source file
+- We use relative paths to traverse up to the home directory, then down to `.cache`
+- Platform-specific flags ensure the correct library variant is linked
+- Additional system libraries (`-lm`, `-lws2_32`, etc.) are included as needed
+
+### 4. Download from GitHub Releases
+
+The setup tool downloads pre-compiled libraries from GitHub Releases:
+
+```go
+func DownloadLibrary(target string) error {
+    version := Version() // Gets version from go.mod
+    
+    url := fmt.Sprintf(
+        "https://github.com/agntcy/slim/releases/download/slim-bindings-libs-%s/slim-bindings-%s.zip",
+        version, target,
+    )
+    
+    // Download zip file
+    resp, err := http.Get(url)
+    // ... error handling ...
+    
+    // Extract .a files to cache directory
+    // ... extraction logic ...
+}
+```
+
+**Release Structure:**
+```
+slim-bindings-libs-v0.7.2/
+├── slim-bindings-aarch64-apple-darwin.zip
+│   └── libslim_bindings_aarch64_apple_darwin.a
+├── slim-bindings-x86_64-apple-darwin.zip
+│   └── libslim_bindings_x86_64_apple_darwin.a
+├── slim-bindings-aarch64-unknown-linux-gnu.zip
+│   └── libslim_bindings_aarch64_linux_gnu.a
+├── slim-bindings-x86_64-unknown-linux-gnu.zip
+│   └── libslim_bindings_x86_64_linux_gnu.a
+├── slim-bindings-aarch64-unknown-linux-musl.zip
+│   └── libslim_bindings_aarch64_linux_musl.a
+├── slim-bindings-x86_64-unknown-linux-musl.zip
+│   └── libslim_bindings_x86_64_linux_musl.a
+└── slim-bindings-x86_64-pc-windows-gnu.zip
+    └── libslim_bindings_x86_64_windows_gnu.a
+```
+
+### 5. User Experience
+
+From a user's perspective, the workflow is simple:
+
+```bash
+# 1. Install the module
+go get github.com/agntcy/slim-bindings-go
+
+# 2. Run the setup tool (one-time)
+go run github.com/agntcy/slim-bindings-go/cmd/slim-bindings-setup
+
+# 3. Use the module in your code
+```
+
+Example output:
+
+```
+╔═══════════════════════════════════════════════════════════╗
+║              SLIM Bindings Setup                          ║
+╚═══════════════════════════════════════════════════════════╝
+
+Version:  v0.7.2
+Platform: darwin/arm64
+Target:   aarch64-apple-darwin
+
+📦 Downloading SLIM bindings library...
+   Version:  v0.7.2
+   Platform: aarch64-apple-darwin
+   URL:      https://github.com/agntcy/slim/releases/download/...
+   Extracted: libslim_bindings_aarch64_apple_darwin.a (12.3 MB)
+✅ Library installed to: /Users/username/.cache/slim-bindings
+
+✅ Setup complete! You can now build Go projects using SLIM bindings.
+```
+
+## Supported Platforms
+
+We support 7 platform combinations out of the box:
+
+| OS      | Architecture | Target Triple                      | Library File                               |
+|---------|--------------|------------------------------------|--------------------------------------------|
+| Linux   | amd64        | x86_64-unknown-linux-gnu           | libslim_bindings_x86_64_linux_gnu.a        |
+| Linux   | arm64        | aarch64-unknown-linux-gnu          | libslim_bindings_aarch64_linux_gnu.a       |
+| Linux   | amd64 (musl) | x86_64-unknown-linux-musl          | libslim_bindings_x86_64_linux_musl.a       |
+| Linux   | arm64 (musl) | aarch64-unknown-linux-musl         | libslim_bindings_aarch64_linux_musl.a      |
+| macOS   | amd64        | x86_64-apple-darwin                | libslim_bindings_x86_64_apple_darwin.a     |
+| macOS   | arm64        | aarch64-apple-darwin               | libslim_bindings_aarch64_apple_darwin.a    |
+| Windows | amd64        | x86_64-pc-windows-gnu              | libslim_bindings_x86_64_windows_gnu.a      |
+
+## Building the Release Artifacts
+
+The artifacts are built using a CI/CD pipeline in the main SLIM repository. Here's the general process:
+
+1. **Cross-compile Rust library** for all target platforms using `cross` or `cargo build --target`
+2. **Generate C bindings** using UniFFI
+3. **Create static libraries** (`.a` files)
+4. **Package per platform** into zip files
+5. **Upload to GitHub Release** with version tag
+
+Example commit message from our releases:
+
+```
+Release v0.7.2
+
+Generated from https://github.com/agntcy/slim/commit/a51521ea
+
+Platforms:
+- linux/amd64 (x86_64-unknown-linux-gnu)
+- linux/arm64 (aarch64-unknown-linux-gnu)
+- linux/amd64-musl (x86_64-unknown-linux-musl)
+- linux/arm64-musl (aarch64-unknown-linux-musl)
+- darwin/arm64 (aarch64-apple-darwin)
+- darwin/amd64 (x86_64-apple-darwin)
+- windows/amd64 (x86_64-pc-windows-msvc)
+```
+
+## Advantages of This Approach
+
+1. **No Build Toolchain Required**: Users don't need Rust, C compilers, or complex build dependencies
+2. **Fast Installation**: Download pre-compiled binaries instead of compiling from source
+3. **Version Pinning**: Go modules naturally version-pin the setup tool and library version together
+4. **Cross-Platform**: Works consistently across Linux, macOS, and Windows
+5. **Transparent**: Users can see exactly what's being downloaded and where it's stored
+6. **Cache-Friendly**: Standard cache directories integrate with system cleanup tools
+
+## Limitations and Trade-offs
+
+1. **Manual Setup Step**: Users must run the setup tool once (not fully automatic)
+2. **Storage Overhead**: Each platform variant is ~10-15 MB
+3. **Platform Coverage**: Need to pre-build for all target platforms
+4. **Musl vs GNU libc**: Linux users need to pick the right variant (though we detect this)
+5. **Trust Model**: Users trust our GitHub Release artifacts
+
+## Alternative Approaches We Considered
+
+### 1. Embed Libraries in Git Repository
+
+**Pros:** Fully automatic, works with `go get`
+**Cons:** Bloats repository size, problematic for Git LFS, multiple platform variants
+
+### 2. Build from Source
+
+**Pros:** Maximum flexibility, no trust issues
+**Cons:** Requires Rust toolchain, very slow, compilation failures
+
+### 3. Separate Binary Distribution
+
+**Pros:** Can use OS package managers
+**Cons:** Breaks Go's module system, complex installation instructions
+
+### 4. Go Generate with Download Script
+
+**Pros:** Can be automatic
+**Cons:** Security concerns with running arbitrary scripts, harder to audit
+
+## Future Improvements
+
+We're considering several enhancements:
+
+1. **Automatic Setup Check**: Add init code that verifies the library is installed and prints helpful error messages
+2. **Checksums**: Include SHA256 checksums in release notes for verification
+3. **Signature Verification**: Sign releases with GPG or sigstore for supply chain security
+4. **Auto-Detection of Musl**: Better detection of musl-based Linux systems
+5. **Vendoring Option**: Allow optional embedding of libraries for airgapped environments
+6. **Module Tooling**: Investigate go:embed or go:generate approaches for automation
+
+## Conclusion
+
+Distributing C artifacts for Go modules requires balancing simplicity, security, and user experience. Our approach using GitHub Releases and a setup tool provides:
+
+- **Developer-friendly** installation process
+- **Fast** download and setup
+- **Transparent** and auditable
+- **Cross-platform** support
+
+While not perfect, it solves the core problem: users can start using CGO-based Go modules without needing complex build toolchains.
+
+The SLIM Go bindings demonstrate this approach in production. If you're building Go modules with native dependencies, feel free to adapt this pattern for your own projects.
+
+## References
+
+- [SLIM Go Bindings Repository](https://github.com/agntcy/slim-bindings-go)
+- [SLIM Main Repository](https://github.com/agntcy/slim)
+- [UniFFI - Unified Foreign Function Interface](https://mozilla.github.io/uniffi-rs/)
+- [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
+- [CGO Documentation](https://pkg.go.dev/cmd/cgo)
+
+---
+
+*Have questions about this approach or want to discuss alternative solutions? Join our [Slack community](https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ) or check out our [GitHub](https://github.com/agntcy).*
