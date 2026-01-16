@@ -317,18 +317,28 @@ We support 7 platform combinations out of the box:
 
 ## Building the Release Artifacts
 
-The artifacts are built using a CI/CD pipeline in the main SLIM repository. Here's the general process:
+The release process is split into two phases: building the native libraries in the SLIM repository, and generating/distributing the Go bindings in the slim-bindings-go repository.
+
+### Phase 1: Native Library Build (SLIM Repository)
+
+The CI/CD pipeline in the [main SLIM repository](https://github.com/agntcy/slim) handles cross-compilation of the Rust library:
 
 1. **Cross-compile Rust library** for all target platforms using `cross` or `cargo build --target`
-2. **Generate C bindings** using UniFFI
-3. **Create static libraries** (`.a` files)
-4. **Package per platform** into zip files
-5. **Upload to GitHub Release** with version tag
+   - Targets: `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `x86_64-apple-darwin`, etc.
+   - Produces static library archives (`.a` files)
 
-Example commit message from our releases:
+2. **Package per platform** into zip files
+   - Each platform gets its own zip: `slim-bindings-{target}.zip`
+   - Contains the static library: `libslim_bindings_{normalized_target}.a`
+
+3. **Upload to GitHub Release** with version tag
+   - Release tag: `slim-bindings-libs-v0.7.2`
+   - All platform zips attached to the release
+
+Example release in the SLIM repository:
 
 ```
-Release v0.7.2
+Release: slim-bindings-libs-v0.7.2
 
 Generated from https://github.com/agntcy/slim/commit/a51521ea
 
@@ -340,7 +350,32 @@ Platforms:
 - darwin/arm64 (aarch64-apple-darwin)
 - darwin/amd64 (x86_64-apple-darwin)
 - windows/amd64 (x86_64-pc-windows-msvc)
+
+Assets:
+- slim-bindings-x86_64-unknown-linux-gnu.zip
+- slim-bindings-aarch64-unknown-linux-gnu.zip
+- ... (one per platform)
 ```
+
+### Phase 2: Go Bindings Generation (slim-bindings-go Repository)
+
+After the native libraries are built, the Go bindings are generated and published:
+
+1. **Generate Go bindings** using [UniFFI](https://mozilla.github.io/uniffi-rs/)
+   - UniFFI reads the Rust library and generates Go code
+   - Produces: `slim_bindings.go` (Go wrapper code)
+   - Produces: `slim_bindings.h` (C header file)
+
+2. **Copy artifacts to distribution repo**
+   - Generated Go code → `github.com/agntcy/slim-bindings-go/slim_bindings.go`
+   - Header file → `github.com/agntcy/slim-bindings-go/slim_bindings.h`
+   - Setup tool → `github.com/agntcy/slim-bindings-go/cmd/slim-bindings-setup/`
+
+3. **Cut matching version tag**
+   - Tag in slim-bindings-go: `v0.7.2` (matches the library version)
+   - Go module version: `github.com/agntcy/slim-bindings-go@v0.7.2`
+
+We use this two-repository approach because Go uses code repositories for distribution via `go get`. The main SLIM repository is a Rust project with its own structure and dependencies—it doesn't make sense to use it as a Go module distribution point. By maintaining a separate slim-bindings-go repository, we provide a clean Go module that developers can import without pulling in the entire SLIM codebase.
 
 ## Advantages of This Approach
 
