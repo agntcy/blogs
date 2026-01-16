@@ -28,12 +28,9 @@ communication and dynamic discovery.
 The Tourist Scheduling System models a bustling travel marketplace. Instead of
 rigid algorithms, we have autonomous agents acting with intent:
 
-*   **Tourist Agents**: The demanding travelers. They have budgets, specific
-    interests (like "Architecture" or "Food"), and tight schedules.
-*   **Guide Agents**: The local experts. They have specialties, hourly rates,
-    and limited availability.
-*   **Scheduler Agent**: The ultimate matchmaker. It's the central hub that
-    listens to everyone and orchestrates the perfect itinerary.
+* **Tourist Agents**: The demanding travelers. They have budgets, specific interests (like "Architecture" or "Food"), and tight schedules.
+* **Guide Agents**: The local experts. They have specialties, hourly rates, and limited availability.
+* **Scheduler Agent**: The ultimate matchmaker. It's the central hub that listens to everyone and orchestrates the perfect itinerary.
 
 This goes beyond a simple chat simulation. It's a living, breathing distributed
 system featuring **Dynamic Service Discovery**, **[Secure Agent-to-Agent (A2A)
@@ -93,19 +90,18 @@ Each agent in our system is a specialized Python class inheriting from [ADK](htt
 `LlmAgent`. But an agent is only as good as its tools.
 
 #### The Scheduler: The Brains of the Operation
+
 The Scheduler Agent (`src/agents/scheduler_agent.py`) is the heavy lifter.
 Instead of a single prompt doing everything, we equipped it with precise
 **Tools**:
-*   **Request Parser** (`register_tourist_request`): Translates "I want a cheap
-    art tour on Monday" into structured JSON constraints.
-*   **Guide Onboarding** (`register_guide_offer`): Registers new guides,
-    capturing their niche expertise and rates.
-*   **The Matchmaker** (`run_scheduling`): Executes a greedy matching algorithm
-    that optimizes for budget and interest overlap.
-*   **Status Reporter** (`get_schedule_status`): Provides real-time visibility
-    into the system's state.
+
+* **Request Parser** (`register_tourist_request`): Translates "I want a cheap art tour on Monday" into structured JSON constraints.
+* **Guide Onboarding** (`register_guide_offer`): Registers new guides, capturing their niche expertise and rates.
+* **The Matchmaker** (`run_scheduling`): Executes a greedy matching algorithm that optimizes for budget and interest overlap.
+* **Status Reporter** (`get_schedule_status`): Provides real-time visibility into the system's state.
 
 #### The Dashboard Agent: The Face
+
 While the Scheduler handles the logic, the **Dashboard Agent**
 (`src/agents/ui_agent.py`) translates the system's state for human consumption.
 It communicates with the Flutter frontend using the **[A2UI
@@ -114,14 +110,11 @@ how agents stream generative UI components to client applications, allowing for
 dynamic, rich interfaces that update in real-time.
 
 #### The A2A Protocol
+
 How do these agents find each other?
-1.  **Discovery**: No hard-coded IPs here. Agents publish their "Business Cards"
-to the **[Agent Directory](https://github.com/agntcy/dir)** and look up the Scheduler dynamically.
-2.  **Transport**: They communicate via the [A2A
-protocol](https://github.com/a2aproject/a2a-python). We use
-**[SLIM](https://github.com/agntcy/slim)**
-(Secure Low Latency Interactive Messaging) to ensure every message is encrypted
-and authenticated via MLS. It's like a VIP line for your AI agents.
+
+1. **Discovery**: No hard-coded IPs here. Agents publish their "Business Cards" to the **[Agent Directory](https://github.com/agntcy/dir)** and look up the Scheduler dynamically.
+2. **Transport**: They communicate via the [A2A protocol](https://github.com/a2aproject/a2a-python). We use **[SLIM](https://github.com/agntcy/slim)** to ensure every message is encrypted and authenticated via MLS. It's like a VIP line for your AI agents.
 
 ### 3. The Live Performance
 
@@ -503,15 +496,10 @@ A2UI_SCHEMA = """
 
 ## 🌟 Why This Matters
 
-1.  **Decoupled Architecture**: Agents don’t need to know *where* other agents
-are running, just *what* they can do.
-2.  **Secure Communication**: **SLIM** ensures that every message is encrypted
-and authenticated. You know exactly who is talking to whom.
-3.  **X-Ray Vision**: Distributed tracing with **Jaeger** lets you see the
-"thought process" of your entire swarm. Pinpoint latency and debug negotiation
-failures with surgical precision.
-4.  **Human Command Center**: The **Dashboard** keeps humans in the loop,
-providing a real-time view of the marketplace without requiring micromanagement.
+1. **Decoupled Architecture**: Agents don’t need to know *where* other agents are running, just *what* they can do.
+2. **Secure Communication**: **SLIM** ensures that every message is encrypted and authenticated. You know exactly who is talking to whom.
+3. **X-Ray Vision**: Distributed tracing with **Jaeger** lets you see the "thought process" of your entire swarm. Pinpoint latency and debug negotiation failures with surgical precision.
+4. **Human Command Center**: The **Dashboard** keeps humans in the loop, providing a real-time view of the marketplace without requiring micromanagement.
 
 ## 🚀 Hands-On: Run the System Locally
 
@@ -520,10 +508,11 @@ straightforward. We use Docker to host the heavy infrastructure (SLIM, Jaeger,
 Directory) while running the agents as agile local processes.
 
 ### Prerequisites
-*   Python 3.12+
-*   [UV](https://github.com/astral-sh/uv) package manager
-*   Docker
-*   An API Key for Azure OpenAI or Google Gemini
+
+* Python 3.12+
+* [UV](https://github.com/astral-sh/uv) package manager
+* Docker
+* An API Key for Azure OpenAI or Google Gemini
 
 ### Step 1: Set the Stage
 
@@ -544,6 +533,7 @@ uv sync
 Export your LLM credentials.
 
 **For Google Gemini:**
+
 ```bash
 export MODEL_PROVIDER="gemini"
 export GOOGLE_GEMINI_API_KEY="your-google-api-key"
@@ -552,6 +542,7 @@ export MODEL_NAME="gemini/gemini-3-pro-preview"
 ```
 
 **Or for Azure OpenAI:**
+
 ```bash
 export MODEL_PROVIDER="azure"
 export AZURE_OPENAI_API_KEY="your-key"
@@ -591,7 +582,7 @@ Jaeger.
 It's helpful to understand how the project is organized. Here's a look at the
 key directories:
 
-```
+```text
 tourist_scheduling_system/
 ├── src/
 │   ├── agents/                  # The core agent logic
@@ -620,17 +611,21 @@ tourist_scheduling_system/
 The repository includes a set of bash scripts to simplify this process:
 
 #### `setup.sh`
+
 This is your infrastructure manager. It spins up the necessary containers for
 SLIM, Jaeger, and the Directory.
-*   **Start Infrastructure**: `./setup.sh start`
-*   **Stop Infrastructure**: `./setup.sh stop`
-*   **Clean Up**: `./setup.sh clean` (removes containers and volumes)
+
+* **Start Infrastructure**: `./setup.sh start`
+* **Stop Infrastructure**: `./setup.sh stop`
+* **Clean Up**: `./setup.sh clean` (removes containers and volumes)
 
 #### `run.sh`
+
 This script launches the actual Multi-Agent System. It runs the Scheduler,
 Dashboard, and simulated Guides and Tourists.
 
 **Basic Usage:**
+
 ```bash
 # Run with SLIM secure transport
 source run.sh --transport slim
@@ -640,16 +635,18 @@ source run.sh --transport http
 ```
 
 **Advanced Parameters:**
-*   `--tracing`: Enable OpenTelemetry tracing (requires `./setup.sh start` first).
-*   `--guides N`: Simulate N guide agents (default: 2).
-*   `--tourists N`: Simulate N tourist agents (default: 3).
-*   `--duration N`: Run the demo for N minutes (0 = run once).
-*   `--real-agents`: Use fully autonomous ADK agents instead of simplified simulators.
-*   `--provider [azure|google]`: Switch LLM providers dynamically.
+
+* `--tracing`: Enable OpenTelemetry tracing (requires `./setup.sh start` first).
+* `--guides N`: Simulate N guide agents (default: 2).
+* `--tourists N`: Simulate N tourist agents (default: 3).
+* `--duration N`: Run the demo for N minutes (0 = run once).
+* `--real-agents`: Use fully autonomous ADK agents instead of simplified simulators.
+* `--provider [azure|google]`: Switch LLM providers dynamically.
 
 **Example: Scale Up Test**
 To run a larger simulation with 5 tourists and 5 guides using Gemini Pro, with
 full tracing:
+
 ```bash
 source run.sh \
   --transport slim \
@@ -658,23 +655,29 @@ source run.sh \
   --tourists 5 \
   --provider google
 ```
+
 ### 🖥️ Running the Frontend (Optional)
 
 For a richer, visual experience, the system includes a modern Flutter-based
 dashboard.
 
 **Prerequisites:**
-*   [Flutter SDK](https://docs.flutter.dev/get-started/install) installed.
+
+* [Flutter SDK](https://docs.flutter.dev/get-started/install) installed.
 
 **Launch Instructions:**
-1.  Ensure the backend agents are running (see above).
-2.  Open a new terminal and run:
+
+1. Ensure the backend agents are running (see above).
+2. Open a new terminal and run:
+
     ```bash
     cd frontend
     ./setup.sh
     flutter run -d web-server --web-port 8080
     ```
-3.  Open `http://localhost:8080` to view the live dashboard.
+
+3. Open `http://localhost:8080` to view the live dashboard.
+
 ## 📊 Observability: Logs and Traces
 
 Debugging distributed agents can be challenging. To solve this, the system
@@ -686,21 +689,18 @@ includes a comprehensive telemetry stack powered by **OpenTelemetry** and
 When you enable tracing (via the `--tracing` flag or the SLIM configuration),
 every agent interaction is recorded as a "span" in a distributed trace.
 
-*   **Global Context**: See the entire request lifecycle, starting from the
-*   Tourist's initial request to the Scheduler, through the internal tool calls
-*   (`register_tourist_request`), and finally to the Guide's confirmation.
-*   **Performance Bottlenecks**: Identify which part of the negotiation process
-*   is slow (e.g., latency in LLM generation vs. network transport).
-*   **Error Diagnosis**: Pinpoint exactly where a negotiation failed (e.g., did
-*   the Guide reject the budget, or did the Scheduler fail to find a match?).
+* **Global Context**: See the entire request lifecycle, starting from the Tourist's initial request to the Scheduler, through the internal tool calls (`register_tourist_request`), and finally to the Guide's confirmation.
+* **Performance Bottlenecks**: Identify which part of the negotiation process is slow (e.g., latency in LLM generation vs. network transport).
+* **Error Diagnosis**: Pinpoint exactly where a negotiation failed (e.g., did the Guide reject the budget, or did the Scheduler fail to find a match?).
 
 ### Structured Logging
 
 In addition to traces, each agent process generates detailed structured logs.
 These logs capture:
-*   **Agent Decisions**: Why did an agent choose a specific tool?
-*   **LLM Prompts & Completions**: What exact text was sent to the model and what did it return?
-*   **State Changes**: Updates to the schedule, new bookings, and status transitions.
+
+* **Agent Decisions**: Why did an agent choose a specific tool?
+* **LLM Prompts & Completions**: What exact text was sent to the model and what did it return?
+* **State Changes**: Updates to the schedule, new bookings, and status transitions.
 
 Logs are written to the `logs/` directory locally or streamed to standard output
 in Docker/Kubernetes environments, making them easy to collect with tools like
@@ -899,6 +899,7 @@ All tourist requests have been matched, ...
 [RUN] Stopping PID 54633
 [OK] Stopped
 ```
+
 ### 📸 Dashboard Screenshots
 
 The dashboard provides a real-time window into the agent marketplace.
@@ -906,7 +907,6 @@ The dashboard provides a real-time window into the agent marketplace.
 **1. The Live Graph View**: This view visualizes the active agents (Tourists,
 *Guides, Scheduler) and the messages flowing between them. The lines animate to
 *show the negotiation process as it happens.
-
 
 <div style="text-align: center; margin-top: 10px;">
   <img src="/assets/figures/frontend1.png" alt="Dashboard Main View" width="80%">
@@ -935,6 +935,7 @@ Located in `scripts/`, these helper scripts automate complex Kubernetes tasks:
 * `scripts/slim-controller.sh` & `scripts/slim-node.sh`: Deploy the **SLIM Control Plane** and **Data Plane**. These scripts manage the necessary `StatefulSets` and config maps to get the secure transport layer running.
 
 To deploy the full dependency stack on a fresh cluster:
+
 ```bash
 # 1. Identity Infrastructure
 ./scripts/spire.sh install
@@ -948,28 +949,34 @@ To deploy the full dependency stack on a fresh cluster:
 ```
 
 ### Prerequisites
-*   A running Kubernetes cluster (e.g., MicroK8s, GKE, EKS)
-*   `kubectl` configured
-*   Container images (or build your own)
+
+* A running Kubernetes cluster (e.g., MicroK8s, GKE, EKS)
+* `kubectl` configured
+* Container images (or build your own)
 
 ### Deployment Steps
 
-1.  **Navigate to the deployment directory**:
+1. **Navigate to the deployment directory**:
+
     ```bash
     cd deploy/k8s
     ```
 
-2.  **Configure Environment Variables**:
+2. **Configure Environment Variables**:
+
     Set the namespace and image registry details.
+
     ```bash
     export NAMESPACE=tourist-system
     export IMAGE_REGISTRY=ghcr.io/agntcy/apps
     export IMAGE_TAG=latest
     ```
 
-3.  **Configure Credentials**:
+3. **Configure Credentials**:
+
     Create the namespace and export your API keys. The deployment script will
     read these environment variables and create the Kubernetes secrets for you.
+
     ```bash
     kubectl create namespace $NAMESPACE
 
@@ -984,34 +991,40 @@ To deploy the full dependency stack on a fresh cluster:
     export AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o"
     ```
 
-4.  **Deploy**:
+4. **Deploy**:
+
     You can deploy using the standard HTTP transport or the secure SLIM
     transport. To deploy with the default HTTP transport:
+
     ```bash
     ./deploy.sh http
     ```
 
     Or, if you have set up the SLIM infrastructure (SPIRE, Controller, Nodes):
+
     ```bash
     ./deploy.sh slim
     ```
 
-5.  **Scale Agents**:
+5. **Scale Agents**:
+
     Simulate load by spawning multiple tourists and guides:
+
     ```bash
     ./spawn-agents.sh 5 tourists
     ./spawn-agents.sh 3 guides
     ```
 
-6.  **Access the Dashboard**:
+6. **Access the Dashboard**:
+
     The deployment automatically spins up the frontend. Retrieve its external
     address:
 
     ```bash
     kubectl get svc frontend -n $NAMESPACE
     ```
-    Open the provided External-IP in your browser to watch the system in action.
 
+    Open the provided External-IP in your browser to watch the system in action.
 
 ### 📊 Real-world Deployment
 
@@ -1019,19 +1032,20 @@ When deployed to a cluster, the system efficiently manages dozens of concurrent
 agent processes.
 
 **Test Environment:**
+
 The following metrics and logs were captured from a deployment on a **6-node
 Kubernetes cluster** (Nodes `tf-node-0` through `tf-node-5`).
+
 In this topology:
-*   **SLIM DaemonSet**: A `slim-node` pod runs on every worker node, providing a
-   local, low-latency secure gateway for any agent scheduled on that machine.
-*   **Agent Distribution**: Guide and Tourist agents are scheduled across the
-   fleet, communicating seamlessly over the mesh regardless of their physical
-   location.
+
+* **SLIM DaemonSet**: A `slim-node` pod runs on every worker node, providing a local, low-latency secure gateway for any agent scheduled on that machine.
+* **Agent Distribution**: Guide and Tourist agents are scheduled across the fleet, communicating seamlessly over the mesh regardless of their physical location.
 
 To demonstrate the reproducibility of the environment, we first perform a full
 cleanup and re-deployment of the core infrastructure.
 
 **1. Infrastructure Cleanup & Installation:**
+
 We start by cleaning up any existing resources to ensure a fresh state. We
 execute the following commands to remove previous agent jobs, the application
 deployment, and the infrastructure layers:
@@ -1057,6 +1071,7 @@ release "dir" uninstalled
 ```
 
 **SLIM Controller Cleanup:**
+
 ```text
 [WARN] Cleaning up all SLIM controller resources in namespace lumuscar-jobs...
 [INFO] Uninstalling Helm release slim-controller...
@@ -1066,6 +1081,7 @@ release "slim-controller" uninstalled
 ```
 
 **Agent Directory Installation:**
+
 ```text
 [INFO] Installing Agent Directory in namespace lumuscar-jobs...
 [INFO] Installing new release...
@@ -1077,6 +1093,7 @@ deployment "dir-apiserver" successfully rolled out
 ```
 
 **SLIM Controller Installation:**
+
 ```text
 [INFO] Installing SLIM controller in namespace lumuscar-jobs...
 [INFO] Installing new release...
@@ -1088,6 +1105,7 @@ deployment "slim-control" successfully rolled out
 ```
 
 **2. Application Deployment:**
+
 With the infrastructure ready, we deploy the Tourist Scheduling System agents
 using the SLIM transport.
 
@@ -1106,11 +1124,13 @@ deployment.apps/ui-dashboard-agent created
 ```
 
 **3. Running State:**
+
 Here is a snapshot of the cluster running a full simulation with multiple guide
 and tourist agents spawned as Kubernetes Jobs alongside the SLIM DaemonSet
 infrastructure.
 
 **Active Pods (SLIM Nodes & Agents):**
+
 ```text
 NAME                              READY   STATUS      RESTARTS     AGE     IP             NODE
 dir-apiserver-7f85dd58d5-tmf6j    1/1     Running     0            49m     10.1.196.203   tf-node-0
@@ -1125,6 +1145,7 @@ scheduler-agent-69cbc8485f-lw6ht  1/1     Running     0            5m36s   10.1.
 ```
 
 **Job Execution Status:**
+
 ```text
 NAME                  COMPLETIONS   DURATION   AGE
 guide-agent-g1001     1/1           34s        38s
@@ -1137,7 +1158,9 @@ guide-agent-g1011     0/1           17s        17s
 ```
 
 **Agent Logs (Guide Agent):**
+
 The agent automatically initializes, discovers the scheduler, and begins negotiation.
+
 ```text
 [Guide g1005] Starting with ADK (transport: slim)...
 [Guide g1005] Connecting to SLIM at http://slim-node:46357
@@ -1156,7 +1179,9 @@ User > Please register guide offer:
 ```
 
 **Agent Logs (Scheduler Agent):**
+
 The scheduler receives offers, negotiates with tourists, and updates the dashboard in real-time.
+
 ```text
 INFO:agents.tools:[Scheduler] Created 7 assignments
 INFO:slimrpc.server:sending response for session 531412045 with code 0
@@ -1170,7 +1195,6 @@ INFO:agents.tools:[ADK Scheduler] ✅ Sent update to dashboard: communication_ev
 INFO:slimrpc.server:sending response for session 1242699209 with code 0
 ```
 
-
 ## The Power of Protocols
 
 The Tourist Scheduling System proves that building complex, multi-agent
@@ -1178,14 +1202,10 @@ workflows requires more than just smart LLMs—it requires a robust foundation o
 standard protocols. This demo acts as a blueprint for that future by bringing
 together four critical pillars:
 
-1.  **[MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/python-sdk)**: Providing a universal way for agents to
-interface with tools and data sources.
-2.  **[A2A (Agent-to-Agent)](https://github.com/a2aproject/a2a-python)**: Defining a common language for negotiation and
-task coordination.
-3.  **[Agent Directory](https://github.com/agntcy/dir)**: Enabling dynamic service discovery so the mesh can
-self-organize.
-4.  **[SLIM (Secure Low Latency Interactive Messaging)](https://github.com/agntcy/slim)**: Ensuring that every
-interaction is encrypted and authenticated.
+1. **[MCP (Model Context Protocol)](https://github.com/modelcontextprotocol/python-sdk)**: Providing a universal way for agents to interface with tools and data sources.
+2. **[A2A (Agent-to-Agent)](https://github.com/a2aproject/a2a-python)**: Defining a common language for negotiation and task coordination.
+3. **[Agent Directory](https://github.com/agntcy/dir)**: Enabling dynamic service discovery so the mesh can self-organize.
+4. **[SLIM (Secure Low Latency Interactive Messaging)](https://github.com/agntcy/slim)**: Ensuring that every interaction is encrypted and authenticated.
 
 By combining these standards, we move from isolated chatbots to a true
 **Internet of Agents**—where software services actively cooperate to solve your
@@ -1196,11 +1216,11 @@ problems.
 
 ## 📚 References
 
-*   [Tourist Scheduling System Source Code](https://github.com/agntcy/agentic-apps)
-*   [Agent Directory](https://github.com/agntcy/dir)
-*   [SLIM (Secure Low Latency Interactive Messaging)](https://github.com/agntcy/slim)
-*   [A2A Protocol (Python)](https://github.com/a2aproject/a2a-python)
-*   [Model Context Protocol (Python SDK)](https://github.com/modelcontextprotocol/python-sdk)
-*   [Google ADK (Python)](https://github.com/google/adk-python)
-*   [Flutter GenUI](https://github.com/flutter/genui)
-*   [Google A2UI](https://github.com/google/A2UI)
+* [Tourist Scheduling System Source Code](https://github.com/agntcy/agentic-apps)
+* [Agent Directory](https://github.com/agntcy/dir)
+* [SLIM (Secure Low Latency Interactive Messaging)](https://github.com/agntcy/slim)
+* [A2A Protocol (Python)](https://github.com/a2aproject/a2a-python)
+* [Model Context Protocol (Python SDK)](https://github.com/modelcontextprotocol/python-sdk)
+* [Google ADK (Python)](https://github.com/google/adk-python)
+* [Flutter GenUI](https://github.com/flutter/genui)
+* [Google A2UI](https://github.com/google/A2UI)
