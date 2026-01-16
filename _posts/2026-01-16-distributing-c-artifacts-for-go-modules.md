@@ -131,6 +131,8 @@ The foundation of our approach is using **static libraries** (`.a` files). This 
 
 The trade-off is larger binary sizes, but this is acceptable for most use cases and aligns with Go's philosophy of self-contained binaries.
 
+**Note on Fully Static Binaries:** On Linux, using the musl libc variant (e.g., `x86_64-unknown-linux-musl`) allows for fully statically compiled binaries with no dependency on glibc or any system libraries. This is ideal for minimal container images (like `FROM scratch`) or environments where you want absolute portability without any system library dependencies.
+
 ### 2. Platform Detection
 
 The setup tool automatically detects the user's platform:
@@ -321,15 +323,20 @@ From an end user's perspective, it's even simpler:
 
 We support 7 platform combinations out of the box:
 
-| OS      | Architecture | Target Triple                      | Library File                               |
-|---------|--------------|------------------------------------|--------------------------------------------|
-| Linux   | amd64        | x86_64-unknown-linux-gnu           | libslim_bindings_x86_64_linux_gnu.a        |
-| Linux   | arm64        | aarch64-unknown-linux-gnu          | libslim_bindings_aarch64_linux_gnu.a       |
-| Linux   | amd64 (musl) | x86_64-unknown-linux-musl          | libslim_bindings_x86_64_linux_musl.a       |
-| Linux   | arm64 (musl) | aarch64-unknown-linux-musl         | libslim_bindings_aarch64_linux_musl.a      |
-| macOS   | amd64        | x86_64-apple-darwin                | libslim_bindings_x86_64_apple_darwin.a     |
-| macOS   | arm64        | aarch64-apple-darwin               | libslim_bindings_aarch64_apple_darwin.a    |
-| Windows | amd64        | x86_64-pc-windows-gnu              | libslim_bindings_x86_64_windows_gnu.a      |
+| OS      | Architecture | Target Triple                      | Library File                               | Notes                          |
+|---------|--------------|------------------------------------|--------------------------------------------|--------------------------------|
+| Linux   | amd64        | x86_64-unknown-linux-gnu           | libslim_bindings_x86_64_linux_gnu.a        | Requires glibc at runtime      |
+| Linux   | arm64        | aarch64-unknown-linux-gnu          | libslim_bindings_aarch64_linux_gnu.a       | Requires glibc at runtime      |
+| Linux   | amd64 (musl) | x86_64-unknown-linux-musl          | libslim_bindings_x86_64_linux_musl.a       | Fully static, no glibc needed  |
+| Linux   | arm64 (musl) | aarch64-unknown-linux-musl         | libslim_bindings_aarch64_linux_musl.a      | Fully static, no glibc needed  |
+| macOS   | amd64        | x86_64-apple-darwin                | libslim_bindings_x86_64_apple_darwin.a     |                                |
+| macOS   | arm64        | aarch64-apple-darwin               | libslim_bindings_aarch64_apple_darwin.a    |                                |
+| Windows | amd64        | x86_64-pc-windows-gnu              | libslim_bindings_x86_64_windows_gnu.a      |                                |
+
+The **musl variants** are particularly useful for:
+- **Minimal Docker images**: Deploy to `FROM scratch` or minimal base images
+- **Portable binaries**: No system library dependencies beyond the kernel
+- **Legacy systems**: Run on systems with different or missing glibc versions
 
 ## Building the Release Artifacts
 
