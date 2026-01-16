@@ -261,22 +261,9 @@ go get github.com/agntcy/slim-bindings-go
 
 # 2. Run the setup tool (one-time, downloads static library)
 go run github.com/agntcy/slim-bindings-go/cmd/slim-bindings-setup
-
-# 3. Build your application (native code gets statically linked)
-go build -o myapp
-
-# 4. Deploy the single binary (no runtime dependencies!)
-./myapp
 ```
 
-From an end user's perspective, it's even simpler:
-
-```bash
-# Just run the application - no installation of native libraries required!
-./myapp
-```
-
-Example output:
+The setup tool will output:
 
 ```
 ╔═══════════════════════════════════════════════════════════╗
@@ -295,6 +282,23 @@ Target:   aarch64-apple-darwin
 ✅ Library installed to: $GOPATH/.cgo-cache/slim-bindings
 
 ✅ Setup complete! You can now build Go projects using SLIM bindings.
+```
+
+Then continue with your build:
+
+```bash
+# 3. Build your application (native code gets statically linked)
+go build -o myapp
+
+# 4. Deploy the single binary (no runtime dependencies!)
+./myapp
+```
+
+From an end user's perspective, it's even simpler:
+
+```bash
+# Just run the application - no installation of native libraries required!
+./myapp
 ```
 
 ## Supported Platforms
