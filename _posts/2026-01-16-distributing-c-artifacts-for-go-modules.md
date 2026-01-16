@@ -83,7 +83,7 @@ We then developed a two-part solution for the build-time requirements:
 
 ## Implementation Details
 
-### 1. Static vs Dynamic Linking
+### 1. Pre-compiled Static Libraries
 
 The foundation of our approach is using **static libraries** (`.a` files). This is crucial for achieving our goal:
 
@@ -133,54 +133,31 @@ The trade-off is larger binary sizes, but this is acceptable for most use cases 
 
 **Note on Fully Static Binaries:** On Linux, using the musl libc variant (e.g., `x86_64-unknown-linux-musl`) allows for fully statically compiled binaries with no dependency on glibc or any system libraries. This is ideal for minimal container images (like `FROM scratch`) or environments where you want absolute portability without any system library dependencies.
 
-### 2. Platform Detection
+### 2. Library Distribution: Setup Tool Approach
 
-The setup tool automatically detects the user's platform:
+Rather than embedding pre-compiled static libraries directly in the Go repository (which would bloat the repo with ~600 MB per platform × 7 platforms ≈ 4.2 GB), we provide a lightweight **setup tool** that developers run once to prepare their build environment.
 
-```go
-func GetTarget(goos, arch string) string {
-    if goos == "" {
-        goos = runtime.GOOS
-    }
-    if arch == "" {
-        arch = runtime.GOARCH
-    }
+This approach offers several advantages:
+- **Small repository size**: Only source code is in the repo
+- **Flexible platform support**: Add new platforms without repo bloat
+- **Version management**: Libraries are downloaded for the specific version being used
+- **Developer control**: Explicit setup step makes the native dependency transparent
 
-    switch goos {
-    case "darwin":
-        if arch == "arm64" {
-            return "aarch64-apple-darwin"
-        }
-        return "x86_64-apple-darwin"
-    case "linux":
-        if arch == "arm64" {
-            return "aarch64-unknown-linux-gnu"
-        }
-        return "x86_64-unknown-linux-gnu"
-    case "windows":
-        return "x86_64-pc-windows-gnu"
-    }
-    return fmt.Sprintf("%s-unknown-%s", arch, goos)
-}
-```
+The setup tool handles three key tasks: detecting the platform, determining where to cache libraries, and downloading the correct artifacts from GitHub Releases.
 
-### 3. Cache Directory Strategy
+#### Platform Detection
+
+The setup tool automatically detects the developer's platform using Go's `runtime.GOOS` and `runtime.GOARCH` values, then maps them to the appropriate Rust target triple (e.g., `darwin/arm64` → `aarch64-apple-darwin`).
+
+Developers can override the platform detection using standard Go environment variables:
+- `GOOS`: Target operating system (e.g., `linux`, `darwin`, `windows`)
+- `GOARCH`: Target architecture (e.g., `amd64`, `arm64`)
+
+This is useful for downloading libraries for a different platform than the one you're currently on.
+
+#### Cache Directory Strategy
 
 We store the static libraries in `$GOPATH/.cgo-cache/slim-bindings`. This keeps our artifacts separate from Go's protected module cache while still being relative to `$GOPATH`, which allows us to navigate safely from the module cache where the source is stored by `go get` when using the libraries as a downstream dependency.
-
-```go
-func GetCacheDir() (string, error) {
-    // Get GOPATH using build.Default which handles the default correctly
-    gopath := build.Default.GOPATH
-    if gopath == "" {
-        return "", fmt.Errorf("GOPATH is not set")
-    }
-
-    // Use our own .cgo-cache directory within GOPATH
-    // We can't use pkg/mod/* because those directories are readonly/protected by lockfiles
-    return filepath.Join(gopath, ".cgo-cache", "slim-bindings"), nil
-}
-```
 
 **Why $GOPATH/.cgo-cache Instead of pkg/mod?**
 - **Write permissions**: The `pkg/mod` directories are readonly and protected by lockfiles
@@ -194,7 +171,17 @@ func GetCacheDir() (string, error) {
 - **Path**: `$GOPATH/.cgo-cache/slim-bindings/`
 - **Example**: If `GOPATH=/opt/go`, libraries are in `/opt/go/.cgo-cache/slim-bindings/`
 
-### 4. CGO Linker Flags for Static Linking
+#### Download from GitHub Releases
+
+The setup tool downloads pre-compiled libraries from GitHub Releases. Each release follows a consistent naming pattern:
+
+- **Release tag**: `slim-bindings-libs-{version}` (e.g., `slim-bindings-libs-v0.7.2`)
+- **Artifact naming**: `slim-bindings-{target}.zip` (e.g., `slim-bindings-aarch64-apple-darwin.zip`)
+- **Archive contents**: Single static library file `libslim_bindings_{normalized_target}.a` (~600 MB with debug symbols)
+
+The setup tool constructs the download URL based on the detected platform and version, fetches the appropriate zip file, and extracts the static library to the cache directory.
+
+### 3. CGO Linker Flags for Static Linking
 
 The Go source file includes platform-specific CGO directives that reference the cache directory and ensure static linking:
 
@@ -226,50 +213,7 @@ When you run `go build`, CGO:
 3. Links them directly into your Go binary
 4. Results in a single executable with no external native library dependencies
 
-### 5. Download from GitHub Releases
-
-The setup tool downloads pre-compiled libraries from GitHub Releases:
-
-```go
-func DownloadLibrary(target string) error {
-    version := Version() // Gets version from go.mod
-    
-    url := fmt.Sprintf(
-        "https://github.com/agntcy/slim/releases/download/slim-bindings-libs-%s/slim-bindings-%s.zip",
-        version, target,
-    )
-    
-    // Download zip file
-    resp, err := http.Get(url)
-    // ... error handling ...
-    
-    // Extract .a files to cache directory
-    // ... extraction logic ...
-}
-```
-
-**Release Structure:**
-```
-slim-bindings-libs-v0.7.2/
-├── slim-bindings-aarch64-apple-darwin.zip
-│   └── libslim_bindings_aarch64_apple_darwin.a  (static archive)
-├── slim-bindings-x86_64-apple-darwin.zip
-│   └── libslim_bindings_x86_64_apple_darwin.a
-├── slim-bindings-aarch64-unknown-linux-gnu.zip
-│   └── libslim_bindings_aarch64_linux_gnu.a
-├── slim-bindings-x86_64-unknown-linux-gnu.zip
-│   └── libslim_bindings_x86_64_linux_gnu.a
-├── slim-bindings-aarch64-unknown-linux-musl.zip
-│   └── libslim_bindings_aarch64_linux_musl.a
-├── slim-bindings-x86_64-unknown-linux-musl.zip
-│   └── libslim_bindings_x86_64_linux_musl.a
-└── slim-bindings-x86_64-pc-windows-gnu.zip
-    └── libslim_bindings_x86_64_windows_gnu.a
-```
-
-Note that all files are `.a` (static archive) files, not `.so`, `.dylib`, or `.dll` (dynamic libraries).
-
-### 6. User Experience
+### 4. User Experience
 
 From a developer's perspective, the workflow is simple:
 
@@ -296,7 +240,7 @@ Target:   aarch64-apple-darwin
    Version:  v0.7.2
    Platform: aarch64-apple-darwin
    URL:      https://github.com/agntcy/slim/releases/download/...
-   Extracted: libslim_bindings_aarch64_apple_darwin.a (12.3 MB)
+   Extracted: libslim_bindings_aarch64_apple_darwin.a (685 MB)
 ✅ Library installed to: $GOPATH/.cgo-cache/slim-bindings
 
 ✅ Setup complete! You can now build Go projects using SLIM bindings.
@@ -424,8 +368,8 @@ We use this two-repository approach because Go uses code repositories for distri
 ## Limitations and Trade-offs
 
 1. **Manual Setup Step**: Developers must run the setup tool once (not fully automatic)
-2. **Storage Overhead**: Each platform variant is ~10-15 MB in the developer's cache
-3. **Binary Size**: Static linking increases final binary size (typically 10-15 MB larger)
+2. **Storage Overhead**: Each platform variant is ~600 MB in the developer's cache (includes all debug symbols)
+3. **Binary Size**: Static linking increases final binary size (typically several MB when stripped)
 4. **Platform Coverage**: Need to pre-build static libraries for all target platforms
 5. **Musl vs GNU libc**: Linux developers need to pick the right variant (though we auto-detect this)
 6. **Trust Model**: Developers trust our GitHub Release artifacts
