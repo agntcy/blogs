@@ -81,7 +81,7 @@ We then developed a two-part solution for the build-time requirements:
 └─────────────────────────────────────────────────────────┘
 ```
 
-## Implementation Details
+## Solution Details
 
 ### 1. Pre-compiled Static Libraries
 
@@ -213,7 +213,84 @@ When you run `go build`, CGO:
 3. Links them directly into your Go binary
 4. Results in a single executable with no external native library dependencies
 
-### 4. User Experience
+## Our Implementation for SLIM
+
+The release process is split into two phases: building the native libraries in the SLIM repository, and generating/distributing the Go bindings in the slim-bindings-go repository.
+
+### Phase 1: Native Library Build (SLIM Repository)
+
+The CI/CD pipeline in the [main SLIM repository](https://github.com/agntcy/slim) handles cross-compilation of the Rust library:
+
+1. **Cross-compile Rust library** for all target platforms using `cargo zigbuild`
+   - Targets: `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `x86_64-apple-darwin`, etc.
+   - Produces static library archives (`.a` files)
+   - We use [Zig](https://andrewkelley.me/post/zig-cc-powerful-drop-in-replacement-gcc-clang.html) instead of traditional cross-compilation toolchains because Zig provides true cross-compilation capabilities for C dependencies without needing separate toolchains for every architecture
+
+2. **Package per platform** into zip files
+   - Each platform gets its own zip: `slim-bindings-{target}.zip`
+   - Contains the static library: `libslim_bindings_{normalized_target}.a`
+
+3. **Upload to GitHub Release** with version tag
+   - Release tag: `slim-bindings-libs-v0.7.2`
+   - All platform zips attached to the release
+
+**Supported Platforms:**
+
+We build static libraries for 7 platform combinations:
+
+| OS      | Architecture | Target Triple                      | Library File                               | Notes                          |
+|---------|--------------|------------------------------------|--------------------------------------------|--------------------------------|
+| Linux   | amd64        | x86_64-unknown-linux-gnu           | libslim_bindings_x86_64_linux_gnu.a        | Requires glibc at runtime      |
+| Linux   | arm64        | aarch64-unknown-linux-gnu          | libslim_bindings_aarch64_linux_gnu.a       | Requires glibc at runtime      |
+| Linux   | amd64 (musl) | x86_64-unknown-linux-musl          | libslim_bindings_x86_64_linux_musl.a       | Fully static, no glibc needed  |
+| Linux   | arm64 (musl) | aarch64-unknown-linux-musl         | libslim_bindings_aarch64_linux_musl.a      | Fully static, no glibc needed  |
+| macOS   | amd64        | x86_64-apple-darwin                | libslim_bindings_x86_64_apple_darwin.a     |                                |
+| macOS   | arm64        | aarch64-apple-darwin               | libslim_bindings_aarch64_apple_darwin.a    |                                |
+| Windows | amd64        | x86_64-pc-windows-gnu              | libslim_bindings_x86_64_windows_gnu.a      |                                |
+
+The **musl variants** are particularly useful for:
+- **Minimal Docker images**: Deploy to `FROM scratch` or minimal base images
+- **Portable binaries**: No system library dependencies beyond the kernel
+- **Legacy systems**: Run on systems with different or missing glibc versions
+
+Example release in the SLIM repository:
+
+```
+Release: slim-bindings-libs-v0.7.2
+
+Generated from https://github.com/agntcy/slim/commit/a51521ea
+
+Assets:
+- slim-bindings-x86_64-unknown-linux-gnu.zip
+- slim-bindings-aarch64-unknown-linux-gnu.zip
+- slim-bindings-x86_64-unknown-linux-musl.zip
+- slim-bindings-aarch64-unknown-linux-musl.zip
+- slim-bindings-aarch64-apple-darwin.zip
+- slim-bindings-x86_64-apple-darwin.zip
+- slim-bindings-x86_64-pc-windows-gnu.zip
+```
+
+### Phase 2: Go Bindings Generation (slim-bindings-go Repository)
+
+After the native libraries are built, the Go bindings are generated and published:
+
+1. **Generate Go bindings** using [UniFFI](https://mozilla.github.io/uniffi-rs/)
+   - UniFFI reads the Rust library and generates Go code
+   - Produces: `slim_bindings.go` (Go wrapper code)
+   - Produces: `slim_bindings.h` (C header file)
+
+2. **Copy artifacts to distribution repo**
+   - Generated Go code → `github.com/agntcy/slim-bindings-go/slim_bindings.go`
+   - Header file → `github.com/agntcy/slim-bindings-go/slim_bindings.h`
+   - Setup tool → `github.com/agntcy/slim-bindings-go/cmd/slim-bindings-setup/`
+
+3. **Cut matching version tag**
+   - Tag in slim-bindings-go: `v0.7.2` (matches the library version)
+   - Go module version: `github.com/agntcy/slim-bindings-go@v0.7.2`
+
+We use this two-repository approach because Go uses code repositories for distribution via `go get`. The main SLIM repository is a Rust project with its own structure and dependencies—it doesn't make sense to use it as a Go module distribution point. By maintaining a separate slim-bindings-go repository, we provide a clean Go module that developers can import without pulling in the entire SLIM codebase.
+
+## Final User Experience
 
 From a developer's perspective, the workflow is simple:
 
@@ -271,88 +348,6 @@ From an end user's perspective, it's even simpler:
 # Just run the application - no installation of native libraries required!
 ./myapp
 ```
-
-## Supported Platforms
-
-We support 7 platform combinations out of the box:
-
-| OS      | Architecture | Target Triple                      | Library File                               | Notes                          |
-|---------|--------------|------------------------------------|--------------------------------------------|--------------------------------|
-| Linux   | amd64        | x86_64-unknown-linux-gnu           | libslim_bindings_x86_64_linux_gnu.a        | Requires glibc at runtime      |
-| Linux   | arm64        | aarch64-unknown-linux-gnu          | libslim_bindings_aarch64_linux_gnu.a       | Requires glibc at runtime      |
-| Linux   | amd64 (musl) | x86_64-unknown-linux-musl          | libslim_bindings_x86_64_linux_musl.a       | Fully static, no glibc needed  |
-| Linux   | arm64 (musl) | aarch64-unknown-linux-musl         | libslim_bindings_aarch64_linux_musl.a      | Fully static, no glibc needed  |
-| macOS   | amd64        | x86_64-apple-darwin                | libslim_bindings_x86_64_apple_darwin.a     |                                |
-| macOS   | arm64        | aarch64-apple-darwin               | libslim_bindings_aarch64_apple_darwin.a    |                                |
-| Windows | amd64        | x86_64-pc-windows-gnu              | libslim_bindings_x86_64_windows_gnu.a      |                                |
-
-The **musl variants** are particularly useful for:
-- **Minimal Docker images**: Deploy to `FROM scratch` or minimal base images
-- **Portable binaries**: No system library dependencies beyond the kernel
-- **Legacy systems**: Run on systems with different or missing glibc versions
-
-## Building the Release Artifacts
-
-The release process is split into two phases: building the native libraries in the SLIM repository, and generating/distributing the Go bindings in the slim-bindings-go repository.
-
-### Phase 1: Native Library Build (SLIM Repository)
-
-The CI/CD pipeline in the [main SLIM repository](https://github.com/agntcy/slim) handles cross-compilation of the Rust library:
-
-1. **Cross-compile Rust library** for all target platforms using `cargo zigbuild`
-   - Targets: `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `x86_64-apple-darwin`, etc.
-   - Produces static library archives (`.a` files)
-   - We use [Zig](https://andrewkelley.me/post/zig-cc-powerful-drop-in-replacement-gcc-clang.html) instead of traditional cross-compilation toolchains because Zig provides true cross-compilation capabilities for C dependencies without needing separate toolchains for every architecture
-
-2. **Package per platform** into zip files
-   - Each platform gets its own zip: `slim-bindings-{target}.zip`
-   - Contains the static library: `libslim_bindings_{normalized_target}.a`
-
-3. **Upload to GitHub Release** with version tag
-   - Release tag: `slim-bindings-libs-v0.7.2`
-   - All platform zips attached to the release
-
-Example release in the SLIM repository:
-
-```
-Release: slim-bindings-libs-v0.7.2
-
-Generated from https://github.com/agntcy/slim/commit/a51521ea
-
-Platforms:
-- linux/amd64 (x86_64-unknown-linux-gnu)
-- linux/arm64 (aarch64-unknown-linux-gnu)
-- linux/amd64-musl (x86_64-unknown-linux-musl)
-- linux/arm64-musl (aarch64-unknown-linux-musl)
-- darwin/arm64 (aarch64-apple-darwin)
-- darwin/amd64 (x86_64-apple-darwin)
-- windows/amd64 (x86_64-pc-windows-msvc)
-
-Assets:
-- slim-bindings-x86_64-unknown-linux-gnu.zip
-- slim-bindings-aarch64-unknown-linux-gnu.zip
-- ... (one per platform)
-```
-
-### Phase 2: Go Bindings Generation (slim-bindings-go Repository)
-
-After the native libraries are built, the Go bindings are generated and published:
-
-1. **Generate Go bindings** using [UniFFI](https://mozilla.github.io/uniffi-rs/)
-   - UniFFI reads the Rust library and generates Go code
-   - Produces: `slim_bindings.go` (Go wrapper code)
-   - Produces: `slim_bindings.h` (C header file)
-
-2. **Copy artifacts to distribution repo**
-   - Generated Go code → `github.com/agntcy/slim-bindings-go/slim_bindings.go`
-   - Header file → `github.com/agntcy/slim-bindings-go/slim_bindings.h`
-   - Setup tool → `github.com/agntcy/slim-bindings-go/cmd/slim-bindings-setup/`
-
-3. **Cut matching version tag**
-   - Tag in slim-bindings-go: `v0.7.2` (matches the library version)
-   - Go module version: `github.com/agntcy/slim-bindings-go@v0.7.2`
-
-We use this two-repository approach because Go uses code repositories for distribution via `go get`. The main SLIM repository is a Rust project with its own structure and dependencies—it doesn't make sense to use it as a Go module distribution point. By maintaining a separate slim-bindings-go repository, we provide a clean Go module that developers can import without pulling in the entire SLIM codebase.
 
 ## Advantages of This Approach
 
