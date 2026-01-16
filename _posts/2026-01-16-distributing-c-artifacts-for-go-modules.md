@@ -312,6 +312,15 @@ go build -o myapp
 ./myapp
 ```
 
+**Cross-Compiling CGO Applications:** If you need to cross-compile your Go application with CGO enabled for different platforms, you can use [Zig as a drop-in C compiler replacement](https://andrewkelley.me/post/zig-cc-powerful-drop-in-replacement-gcc-clang.html). This eliminates the need for platform-specific toolchains:
+
+```bash
+# Example: Cross-compile for Linux ARM64 from macOS
+CGO_ENABLED=1 GOOS=linux GOARCH=arm64 CC="zig cc -target aarch64-linux-gnu" go build -o myapp
+```
+
+Zig provides true cross-compilation for CGO without maintaining separate toolchains for each target platform.
+
 From an end user's perspective, it's even simpler:
 
 ```bash
@@ -346,9 +355,10 @@ The release process is split into two phases: building the native libraries in t
 
 The CI/CD pipeline in the [main SLIM repository](https://github.com/agntcy/slim) handles cross-compilation of the Rust library:
 
-1. **Cross-compile Rust library** for all target platforms using `cross` or `cargo build --target`
+1. **Cross-compile Rust library** for all target platforms using `cargo zigbuild`
    - Targets: `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`, `x86_64-apple-darwin`, etc.
    - Produces static library archives (`.a` files)
+   - We use [Zig](https://andrewkelley.me/post/zig-cc-powerful-drop-in-replacement-gcc-clang.html) instead of traditional cross-compilation toolchains because Zig provides true cross-compilation capabilities for C dependencies without needing separate toolchains for every architecture
 
 2. **Package per platform** into zip files
    - Each platform gets its own zip: `slim-bindings-{target}.zip`
