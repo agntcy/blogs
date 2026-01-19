@@ -11,6 +11,9 @@ linkedin_url: "https://www.linkedin.com/company/agntcyproject"
 youtube_url: "https://www.youtube.com/@agntcy-lf"
 slack_url: "https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ"
 
+# Google Tag (gtag.js)
+google_analytics: "G-3D9938KZCN"
+
 # Header navigation - explicitly list pages to show
 header_pages:
   - archive.md
