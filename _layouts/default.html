@@ -23,7 +23,7 @@
 
       async function renderMermaid() {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        
+
         // Agntcy color scheme for mermaid
         const agntcyTheme = {
           startOnLoad: false,
@@ -94,7 +94,7 @@
             sequenceNumberColor: '#f3f6fd'
           }
         };
-        
+
         mermaid.initialize(agntcyTheme);
         await mermaid.run();
       }
@@ -151,7 +151,7 @@
           observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
       });
     </script>
-
+    {% include cookie-consent.html %}
   </body>
 
 </html>

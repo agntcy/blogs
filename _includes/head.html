@@ -6,9 +6,6 @@
   <link rel="icon" type="image/x-icon" href="{{ "/assets/images/favicon.ico" | relative_url }}">
   <link rel="stylesheet" href="{{ "/assets/main.css" | relative_url }}">
   {%- feed_meta -%}
-  {%- if jekyll.environment == 'production' and site.google_analytics -%}
-    {%- include google-tag.html -%}
-  {%- endif -%}
   <script>
     // Set theme immediately to prevent flash of wrong theme
     (function() {
