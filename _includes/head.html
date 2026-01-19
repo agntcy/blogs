@@ -7,12 +7,12 @@
   <link rel="stylesheet" href="{{ "/assets/main.css" | relative_url }}">
   {%- feed_meta -%}
   {%- if jekyll.environment == 'production' and site.google_analytics -%}
-    {%- include google-analytics.html -%}
+    {%- include google-tag.html -%}
   {%- endif -%}
   <script>
     // Set theme immediately to prevent flash of wrong theme
     (function() {
-      const theme = localStorage.getItem('theme-preference') || 
+      const theme = localStorage.getItem('theme-preference') ||
         (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       document.documentElement.setAttribute('data-theme', theme);
     })();

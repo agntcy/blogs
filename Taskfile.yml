@@ -25,6 +25,13 @@ tasks:
     cmds:
       - bundle exec jekyll serve --livereload --host 0.0.0.0
 
+  run:prod:
+    desc: Run content website in production mode (enables analytics)
+    deps:
+      - deps
+    cmds:
+      - JEKYLL_ENV=production bundle exec jekyll serve --livereload --host 0.0.0.0
+
   ##
   ## Dependencies
   ##
