@@ -362,8 +362,7 @@ From an end user's perspective, it's even simpler:
 4. **Version Pinning**: Go modules naturally version-pin the setup tool and library version together
 5. **Cross-Platform**: Works consistently across Linux, macOS, and Windows
 6. **Transparent**: Developers can see exactly what's being downloaded and where it's stored
-7. **Cache-Friendly**: Standard cache directories integrate with system cleanup tools
-8. **Single Binary Deployment**: Maintains Go's promise of simple, single-binary deployment
+7. **Single Binary Deployment**: Maintains Go's promise of simple, single-binary deployment
 
 ## Limitations and Trade-offs
 
