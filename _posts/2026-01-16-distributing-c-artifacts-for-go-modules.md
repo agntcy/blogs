@@ -135,13 +135,18 @@ The trade-off is larger binary sizes, but this is acceptable for most use cases 
 
 ### 2. Library Distribution: Setup Tool Approach
 
-Rather than embedding pre-compiled static libraries directly in the Go repository (which would bloat the repo with ~600 MB per platform × 7 platforms ≈ 4.2 GB), we provide a lightweight **setup tool** that developers run once to prepare their build environment.
+Rather than embedding pre-compiled static libraries directly in the Go repository, we provide a lightweight **setup tool** that developers run once to prepare their build environment. Each static library is approximately ~150 MB in size (7 platforms × 150 MB ≈ 1 GB total), which presents several distribution challenges:
 
-This approach offers several advantages:
+**GitHub Repository Limitations:**
+- GitHub has a **100 MB file size limit** without Git LFS, but `go get` doesn't support Git LFS
+- `go get` has a **hard-coded 500 MB size limit**, preventing distribution even with workarounds
+
+These technical constraints make it impossible to distribute the static libraries through the Git repository itself. Instead, our setup tool approach offers several advantages:
 - **Small repository size**: Only source code is in the repo
 - **Flexible platform support**: Add new platforms without repo bloat
 - **Version management**: Libraries are downloaded for the specific version being used
 - **Developer control**: Explicit setup step makes the native dependency transparent
+- **No Git/Go tooling limits**: GitHub Releases can host large files that `go get` cannot handle
 
 The setup tool handles three key tasks: detecting the platform, determining where to cache libraries, and downloading the correct artifacts from GitHub Releases.
 
@@ -177,7 +182,7 @@ The setup tool downloads pre-compiled libraries from GitHub Releases. Each relea
 
 - **Release tag**: `slim-bindings-libs-{version}` (e.g., `slim-bindings-libs-v0.7.2`)
 - **Artifact naming**: `slim-bindings-{target}.zip` (e.g., `slim-bindings-aarch64-apple-darwin.zip`)
-- **Archive contents**: Single static library file `libslim_bindings_{normalized_target}.a` (~600 MB with debug symbols)
+- **Archive contents**: Single static library file `libslim_bindings_{normalized_target}.a` (~150 MB)
 
 The setup tool constructs the download URL based on the detected platform and version, fetches the appropriate zip file, and extracts the static library to the cache directory.
 
@@ -363,7 +368,7 @@ From an end user's perspective, it's even simpler:
 ## Limitations and Trade-offs
 
 1. **Manual Setup Step**: Developers must run the setup tool once (not fully automatic)
-2. **Storage Overhead**: Each platform variant is ~600 MB in the developer's cache (includes all debug symbols)
+2. **Storage Overhead**: Each platform variant is ~150 MB in the developer's cache
 3. **Binary Size**: Static linking increases final binary size (typically several MB when stripped)
 4. **Platform Coverage**: Need to pre-build static libraries for all target platforms
 5. **Musl vs GNU libc**: Linux developers need to pick the right variant (though we auto-detect this)
@@ -379,8 +384,8 @@ From an end user's perspective, it's even simpler:
 
 ### 2. Embed Libraries in Git Repository
 
-**Pros:** Fully automatic, works with `go get`
-**Cons:** Bloats repository size, problematic for Git LFS, multiple platform variants
+**Pros:** Fully automatic, works seamlessly with `go get`, no extra setup step
+**Cons:** Each library is ~150 MB (~1 GB total for 7 platforms). GitHub's 100 MB limit requires Git LFS, but `go get` doesn't support Git LFS and has a 500 MB hard limit.
 
 ### 3. Build from Source
 
