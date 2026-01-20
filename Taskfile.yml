@@ -3,6 +3,9 @@
 
 version: "3"
 
+env:
+  GEM_HOME: ./.bundle
+
 tasks:
   default:
     cmds:
