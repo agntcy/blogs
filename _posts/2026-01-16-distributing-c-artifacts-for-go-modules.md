@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Distributing C Artifacts for Go Modules: A Practical Approach"
-date: 2026-01-16 10:00:00 +0000
+date: 2026-01-20 10:00:00 +0000
 author: Sam Betts
 author_url: https://github.com/tehsmash
 categories: technical
@@ -16,10 +16,10 @@ When building Go modules that depend on C/C++/Rust libraries via CGO, one of the
 
 The [SLIM Go bindings](https://github.com/agntcy/slim-bindings-go) wrap a Rust library that provides secure messaging capabilities. While Go's CGO makes it possible to call native libraries, it creates a distribution problem:
 
-- Developers need a C compiler** (gcc, clang, etc.)
-- They need the native library** already built for their platform
-- Cross-compilation becomes painful**
-- Build times increase significantly**
+- Developers need a C compiler (gcc, clang, etc.)
+- They need the native library already built for their platform
+- Cross-compilation becomes painful
+- Build times increase significantly
 
 But there's an even bigger challenge: **end-user distribution**. We wanted to ensure that applications built using our Go library could be distributed as single, self-contained binaries—without requiring end users to install additional native libraries on their systems.
 
