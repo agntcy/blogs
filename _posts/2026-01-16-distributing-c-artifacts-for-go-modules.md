@@ -16,10 +16,10 @@ When building Go modules that depend on C/C++/Rust libraries via CGO, one of the
 
 The [SLIM Go bindings](https://github.com/agntcy/slim-bindings-go) wrap a Rust library that provides secure messaging capabilities. While Go's CGO makes it possible to call native libraries, it creates a distribution problem:
 
-- **Developers need a C compiler** (gcc, clang, etc.)
-- **They need the native library** already built for their platform
-- **Cross-compilation becomes painful**
-- **Build times increase significantly**
+- Developers need a C compiler** (gcc, clang, etc.)
+- They need the native library** already built for their platform
+- Cross-compilation becomes painful**
+- Build times increase significantly**
 
 But there's an even bigger challenge: **end-user distribution**. We wanted to ensure that applications built using our Go library could be distributed as single, self-contained binaries—without requiring end users to install additional native libraries on their systems.
 
@@ -373,8 +373,8 @@ The SLIM Go bindings demonstrate this approach in production. If you're building
 - [SLIM Go Bindings Repository](https://github.com/agntcy/slim-bindings-go)
 - [SLIM Main Repository](https://github.com/agntcy/slim)
 - [UniFFI - Unified Foreign Function Interface](https://mozilla.github.io/uniffi-rs/)
-- [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
 - [CGO Documentation](https://pkg.go.dev/cmd/cgo)
+- [SLIM Documentation](https://docs.agntcy.org/slim/overview/)
 
 ---
 
