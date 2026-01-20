@@ -3,6 +3,7 @@ layout: post
 title: "Distributing C Artifacts for Go Modules: A Practical Approach"
 date: 2026-01-16 10:00:00 +0000
 author: Sam Betts
+author_url: https://github.com/tehsmash
 categories: technical
 tags: [go, cgo, rust, slim, bindings, artifacts]
 ---
