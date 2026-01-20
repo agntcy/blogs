@@ -81,7 +81,7 @@ flowchart TD
 
 The trade-off is larger binary sizes, but this is acceptable for most use cases and aligns with Go's philosophy of self-contained binaries.
 
-**Note on Fully Static Binaries:** On Linux, using the musl libc variant (e.g., `x86_64-unknown-linux-musl`) allows for fully statically compiled binaries with no dependency on glibc or any system libraries. This is ideal for minimal container images (like `FROM scratch`) or environments where you want absolute portability without any system library dependencies.
+**Note on Fully Static Binaries:** On Linux, using the [musl libc](https://musl.libc.org/) variant (e.g., `x86_64-unknown-linux-musl`) allows for fully statically compiled binaries with no dependency on glibc or any system libraries. This is ideal for minimal container images (like `FROM scratch`) or environments where you want absolute portability without any system library dependencies.
 
 ### 2. Library Distribution: Setup Tool Approach
 
