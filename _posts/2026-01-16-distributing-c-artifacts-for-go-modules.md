@@ -8,7 +8,7 @@ categories: technical
 tags: [go, cgo, rust, slim, bindings, artifacts]
 ---
 
-When building Go modules that depend on C/C++/Rust libraries via CGO, one of the biggest challenges is distribution. How do you ensure users can simply `go get` your module without needing complex build toolchains? This post explores our solution for distributing pre-compiled C artifacts for Go modules, using the SLIM Go bindings as a case study.
+When building Go modules that depend on C/C++/Rust libraries via CGO, one of the biggest challenges is distribution. How do you ensure users can simply `go get` your module without needing complex build toolchains? This post explores our solution for distributing pre-compiled C artifacts for Go modules, using the Secure Low-Latency Interactive Messaging (SLIM) Go bindings as a case study.
 
 <!--more-->
 
