@@ -40,45 +40,15 @@ We then developed a two-part solution for the build-time requirements:
 
 ### Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  User runs: go get github.com/agntcy/slim-bindings-go  │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  User runs: go run .../cmd/slim-bindings-setup          │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-         ┌──────────────────┴──────────────────┐
-         │  Setup Tool Detects Platform         │
-         │  - OS: darwin/linux/windows          │
-         │  - Arch: amd64/arm64                 │
-         └──────────────────┬──────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Downloads from GitHub Release:                         │
-│  github.com/agntcy/slim/releases/download/              │
-│    slim-bindings-libs-v0.7.2/                           │
-│    slim-bindings-aarch64-apple-darwin.zip               │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Extracts to $GOPATH Cache Directory:                   │
-│  $GOPATH/.cgo-cache/slim-bindings/                      │
-│    libslim_bindings_aarch64_apple_darwin.a              │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  CGO Flags Reference Cache Location:                    │
-│  #cgo darwin,arm64 LDFLAGS:                             │
-│    -L${SRCDIR}/../../../../.cgo-cache/slim-bindings     │
-│    -lslim_bindings_aarch64_darwin                       │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    classDef step fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+
+    A["User runs: go get github.com/agntcy/slim-bindings-go"]:::step --> B["User runs: go run .../cmd/slim-bindings-setup"]:::step
+    B --> C["Setup Tool Detects Platform<br>• OS: darwin/linux/windows<br>• Arch: amd64/arm64"]:::step
+    C --> D["Downloads from GitHub Release:<br>github.com/agntcy/slim<br>.../releases/download/...<br>slim-bindings-libs-v0.7.2/<br>slim-bindings-aarch64-apple-darwin.zip"]:::step
+    D --> E["Extracts to $GOPATH Cache Directory:<br>$GOPATH/.cgo-cache/slim-bindings/<br>libslim_bindings_aarch64_apple_darwin.a"]:::step
+    E --> F["CGO Flags Reference Cache Location:<br>#cgo darwin,arm64 LDFLAGS:<br>-L${SRCDIR}/../../../../.cgo-cache/slim-bindings<br>-lslim_bindings_aarch64_darwin"]:::step
 ```
 
 ## Solution Details
@@ -87,40 +57,19 @@ We then developed a two-part solution for the build-time requirements:
 
 The foundation of our approach is using **static libraries** (`.a` files). This is crucial for achieving our goal:
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  Build Time (Developer Machine)                         │
-├─────────────────────────────────────────────────────────┤
-│  ✓ Needs: libslim_bindings_*.a (static library)        │
-│  ✓ Needs: Go compiler + CGO enabled                    │
-│  ✓ Needs: C compiler (for CGO)                         │
-│  ✓ Statically links SLIM code into Go binary           │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-                    [go build -o myapp]
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Output: myapp (single binary)                          │
-├─────────────────────────────────────────────────────────┤
-│  Contains:                                              │
-│  • Go code                                              │
-│  • SLIM native code (embedded from .a file)             │
-│  • Links to standard system libraries only              │
-└─────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────┐
-│  Deployment (End User Machine)                          │
-├─────────────────────────────────────────────────────────┤
-│  ✓ Only needs: myapp (single binary)                   │
-│  ✓ Only needs: Standard OS libraries (glibc, etc.)     │
-│  ✗ Does NOT need: libslim_bindings_*.a                 │
-│  ✗ Does NOT need: .so/.dylib/.dll files                │
-│  ✗ Does NOT need: SLIM installed separately            │
-│  ✗ Does NOT need: Any project-specific libraries       │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    classDef step fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+
+    Build["Build Time (Developer Machine)<br>✓ Needs: libslim_bindings_*.a (static library)<br>✓ Needs: Go compiler + CGO enabled<br>✓ Needs: C compiler (for CGO)<br>✓ Statically links SLIM code into Go binary"]:::step
+
+    Cmd["go build -o myapp"]:::step
+
+    Output["Output: myapp (single binary)<br>Contains:<br>• Go code<br>• SLIM native code (embedded from .a file)<br>• Links to standard system libraries only"]:::step
+
+    Deploy["Deployment (End User Machine)<br>✓ Only needs: myapp (single binary)<br>✓ Only needs: Standard OS libraries (glibc, etc.)<br>✗ Does NOT need: libslim_bindings_*.a<br>✗ Does NOT need: .so/.dylib/.dll files<br>✗ Does NOT need: SLIM installed separately<br>✗ Does NOT need: Any project-specific libraries"]:::step
+
+    Build --> Cmd --> Output --> Deploy
 ```
 
 **Why Static Linking?**
@@ -406,7 +355,7 @@ From an end user's perspective, it's even simpler:
 Distributing C artifacts for Go modules requires balancing simplicity, security, and deployment models. Our approach using **static linking** with GitHub Releases and a setup tool provides:
 
 - **No additional runtime dependencies** for end users (beyond standard system libraries)
-- **Developer-friendly** installation process  
+- **Developer-friendly** installation process
 - **Fast** download and setup
 - **Transparent** and auditable
 - **Cross-platform** support
