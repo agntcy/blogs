@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Directory v1.0.0: Dual-Mode Authentication for Secure Agent Discovery"
+title: "Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery"
 date: 2026-01-23 09:00:00 +0000
 author: Tibor Kircsi
 author_url: https://github.com/tkircsi
@@ -9,9 +9,9 @@ tags: [spiffe, oauth, github, envoy, mTLS, zero-trust]
 mermaid: true
 ---
 
-The **Agent Directory** is more than just a service registry—it's a **trusted gateway** for discovering and verifying AI agents. With the release of **v1.0.0**, we're introducing a robust dual-mode authentication system that combines the security of **SPIFFE workload identity** with the convenience of **GitHub OAuth** for human operators.
+The **Agent Directory** is more than just a service registry—it's a **trusted gateway** for discovering and verifying AI agents. With the release of **v1.0**, we're introducing a robust dual-mode authentication system that combines the convenience of **GitHub OAuth** for human operators with the security of **SPIFFE workload identity** for automated services.
 
-This post explores the architecture, implementation, and practical usage of Directory's new authentication system, designed for both automated workloads and interactive CLI users.
+This post explores the architecture, implementation, and practical usage of Directory's new authentication system, designed for both interactive CLI users and automated workloads.
 
 <!--more-->
 
@@ -19,106 +19,68 @@ This post explores the architecture, implementation, and practical usage of Dire
 
 When building the Agent Directory, we encountered a fundamental question: **Who should be allowed to access the system?**
 
-The answer wasn't simple. We had two distinct user personas:
+The answer wasn't simple. We had two distinct user personas with very different needs:
 
-1. **Automated Workloads** (services, agents, applications)
-   - Need machine-to-machine authentication
-   - Run continuously without human intervention
-   - Must establish identity within Kubernetes clusters
-   - Require automatic certificate rotation
-
-2. **Human Operators** (developers, administrators)
-   - Need interactive authentication
-   - Access the system via CLI tools
-   - Don't have direct cluster access
-   - Want familiar OAuth flows
+- **Human Operators** (developers, administrators) need interactive authentication via CLI tools with familiar OAuth flows
+- **Automated Workloads** (services, agents, applications) need machine-to-machine authentication with automatic certificate rotation in Kubernetes
 
 Traditional authentication systems force you to choose one approach. We built a system that supports both.
 
 ## The Solution: Dual-Mode Authentication
 
-Directory v1.0.0 introduces a **dual-mode authentication architecture** that seamlessly handles both workload and human authentication:
+Directory v1.0 introduces a **dual-mode authentication architecture** that seamlessly handles both human and workload authentication:
 
 ```mermaid
-flowchart TD
+flowchart LR
     classDef workload fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
     classDef human fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
     classDef gateway fill:#0251af,stroke:#f3f6fd,stroke-width:3px,color:#f3f6fd;
-    classDef api fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef api fill:#03142b,stroke:#0251af,stroke-width:3px,color:#f3f6fd;
 
-    subgraph "Workload Authentication"
+    subgraph Col1["🤖 Workload Authentication"]
+        direction TB
         W[Agent/Service<br/>Kubernetes Pod]:::workload
         SPIRE[SPIRE Agent<br/>Workload Identity]:::workload
+        W -->|Request<br/>Certificate| SPIRE
     end
 
-    subgraph "Human Authentication"
+    subgraph Col2["🏢 Directory Service"]
+        direction TB
+        API[Directory API<br/>SPIFFE-only Auth]:::api
+    end
+
+    subgraph Col3["👤 Human Authentication"]
+        direction TB
         H[Developer<br/>dirctl CLI]:::human
         GH[GitHub OAuth<br/>Device Flow]:::human
+        Envoy[Envoy Gateway<br/>ext_authz + RBAC]:::gateway
+        H -->|OAuth<br/>Token| GH
+        GH -->|Validated| Envoy
     end
 
-    subgraph "Authentication Gateway"
-        Envoy[Envoy Proxy<br/>ext_authz + RBAC]:::gateway
-    end
-
-    subgraph "Directory API"
-        API[Directory Service<br/>Business Logic]:::api
-    end
-
-    W -->|mTLS + SPIFFE ID| SPIRE
-    SPIRE -->|Authenticated| API
-
-    H -->|OAuth Token| GH
-    GH -->|Validated| Envoy
-    Envoy -->|Authorized<br/>via SPIFFE| API
-
-    API -.->|Only accepts<br/>SPIFFE IDs| SPIRE
+    SPIRE ==>|mTLS +<br/>SPIFFE ID| API
+    Envoy ==>|Authorized via<br/>Envoy's SPIFFE ID| API
 ```
 
 **Key Insight:** The Directory API itself has **zero authentication code**. It only validates SPIFFE IDs, trusting that callers have already been authenticated upstream.
 
-## Architecture: Two Paths, One Destination
+---
 
-Let's dive deeper into how each authentication mode works.
+# Part 1: Authentication for Human Operators
 
-### Path 1: SPIFFE Authentication (Workloads)
+The most common way to interact with Directory is through the `dirctl` CLI. This section covers everything you need to know about authenticating as a human user using GitHub OAuth.
 
-**SPIFFE** (Secure Production Identity Framework For Everyone) provides workload identity through **mTLS certificates**. This is ideal for service-to-service communication within Kubernetes.
+## Why GitHub OAuth?
 
-```mermaid
-sequenceDiagram
-    participant Service as Agent/Service
-    participant Agent as SPIRE Agent
-    participant API as Directory API
+Human operators need:
+- ✅ **Interactive authentication** - Simple browser-based login flow
+- ✅ **No cluster access required** - Works from any laptop or CI/CD runner
+- ✅ **Familiar experience** - Uses your existing GitHub account
+- ✅ **Organization-based access** - Leverage GitHub org memberships for authorization
 
-    Note over Service,Agent: Startup Phase
-    Service->>Agent: Request SPIFFE Certificate
-    Agent->>Agent: Verify Pod Identity<br/>(ServiceAccount, Labels, etc.)
-    Agent->>Service: Issue X.509-SVID Certificate<br/>(spiffe://prod.ads.outshift.io/my-agent)
+This makes GitHub OAuth perfect for developers, administrators, and CI/CD pipelines.
 
-    Note over Service,API: API Call Phase
-    Service->>API: gRPC Call + mTLS Certificate
-    API->>API: Validate SPIFFE ID
-    alt Authorized Workload
-        API->>Service: 200 OK + Data
-    else Unauthorized
-        API->>Service: 403 Forbidden
-    end
-```
-
-**How it works:**
-
-1. **Workload Registration**: Services are registered in SPIRE with their intended SPIFFE ID
-2. **Certificate Issuance**: SPIRE Agent validates the workload and issues a short-lived X.509 certificate
-3. **mTLS Communication**: The service uses this certificate for mutual TLS with the Directory API
-4. **Automatic Rotation**: Certificates rotate automatically (typically every 1 hour)
-
-**Security Benefits:**
-- ✅ **No secrets to manage** - No passwords, API keys, or tokens
-- ✅ **Automatic expiration** - Certificates rotate without human intervention
-- ✅ **Strong identity binding** - Identity tied to Kubernetes resources
-- ✅ **Zero-trust security** - Every call is cryptographically authenticated
-
-### Path 2: GitHub OAuth (Human Operators)
+## How It Works: Architecture & Flow
 
 For human operators using the `dirctl` CLI, we use **GitHub OAuth 2.0 Device Flow**. This provides a familiar authentication experience without requiring a local web server.
 
@@ -202,9 +164,9 @@ flowchart LR
 - **RBAC Rules**: Configurable allow/deny lists based on GitHub username and organization membership
 - **SPIFFE Integration**: Uses its own workload identity to call the Directory API
 
-## Hands-On: Using Directory Authentication
+## Hands-On: GitHub Authentication
 
-Now that we understand the architecture, let's walk through both authentication methods with practical examples using the Agntcy-hosted testbed environment.
+Now that we understand the architecture, let's walk through GitHub authentication with practical examples using the Agntcy-hosted testbed environment.
 
 ### Prerequisites
 
@@ -235,7 +197,7 @@ Agntcy hosts a **public testbed environment** where you can experiment with Dire
 - **Development**: Build and test applications that use Directory APIs
 - **Demos**: Showcase Directory capabilities to stakeholders
 
-### Option A: GitHub Authentication (Recommended for CLI Users)
+### Step-by-Step Guide
 
 Perfect for developers who want quick, interactive access without cluster credentials.
 
@@ -292,8 +254,8 @@ You can now use 'dirctl' commands with --auth-mode=github
 **Step 3: Use the CLI**
 
 ```bash
-# List records
-dirctl list
+# Get info about a record
+dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
 
 # Pull a specific record
 dirctl pull baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq -o json
@@ -315,22 +277,225 @@ kubectl logs -n <your-namespace> -l app=envoy-authz-authz --tail=50 | grep youru
 
 **Note:** This step is not available for public testbed users as it requires Kubernetes cluster access.
 
-### Option B: SPIFFE Authentication (For Self-Hosted Environments)
+## Authorization: User & Organization Allow Lists
+
+Now that you've successfully authenticated, the next critical question is: what can you actually do? Authentication proves **who you are**, but authorization determines **what you can access**.
+
+The Envoy gateway enforces authorization rules configured in the Helm chart:
+
+```yaml
+# Helm values for Envoy gateway
+authServer:
+  authorization:
+    # Allow users from specific GitHub organizations
+    allowedOrgConstructs:
+      - "agntcy"
+      - "spiffe"
+    
+    # Explicitly allow specific users
+    userAllowList:
+      - "github:alexdemo2026"
+      - "github:saradev2026"
+      - "github:mikeprod2026"
+    
+    # Explicitly deny specific users (takes precedence)
+    userDenyList:
+      - "github:malicious-user"
+```
+
+**Authorization Logic:**
+1. Check deny list (immediate rejection)
+2. Check allow list (immediate approval)
+3. Check organization membership (approval if in allowed org)
+4. Deny by default
+
+## Security & Best Practices
+
+Understanding how to use authentication is important, but implementing it securely is critical. Let's examine key security practices for managing GitHub tokens and integrating with CI/CD pipelines.
+
+### Token Security
+
+**GitHub OAuth Tokens:**
+- Tokens are stored with **0600 permissions** (owner read/write only)
+- Tokens expire after **8 hours** (configurable)
+- Token cache location: `~/.config/dirctl/auth-token.json`
+- **Never commit tokens to version control**
+- Use environment variables or secrets management for automation
+
+### CI/CD Integration
+
+GitHub Actions provides two approaches for authenticating with Directory. The automatic `GITHUB_TOKEN` is recommended for most use cases.
+
+#### Option 1: Using Automatic `GITHUB_TOKEN` (Recommended)
+
+GitHub Actions automatically provides a `GITHUB_TOKEN` in every workflow - no manual token creation needed!
+
+```yaml
+# GitHub Actions example using automatic token
+name: Deploy Agent
+on: [push]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Authenticate with Directory
+        env:
+          DIRECTORY_CLIENT_SERVER_ADDRESS: "prod.gateway.ads.outshift.io:443"
+          DIRECTORY_CLIENT_AUTH_MODE: "github"
+          DIRECTORY_CLIENT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          dirctl auth login
+          dirctl auth status
+      
+      - name: Push agent card
+        env:
+          DIRECTORY_CLIENT_SERVER_ADDRESS: "prod.gateway.ads.outshift.io:443"
+          DIRECTORY_CLIENT_AUTH_MODE: "github"
+        run: |
+          dirctl push ./agent-card.json
+```
+
+**Prerequisites:**
+1. **Identify the GitHub user** that will be authenticated:
+   ```yaml
+   # Add this step to check what user the token represents
+   - name: Check GitHub Token Identity
+     env:
+       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+     run: |
+       curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user | jq '.login'
+   ```
+   This typically returns `github-actions[bot]` or your repository name.
+
+2. **Add the user to the allow list** in your Directory configuration:
+   ```yaml
+   authServer:
+     authorization:
+       userAllowList:
+         - "github:github-actions[bot]"  # Or whatever the token identity is
+   ```
+
+**How it works:**
+- ✅ GitHub automatically provides the token (no manual creation)
+- ✅ Token is automatically rotated by GitHub
+- ✅ Works without `read:org` scope (authorization via `userAllowList`)
+- ⚠️ Organization fetch during login may show a warning (this is expected and harmless)
+
+#### Option 2: Using Custom PAT (For Organization-Based Access)
+
+If you need organization-based authorization or cross-repository access, use a Personal Access Token with `read:org` scope:
+
+```yaml
+# GitHub Actions example using custom PAT
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use dirctl with PAT
+        env:
+          DIRECTORY_CLIENT_SERVER_ADDRESS: "prod.gateway.ads.outshift.io:443"
+          DIRECTORY_CLIENT_AUTH_MODE: "github"
+          DIRECTORY_CLIENT_GITHUB_TOKEN: ${{ secrets.DIRECTORY_GITHUB_PAT }}
+        run: |
+          dirctl auth login
+          dirctl info <cid>
+          dirctl push ./agent-card.json
+```
+
+**Prerequisites:**
+1. Create a GitHub PAT with `user:email` and `read:org` scopes
+2. Store it as a repository secret: `DIRECTORY_GITHUB_PAT`
+3. Ensure your GitHub user or organization is in the Directory allow list
+
+**When to use this:**
+- Need organization-based authorization (not in `userAllowList`)
+- Need cross-repository access
+- Need to impersonate a specific user
+
+**Best Practices:**
+- ✅ **Prefer automatic `GITHUB_TOKEN`** - No manual token management
+- ✅ Store custom PATs in repository secrets (never in code)
+- ✅ Use dedicated service accounts for PAT-based automation
+- ✅ Rotate custom PATs regularly (e.g., quarterly)
+- ✅ Scope tokens to minimum required permissions
+- ✅ Add the workflow identity to `userAllowList` for automatic token usage
+
+---
+
+# Part 2: Authentication for Automated Workloads
+
+While GitHub OAuth is perfect for humans, automated services and agents running in Kubernetes need a different approach. This section covers SPIFFE-based workload identity for machine-to-machine authentication.
+
+## Why SPIFFE?
+
+Automated workloads need:
+- ✅ **No human intervention** - Fully automated certificate lifecycle
+- ✅ **Strong cryptographic identity** - Workload-to-workload mTLS
+- ✅ **Automatic rotation** - Certificates renew without restarts
+- ✅ **Kubernetes-native** - Identity tied to pods, namespaces, and service accounts
+
+This makes SPIFFE perfect for production services, agents, and microservices running in Kubernetes clusters.
+
+## How It Works: Architecture & Flow
+
+**SPIFFE** (Secure Production Identity Framework For Everyone) provides workload identity through **mTLS certificates**. This is ideal for service-to-service communication within Kubernetes.
+
+```mermaid
+sequenceDiagram
+    participant Service as Agent/Service
+    participant Agent as SPIRE Agent
+    participant API as Directory API
+
+    Note over Service,Agent: Startup Phase
+    Service->>Agent: Request SPIFFE Certificate
+    Agent->>Agent: Verify Pod Identity<br/>(ServiceAccount, Labels, etc.)
+    Agent->>Service: Issue X.509-SVID Certificate<br/>(spiffe://prod.ads.outshift.io/my-agent)
+
+    Note over Service,API: API Call Phase
+    Service->>API: gRPC Call + mTLS Certificate
+    API->>API: Validate SPIFFE ID
+    alt Authorized Workload
+        API->>Service: 200 OK + Data
+    else Unauthorized
+        API->>Service: 403 Forbidden
+    end
+```
+
+**How it works:**
+
+1. **Workload Registration**: Services are registered in SPIRE with their intended SPIFFE ID
+2. **Certificate Issuance**: SPIRE Agent validates the workload and issues a short-lived X.509 certificate
+3. **mTLS Communication**: The service uses this certificate for mutual TLS with the Directory API
+4. **Automatic Rotation**: Certificates rotate automatically (typically every 1 hour)
+
+**Security Benefits:**
+- ✅ **No secrets to manage** - No passwords, API keys, or tokens
+- ✅ **Automatic expiration** - Certificates rotate without human intervention
+- ✅ **Strong identity binding** - Identity tied to Kubernetes resources
+- ✅ **Zero-trust security** - Every call is cryptographically authenticated
+
+## Hands-On: SPIFFE Authentication
 
 **Note:** SPIFFE authentication is **not available for the public testbed** environment. This option is for organizations running their own Directory deployment with SPIRE infrastructure.
 
 Ideal for services running within your own Kubernetes cluster that need programmatic access. This method works best in environments where the **SPIRE Agent** is deployed as a DaemonSet, allowing workloads to automatically obtain their identity certificates via the Workload API.
 
-**Two Approaches:**
+### Two Approaches
 
 1. **Production Workloads (Recommended)**: Use SPIRE Agent + Workload API for fully automated certificate management
 2. **Local Development/Testing**: Manually export certificates from SPIRE Server for experimentation on your laptop
 
 The manual export approach is **only for demonstration and experimenting in your local environment**. It allows you to test SPIFFE authentication without needing the full SPIRE infrastructure on your machine. Production workloads should always use the SPIRE Agent for automatic, zero-touch certificate management.
 
-**Step 1: Mint SPIFFE Certificate (Manual Export for Local Testing)**
+### Manual Certificate Export (Local Testing Only)
 
 When you want to test Directory authentication from your laptop without SPIRE Agent, you can manually mint a certificate from your own SPIRE server (requires cluster access and administrative permissions):
+
+**Step 1: Mint SPIFFE Certificate**
 
 ```bash
 # Replace with your own SPIRE server pod name and namespace
@@ -366,18 +531,18 @@ export DIRECTORY_CLIENT_SPIFFE_TOKEN="spiffe-local.json"
 **Step 3: Use the CLI**
 
 ```bash
-dirctl list
+dirctl info <cid>
 dirctl pull <cid> -o json
 ```
 
-**Step 4: For Production Workloads (Recommended)**
+### Production Deployment (Recommended)
 
 The manual certificate export approach above is useful for testing and debugging, but **production workloads should use the SPIRE Workload API** to automatically obtain and rotate certificates. This requires the SPIRE Agent to be running on the same node as your workload (typically deployed as a Kubernetes DaemonSet).
 
 **Key Benefits of SPIRE Agent Integration:**
 - ✅ **Zero manual steps** - Certificates are obtained automatically via the Workload API
 - ✅ **Automatic rotation** - Certificates renew before expiration without restarts
-- ✅ **No exported files** - No need to manage `spiffe-prod.json` files
+- ✅ **No exported files** - No need to manage `spiffe-local.json` files
 - ✅ **Production-ready** - The recommended approach for all Kubernetes workloads
 - ✅ **Just works** - Your service discovers the SPIRE Agent via the standard Unix domain socket
 
@@ -389,41 +554,7 @@ The manual certificate export approach above is useful for testing and debugging
 
 For implementation details, see the [Directory Go client documentation](https://github.com/agntcy/dir/tree/main/client) and [SPIRE Workload API guide](https://spiffe.io/docs/latest/spire-about/spire-concepts/#workload-api).
 
-## Authorization: Who Can Access What?
-
-Now that you've successfully authenticated, the next critical question is: what can you actually do? Authentication proves **who you are**, but authorization determines **what you can access**. Let's explore how the Directory controls access for both GitHub users and SPIFFE workloads.
-
-### GitHub OAuth: User and Organization Allow Lists
-
-The Envoy gateway enforces authorization rules configured in the Helm chart:
-
-```yaml
-# Helm values for Envoy gateway
-authServer:
-  authorization:
-    # Allow users from specific GitHub organizations
-    allowedOrgConstructs:
-      - "agntcy"
-      - "spiffe"
-    
-    # Explicitly allow specific users
-    userAllowList:
-      - "github:alexdemo2026"
-      - "github:saradev2026"
-      - "github:mikeprod2026"
-    
-    # Explicitly deny specific users (takes precedence)
-    userDenyList:
-      - "github:malicious-user"
-```
-
-**Authorization Logic:**
-1. Check deny list (immediate rejection)
-2. Check allow list (immediate approval)
-3. Check organization membership (approval if in allowed org)
-4. Deny by default
-
-### SPIFFE: Workload Identity Allow Lists
+## Authorization: Workload Identity Allow Lists
 
 The Directory API maintains an allow list of trusted SPIFFE IDs:
 
@@ -436,147 +567,66 @@ authorizedIDs := []spiffeid.ID{
 }
 ```
 
+**Authorization Logic:**
+1. Extract SPIFFE ID from client certificate
+2. Check against authorized ID list
+3. Deny by default if not found
+
 **Why This Matters:**
 - ✅ **Least Privilege** - Only explicitly authorized workloads can access the API
 - ✅ **Defense in Depth** - Even if an attacker compromises a pod, they can't access the Directory without the correct SPIFFE ID
 - ✅ **Audit Trail** - Every request is logged with the authenticated SPIFFE ID
 
-## Security Considerations
+## Security & Best Practices
 
-Understanding how to use authentication and authorization is important, but implementing them securely is critical. Let's examine key security practices for managing tokens, certificates, and integrating with CI/CD pipelines.
-
-### Token Security
-
-**GitHub OAuth Tokens:**
-- Tokens are stored with **0600 permissions** (owner read/write only)
-- Tokens expire after **8 hours** (configurable)
-- Token cache location: `~/.config/dirctl/auth-token.json`
-- **Never commit tokens to version control**
-
-**SPIFFE Certificates:**
+**SPIFFE Certificate Security:**
 - Certificates are **short-lived** (typically 1 hour)
 - Certificates **auto-rotate** before expiration
 - Certificates are **cryptographically bound** to workload identity
 - **No manual rotation required**
+- **No secrets stored** - All key material is ephemeral
 
-### CI/CD Integration
+**Production Best Practices:**
+- Deploy SPIRE Agent as a DaemonSet in all nodes
+- Use pod selectors for fine-grained workload registration
+- Monitor certificate expiry and rotation
+- Implement proper SPIRE Server high availability
+- Use SPIRE's federation features for multi-cluster scenarios
 
-For CI/CD pipelines, you can use GitHub Personal Access Tokens (PATs) or OAuth tokens:
+---
 
-```yaml
-# GitHub Actions example
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Use dirctl
-        env:
-          DIRECTORY_CLIENT_SERVER_ADDRESS: "prod.gateway.ads.outshift.io:443"
-          DIRECTORY_CLIENT_AUTH_MODE: "github"
-          DIRECTORY_CLIENT_GITHUB_TOKEN: ${{ secrets.DIRECTORY_GITHUB_TOKEN }}
-        run: |
-          dirctl list
-          dirctl push ./agent-card.json
-```
-
-**Best Practices:**
-- ✅ Store tokens in CI/CD secrets (never in code)
-- ✅ Use dedicated service accounts for automation
-- ✅ Rotate tokens regularly
-- ✅ Scope tokens to minimum required permissions
+# Part 3: Choosing the Right Method
 
 ## Comparison: When to Use Each Method
 
 With both authentication methods available, you might wonder which one to choose. The answer depends on your use case, environment, and operational requirements. Here's a comprehensive comparison to help you decide:
 
-| Criteria | SPIFFE (mTLS) | GitHub OAuth |
-|----------|---------------|--------------|
-| **Use Case** | Automated workloads | Human operators |
-| **Testbed Support** | ❌ Not available | ✅ Available |
+| Criteria | GitHub OAuth | SPIFFE (mTLS) |
+|----------|--------------|---------------|
+| **Use Case** | Human operators | Automated workloads |
+| **Testbed Support** | ✅ Available | ❌ Not available |
 | **Self-Hosted Support** | ✅ Available | ✅ Available |
-| **Environment** | Kubernetes clusters with SPIRE | CLI, laptops, CI/CD |
-| **Setup Complexity** | Medium (requires SPIRE infrastructure) | Low (just GitHub account) |
-| **Security Model** | Workload identity | User identity |
-| **Token Lifetime** | Short (1 hour) | Medium (8 hours) |
-| **Rotation** | Automatic (with SPIRE Agent) | Manual (re-login) |
-| **Production Workflow** | Fully automated via Workload API | Login once per 8 hours |
-| **Local Testing** | Manual cert export (demo/experimentation) | Same as production |
-| **Cluster Access** | Required for setup | Not required |
-| **Best For** | Production services in self-hosted | Development, testing, demos |
+| **Environment** | CLI, laptops, CI/CD | Kubernetes clusters with SPIRE |
+| **Setup Complexity** | Low (just GitHub account) | Medium (requires SPIRE infrastructure) |
+| **Security Model** | User identity | Workload identity |
+| **Token Lifetime** | Medium (8 hours) | Short (1 hour) |
+| **Rotation** | Manual (re-login) | Automatic (with SPIRE Agent) |
+| **Production Workflow** | Login once per 8 hours | Fully automated via Workload API |
+| **Local Testing** | Same as production | Manual cert export (demo/experimentation) |
+| **Cluster Access** | Not required | Required for setup |
+| **Best For** | Development, testing, demos | Production services in self-hosted |
 
 **Rule of Thumb:**
 - **For Agntcy Testbed**: Use **GitHub OAuth** (only authentication method available for public testbed)
-- **For Self-Hosted Production**: Use **SPIFFE with SPIRE Agent** for Kubernetes workloads (fully automated, zero manual steps)
-- **For Local Development**: Use **SPIFFE manual cert export** for experimentation with your own infrastructure (demo purposes only)
 - **For Human Users (any environment)**: Use **GitHub OAuth** for CLI interactions, development, and CI/CD
-
-## Troubleshooting
-
-Even with robust authentication systems, you may encounter issues during setup or daily use. Here are common problems and their solutions for both authentication methods:
-
-### GitHub Authentication Issues
-
-**Problem:** `dirctl auth login` times out
-
-**Solution:**
-1. Check your internet connection
-2. Verify you can access `https://github.com/login/device`
-3. Ensure you authorized the application within 15 minutes
-4. Try again: `dirctl auth login`
-
----
-
-**Problem:** `not authenticated with GitHub` error
-
-**Solution:**
-1. Check if token is cached: `dirctl auth status`
-2. Re-authenticate: `dirctl auth login`
-3. Verify environment variables:
-   ```bash
-   echo $DIRECTORY_CLIENT_SERVER_ADDRESS
-   echo $DIRECTORY_CLIENT_AUTH_MODE
-   ```
-
----
-
-**Problem:** `403 Forbidden` error after authentication
-
-**Solution:**
-1. Verify you're in the allowed users or organizations list
-2. Contact the Directory administrator to add your GitHub username
-3. **(Self-Hosted Only)** Check Envoy logs for authorization details if you have cluster access:
-   ```bash
-   # Replace with your namespace and label selectors
-   kubectl logs -n <your-namespace> -l app=envoy-authz-authz --tail=100
-   ```
-   **Note:** Testbed users should contact the Agntcy team for authorization issues
-
-### SPIFFE Authentication Issues
-
-**Problem:** `connection refused` error
-
-**Solution:**
-1. Verify you're on the VPN
-2. Check the server address: `prod.api.ads.outshift.io:443`
-3. Verify SPIFFE certificate is valid:
-   ```bash
-   cat spiffe-prod.json | jq '.svids[0].x509_svid' -r | \
-     base64 -d | openssl x509 -noout -dates
-   ```
-
----
-
-**Problem:** Certificate expired
-
-**Solution:**
-1. Mint a new certificate (see Step 1 in SPIFFE authentication)
-2. For workloads, ensure SPIRE Agent is running and can communicate with SPIRE Server
+- **For Self-Hosted Production Workloads**: Use **SPIFFE with SPIRE Agent** for Kubernetes services (fully automated, zero manual steps)
+- **For Local Development/Testing**: Use **SPIFFE manual cert export** for experimentation with your own infrastructure (demo purposes only)
 
 ## What's Next?
 
-Directory v1.0.0 provides a solid foundation for secure agent discovery, but the authentication story continues to evolve. Here's what's on the roadmap:
+Directory v1.0 provides a solid foundation for secure agent discovery, but the authentication story continues to evolve. Here's what's on the roadmap:
 
-The dual-mode authentication system in Directory v1.0.0 is just the beginning. Future enhancements include:
+The dual-mode authentication system in Directory v1.0 is just the beginning. Future enhancements include:
 
 - **OIDC Provider Support**: Integration with enterprise identity providers (Okta, Azure AD, Zitadel)
 - **Fine-Grained RBAC**: Per-resource permissions (read vs. write access)
@@ -585,26 +635,14 @@ The dual-mode authentication system in Directory v1.0.0 is just the beginning. F
 
 ## Conclusion
 
-Directory v1.0.0's dual-mode authentication architecture demonstrates that **security doesn't have to compromise usability**. By supporting both SPIFFE workload identity and GitHub OAuth, we've created a system that's:
+Directory v1.0's dual-mode authentication architecture demonstrates that **security doesn't have to compromise usability**. By supporting both GitHub OAuth and SPIFFE workload identity, we've created a system that's:
 
-- ✅ **Secure by default** - Zero-trust, mutual TLS, automatic rotation
 - ✅ **Developer-friendly** - Familiar OAuth flows, cached tokens, simple CLI
+- ✅ **Secure by default** - Zero-trust, mutual TLS, automatic rotation
 - ✅ **Production-ready** - Battle-tested in real-world environments
-- ✅ **Flexible** - Supports both automated workloads and human operators
+- ✅ **Flexible** - Supports both human operators and automated workloads
 
 Whether you're building AI agents, deploying microservices, or managing a service mesh, the Agent Directory provides the trusted foundation for secure service discovery.
-
-**Try it today:**
-```bash
-# Install dirctl
-curl -sSL https://get.agntcy.dev/dir | sh
-
-# Authenticate
-dirctl auth login
-
-# Explore
-dirctl list
-```
 
 ## 📚 References
 
