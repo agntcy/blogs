@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery"
-date: 2026-01-23 09:00:00 +0000
+date: 2026-01-22 09:00:00 +0000
 author: Tibor Kircsi
 author_url: https://github.com/tkircsi
 categories: [security, authentication, directory]
@@ -17,7 +17,7 @@ This post explores the architecture, implementation, and practical usage of Dire
 
 ## The Challenge: Two Types of Users
 
-When building the Agent Directory, we encountered a fundamental question: **Who should be allowed to access the system?**
+When building the Agent Directory, we encountered a fundamental question: Who should be allowed to access the system?
 
 The answer wasn't simple. We had two distinct user personas with very different needs:
 
@@ -62,7 +62,7 @@ flowchart LR
     Envoy ==>|Authorized via<br/>Envoy's SPIFFE ID| API
 ```
 
-**Key Insight:** The Directory API itself has **zero authentication code**. It only validates SPIFFE IDs, trusting that callers have already been authenticated upstream.
+**Key Insight:** The Directory API itself has zero authentication code. It only validates SPIFFE IDs, trusting that callers have already been authenticated upstream.
 
 ---
 
@@ -123,11 +123,11 @@ sequenceDiagram
 4. **Envoy Gateway**: Token is sent to Envoy, which validates it and enforces RBAC
 5. **SPIFFE Impersonation**: Envoy calls the API using its own SPIFFE ID
 
-**Key Advantage:** The Directory API **never sees user tokens** - it only sees Envoy's trusted SPIFFE ID.
+**Key Advantage:** The Directory API never sees user tokens - it only sees Envoy's trusted SPIFFE ID.
 
 ## The Envoy Gateway: Policy Enforcement Point
 
-The Envoy gateway is the **linchpin** of the human authentication flow. It handles:
+The Envoy gateway is the linchpin of the human authentication flow. It handles:
 
 1. **Token Validation** - Verifies GitHub OAuth tokens
 2. **Authorization** - Enforces role-based access control (RBAC)
@@ -160,7 +160,7 @@ flowchart LR
 
 **Envoy Configuration Highlights:**
 
-- **Custom ext_authz Service**: Validates GitHub tokens and extracts user identity
+- **Custom `ext_authz` Service**: Validates GitHub tokens and extracts user identity
 - **RBAC Rules**: Configurable allow/deny lists based on GitHub username and organization membership
 - **SPIFFE Integration**: Uses its own workload identity to call the Directory API
 
@@ -171,7 +171,8 @@ Now that we understand the architecture, let's walk through GitHub authenticatio
 ### Prerequisites
 
 1. **CLI Tool**: `dirctl` installed ([Installation Guide](https://github.com/agntcy/dir#installation))
-2. **Authorization**: Your GitHub username or organization must be in the production environment's allowed list
+2. **Authorization**: Your GitHub username or organization must be in the production environment's allowed list. In case you are not:
+
    - Contact your Directory administrator if you don't have access
    - See the [Authorization section](#authorization-who-can-access-what) for details on allow lists
 
@@ -218,7 +219,7 @@ You'll see:
 
 ```text
 ╔════════════════════════════════════════════════════════════╗
-║          GitHub OAuth Authentication (Device Flow)        ║
+║          GitHub OAuth Authentication (Device Flow)         ║
 ╚════════════════════════════════════════════════════════════╝
 
 🔐 To authenticate, please follow these steps:
@@ -480,7 +481,7 @@ sequenceDiagram
 
 ## Hands-On: SPIFFE Authentication
 
-**Note:** SPIFFE authentication is **not available for the public testbed** environment. This option is for organizations running their own Directory deployment with SPIRE infrastructure.
+**Note:** SPIFFE authentication is not available for the public testbed environment. This option is for organizations running their own Directory deployment with SPIRE infrastructure.
 
 Ideal for services running within your own Kubernetes cluster that need programmatic access. This method works best in environments where the **SPIRE Agent** is deployed as a DaemonSet, allowing workloads to automatically obtain their identity certificates via the Workload API.
 
@@ -489,7 +490,7 @@ Ideal for services running within your own Kubernetes cluster that need programm
 1. **Production Workloads (Recommended)**: Use SPIRE Agent + Workload API for fully automated certificate management
 2. **Local Development/Testing**: Manually export certificates from SPIRE Server for experimentation on your laptop
 
-The manual export approach is **only for demonstration and experimenting in your local environment**. It allows you to test SPIFFE authentication without needing the full SPIRE infrastructure on your machine. Production workloads should always use the SPIRE Agent for automatic, zero-touch certificate management.
+The manual export approach is only for demonstration and experimenting in your local environment. It allows you to test SPIFFE authentication without needing the full SPIRE infrastructure on your machine. Production workloads should always use the SPIRE Agent for automatic, zero-touch certificate management.
 
 ### Manual Certificate Export (Local Testing Only)
 
@@ -537,7 +538,7 @@ dirctl pull <cid> -o json
 
 ### Production Deployment (Recommended)
 
-The manual certificate export approach above is useful for testing and debugging, but **production workloads should use the SPIRE Workload API** to automatically obtain and rotate certificates. This requires the SPIRE Agent to be running on the same node as your workload (typically deployed as a Kubernetes DaemonSet).
+The manual certificate export approach above is useful for testing and debugging, but production workloads should use the SPIRE Workload API to automatically obtain and rotate certificates. This requires the SPIRE Agent to be running on the same node as your workload (typically deployed as a Kubernetes DaemonSet).
 
 **Key Benefits of SPIRE Agent Integration:**
 - ✅ **Zero manual steps** - Certificates are obtained automatically via the Workload API
@@ -580,10 +581,10 @@ authorizedIDs := []spiffeid.ID{
 ## Security & Best Practices
 
 **SPIFFE Certificate Security:**
-- Certificates are **short-lived** (typically 1 hour)
-- Certificates **auto-rotate** before expiration
-- Certificates are **cryptographically bound** to workload identity
-- **No manual rotation required**
+- Certificates are short-lived, typically one hour
+- Certificates auto-rotate before expiration
+- Certificates are cryptographically bound to workload identity
+- No manual rotation required
 - **No secrets stored** - All key material is ephemeral
 
 **Production Best Practices:**
@@ -617,8 +618,8 @@ With both authentication methods available, you might wonder which one to choose
 | **Best For** | Development, testing, demos | Production services in self-hosted |
 
 **Rule of Thumb:**
-- **For Agntcy Testbed**: Use **GitHub OAuth** (only authentication method available for public testbed)
-- **For Human Users (any environment)**: Use **GitHub OAuth** for CLI interactions, development, and CI/CD
+- **For Agntcy Testbed**: Use GitHub OAuth (only authentication method available for public testbed)
+- **For Human Users (any environment)**: Use GitHub OAuth for CLI interactions, development, and CI/CD
 - **For Self-Hosted Production Workloads**: Use **SPIFFE with SPIRE Agent** for Kubernetes services (fully automated, zero manual steps)
 - **For Local Development/Testing**: Use **SPIFFE manual cert export** for experimentation with your own infrastructure (demo purposes only)
 
