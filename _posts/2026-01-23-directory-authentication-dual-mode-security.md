@@ -161,7 +161,8 @@ flowchart LR
 **Envoy Configuration Highlights:**
 
 - **Custom `ext_authz` Service**: Validates GitHub tokens and extracts user identity
-- **RBAC Rules**: Configurable allow/deny lists based on GitHub username and organization membership
+- **Casbin-Based RBAC**: Policy-driven authorization with role assignments for users and organizations
+- **Fine-Grained Permissions**: Control access per API method (e.g., allow read but deny write operations)
 - **SPIFFE Integration**: Uses its own workload identity to call the Directory API
 
 ## Hands-On: GitHub Authentication
@@ -278,37 +279,62 @@ kubectl logs -n <your-namespace> -l app=envoy-authz-authz --tail=50 | grep youru
 
 **Note:** This step is not available for public testbed users as it requires Kubernetes cluster access.
 
-## Authorization: User & Organization Allow Lists
+## Authorization: Role-Based Access Control (RBAC)
 
 Now that you've successfully authenticated, the next critical question is: what can you actually do? Authentication proves **who you are**, but authorization determines **what you can access**.
 
-The Envoy gateway enforces authorization rules configured in the Helm chart:
+The Envoy gateway enforces authorization using a role-based access control (RBAC) system powered by [Casbin](https://casbin.org), configured in the Helm chart:
 
 ```yaml
 # Helm values for Envoy gateway
 authServer:
   authorization:
-    # Allow users from specific GitHub organizations
-    allowedOrgConstructs:
-      - "agntcy"
-      - "spiffe"
+    # Default role for any authenticated user (empty = deny by default)
+    defaultRole: "reader"
     
-    # Explicitly allow specific users
-    userAllowList:
-      - "github:alexdemo2026"
-      - "github:saradev2026"
-      - "github:mikeprod2026"
-    
-    # Explicitly deny specific users (takes precedence)
+    # Explicitly deny specific users (highest priority)
     userDenyList:
       - "github:malicious-user"
+    
+    # Role definitions
+    roles:
+      # Admin role - full access to all API methods
+      admin:
+        allowedMethods:
+          - "*"  # Wildcard = all Directory API methods
+        users:
+          - "github:alexdemo2026"
+          - "github:saradev2026"
+        orgs:
+          - "agntcy"  # All members of "agntcy" org get admin access
+      
+      # Reader role - read-only access
+      reader:
+        allowedMethods:
+          - "/agntcy.dir.store.v1.StoreService/Pull"
+          - "/agntcy.dir.store.v1.StoreService/Lookup"
+          - "/agntcy.dir.routing.v1.RoutingService/Search"
+          - "/agntcy.dir.routing.v1.RoutingService/List"
+          - "/agntcy.dir.search.v1.SearchService/SearchCIDs"
+          # ... more read-only methods
+        users:
+          - "github:mikeprod2026"
+        orgs:
+          - "contributors"
 ```
 
-**Authorization Logic:**
-1. Check deny list (immediate rejection)
-2. Check allow list (immediate approval)
-3. Check organization membership (approval if in allowed org)
-4. Deny by default
+**Authorization Logic (Precedence Order):**
+1. **Deny List** (highest priority) - Blocks access even if user has a role
+2. **User Role** - Direct user-to-role assignment (e.g., specific users in `admin.users`)
+3. **Organization Role** - Org-to-role assignment (e.g., all members of `agntcy` org)
+4. **Default Role** - Fallback for any authenticated user not explicitly assigned
+5. **Deny by Default** - If no role matches and no default role is set
+
+**Key Features:**
+- **Policy-Driven**: Authorization rules defined in YAML, no code changes needed
+- **Fine-Grained**: Control access per API method (e.g., allow `Pull` but deny `Push`)
+- **Flexible Wildcards**: Use `"*"` for full access or specify individual methods
+- **Org-Based Assignment**: Leverage GitHub organization membership for role assignment
 
 ## Security & Best Practices
 
@@ -372,18 +398,23 @@ jobs:
    ```
    This typically returns `github-actions[bot]` or your repository name.
 
-2. **Add the user to the allow list** in your Directory configuration:
+2. **Assign the user to a role** in your Directory configuration:
    ```yaml
    authServer:
      authorization:
-       userAllowList:
-         - "github:github-actions[bot]"  # Or whatever the token identity is
+       roles:
+         writer:  # Or any role with required permissions
+           allowedMethods:
+             - "/agntcy.dir.store.v1.StoreService/Push"
+             - "/agntcy.dir.store.v1.StoreService/Pull"
+           users:
+             - "github:github-actions[bot]"  # Add the bot user here
    ```
 
 **How it works:**
 - ✅ GitHub automatically provides the token (no manual creation)
 - ✅ Token is automatically rotated by GitHub
-- ✅ Works without `read:org` scope (authorization via `userAllowList`)
+- ✅ Works without `read:org` scope (authorization via direct user role assignment)
 - ⚠️ Organization fetch during login may show a warning (this is expected and harmless)
 
 #### Option 2: Using Custom PAT (For Organization-Based Access)
@@ -410,10 +441,10 @@ jobs:
 **Prerequisites:**
 1. Create a GitHub PAT with `user:email` and `read:org` scopes
 2. Store it as a repository secret: `DIRECTORY_GITHUB_PAT`
-3. Ensure your GitHub user or organization is in the Directory allow list
+3. Ensure your GitHub user or organization is assigned to a role with required permissions
 
 **When to use this:**
-- Need organization-based authorization (not in `userAllowList`)
+- Need organization-based role assignment (leverage GitHub org membership)
 - Need cross-repository access
 - Need to impersonate a specific user
 
@@ -423,7 +454,7 @@ jobs:
 - ✅ Use dedicated service accounts for PAT-based automation
 - ✅ Rotate custom PATs regularly (e.g., quarterly)
 - ✅ Scope tokens to minimum required permissions
-- ✅ Add the workflow identity to `userAllowList` for automatic token usage
+- ✅ Assign the workflow identity to an appropriate RBAC role for automatic token usage
 
 ---
 
@@ -625,25 +656,24 @@ With both authentication methods available, you might wonder which one to choose
 
 ## What's Next?
 
-Directory v1.0 provides a solid foundation for secure agent discovery, but the authentication story continues to evolve. Here's what's on the roadmap:
-
-The dual-mode authentication system in Directory v1.0 is just the beginning. Future enhancements include:
+Directory v1.0 provides a solid foundation for secure agent discovery with **fine-grained RBAC** already implemented. The authentication story continues to evolve with these planned enhancements:
 
 - **OIDC Provider Support**: Integration with enterprise identity providers (Okta, Azure AD, Zitadel)
-- **Fine-Grained RBAC**: Per-resource permissions (read vs. write access)
-- **Audit Logging**: Comprehensive access logs for compliance
-- **Multi-Tenancy**: Namespace-based isolation
+- **Enhanced RBAC**: Per-resource permissions (e.g., read/write access to specific CIDs or namespaces)
+- **Audit Logging**: Comprehensive access logs for compliance and security monitoring
+- **Multi-Tenancy**: Namespace-based isolation for multi-organization deployments
+- **Dynamic Policy Updates**: Hot-reload RBAC policies without service restarts
 
 ## Conclusion
 
-Directory v1.0's dual-mode authentication architecture demonstrates that **security doesn't have to compromise usability**. By supporting both GitHub OAuth and SPIFFE workload identity, we've created a system that's:
+Directory v1.0's dual-mode authentication architecture demonstrates that **security doesn't have to compromise usability**. By combining GitHub OAuth, SPIFFE workload identity, and Casbin-based RBAC, we've created a system that's:
 
 - ✅ **Developer-friendly** - Familiar OAuth flows, cached tokens, simple CLI
-- ✅ **Secure by default** - Zero-trust, mutual TLS, automatic rotation
-- ✅ **Production-ready** - Battle-tested in real-world environments
-- ✅ **Flexible** - Supports both human operators and automated workloads
+- ✅ **Secure by default** - Zero-trust, mutual TLS, automatic rotation, fine-grained permissions
+- ✅ **Production-ready** - Battle-tested in real-world environments with policy-driven authorization
+- ✅ **Flexible** - Supports both human operators and automated workloads with customizable roles
 
-Whether you're building AI agents, deploying microservices, or managing a service mesh, the Agent Directory provides the trusted foundation for secure service discovery.
+Whether you're building AI agents, deploying microservices, or managing a service mesh, the Agent Directory provides the trusted foundation for secure service discovery with enterprise-grade access control.
 
 ## 📚 References
 
@@ -652,3 +682,4 @@ Whether you're building AI agents, deploying microservices, or managing a servic
 - [OAuth 2.0 Device Flow (RFC 8628)](https://datatracker.ietf.org/doc/html/rfc8628)
 - [Envoy External Authorization](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter)
 - [GitHub OAuth Apps](https://docs.github.com/en/developers/apps/building-oauth-apps)
+- [Casbin - Authorization Library](https://casbin.org)
