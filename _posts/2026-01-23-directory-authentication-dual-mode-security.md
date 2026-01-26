@@ -351,11 +351,11 @@ Understanding how to use authentication is important, but implementing it secure
 
 ### CI/CD Integration
 
-For CI/CD pipelines, you'll need to provide authentication credentials programmatically. Currently, Personal Access Tokens (PATs) are the recommended approach.
+For CI/CD pipelines, you'll need to provide authentication credentials programmatically. Personal Access Tokens (PATs) are the recommended approach for automated workflows.
 
-#### Using Personal Access Token (PAT)
+#### Personal Access Token Setup
 
-Use a Personal Access Token with appropriate scopes for CI/CD authentication:
+Create and configure a PAT for CI/CD authentication:
 
 ```yaml
 # GitHub Actions example using PAT
@@ -421,15 +421,11 @@ jobs:
 - ✅ Scope tokens to minimum required permissions
 - ✅ Ensure your user/org is assigned to an appropriate RBAC role
 
-#### GitHub App Integration (Coming Soon)
-
-We're working on GitHub App support for CI/CD authentication, which will provide:
-- ✅ Automated token management (no manual rotation needed)
-- ✅ Short-lived installation tokens (1 hour expiry)
-- ✅ Bot identity (`your-app[bot]`)
-- ✅ Organization-wide installation
-
-**Status:** Coming in a future release. Watch the [GitHub repository](https://github.com/agntcy/dir) for updates.
+**Security Notes:**
+- PATs should be treated as sensitive credentials and never committed to version control
+- Use GitHub's repository secrets or organization secrets for secure storage
+- Consider using different PATs for different environments (dev, staging, prod)
+- Audit PAT usage regularly through GitHub's security logs
 
 ---
 
