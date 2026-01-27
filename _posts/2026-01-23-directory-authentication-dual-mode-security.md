@@ -351,14 +351,14 @@ Understanding how to use authentication is important, but implementing it secure
 
 ### CI/CD Integration
 
-GitHub Actions provides two approaches for authenticating with Directory. The automatic `GITHUB_TOKEN` is recommended for most use cases.
+For CI/CD pipelines, you'll need to provide authentication credentials programmatically. Personal Access Tokens (PATs) are the recommended approach for automated workflows.
 
-#### Option 1: Using Automatic `GITHUB_TOKEN` (Recommended)
+#### Personal Access Token Setup
 
-GitHub Actions automatically provides a `GITHUB_TOKEN` in every workflow - no manual token creation needed!
+Create and configure a PAT for CI/CD authentication:
 
 ```yaml
-# GitHub Actions example using automatic token
+# GitHub Actions example using PAT
 name: Deploy Agent
 on: [push]
 
@@ -373,7 +373,7 @@ jobs:
         env:
           DIRECTORY_CLIENT_SERVER_ADDRESS: "prod.gateway.ads.outshift.io:443"
           DIRECTORY_CLIENT_AUTH_MODE: "github"
-          DIRECTORY_CLIENT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIRECTORY_CLIENT_GITHUB_TOKEN: ${{ secrets.DIRECTORY_GITHUB_PAT }}
         run: |
           dirctl auth login
           dirctl auth status
@@ -386,19 +386,20 @@ jobs:
           dirctl push ./agent-card.json
 ```
 
-**Prerequisites:**
-1. **Identify the GitHub user** that will be authenticated:
-   ```yaml
-   # Add this step to check what user the token represents
-   - name: Check GitHub Token Identity
-     env:
-       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-     run: |
-       curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/user | jq '.login'
-   ```
-   This typically returns `github-actions[bot]` or your repository name.
+**Setup Steps:**
 
-2. **Assign the user to a role** in your Directory configuration:
+1. **Create a GitHub Personal Access Token:**
+   - Go to: https://github.com/settings/tokens/new
+   - Select scopes: `user:email` and `read:org`
+   - Generate token and copy it immediately
+
+2. **Store as repository secret:**
+   - Go to your repository settings: `https://github.com/<org>/<repo>/settings/secrets/actions`
+   - Click "New repository secret"
+   - Name: `DIRECTORY_GITHUB_PAT`
+   - Value: Paste your token
+
+3. **Configure RBAC authorization:**
    ```yaml
    authServer:
      authorization:
@@ -408,53 +409,23 @@ jobs:
              - "/agntcy.dir.store.v1.StoreService/Push"
              - "/agntcy.dir.store.v1.StoreService/Pull"
            users:
-             - "github:github-actions[bot]"  # Add the bot user here
+             - "github:your-username"  # Add your GitHub username
+           orgs:
+             - "your-org"  # Or authorize entire organization
    ```
 
-**How it works:**
-- ✅ GitHub automatically provides the token (no manual creation)
-- ✅ Token is automatically rotated by GitHub
-- ✅ Works without `read:org` scope (authorization via direct user role assignment)
-- ⚠️ Organization fetch during login may show a warning (this is expected and harmless)
-
-#### Option 2: Using Custom PAT (For Organization-Based Access)
-
-If you need organization-based authorization or cross-repository access, use a Personal Access Token with `read:org` scope:
-
-```yaml
-# GitHub Actions example using custom PAT
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Use dirctl with PAT
-        env:
-          DIRECTORY_CLIENT_SERVER_ADDRESS: "prod.gateway.ads.outshift.io:443"
-          DIRECTORY_CLIENT_AUTH_MODE: "github"
-          DIRECTORY_CLIENT_GITHUB_TOKEN: ${{ secrets.DIRECTORY_GITHUB_PAT }}
-        run: |
-          dirctl auth login
-          dirctl info <cid>
-          dirctl push ./agent-card.json
-```
-
-**Prerequisites:**
-1. Create a GitHub PAT with `user:email` and `read:org` scopes
-2. Store it as a repository secret: `DIRECTORY_GITHUB_PAT`
-3. Ensure your GitHub user or organization is assigned to a role with required permissions
-
-**When to use this:**
-- Need organization-based role assignment (leverage GitHub org membership)
-- Need cross-repository access
-- Need to impersonate a specific user
-
 **Best Practices:**
-- ✅ **Prefer automatic `GITHUB_TOKEN`** - No manual token management
-- ✅ Store custom PATs in repository secrets (never in code)
-- ✅ Use dedicated service accounts for PAT-based automation
-- ✅ Rotate custom PATs regularly (e.g., quarterly)
+- ✅ Store PATs in repository secrets (never commit to code)
+- ✅ Use dedicated service accounts for automation
+- ✅ Rotate PATs regularly (e.g., quarterly)
 - ✅ Scope tokens to minimum required permissions
-- ✅ Assign the workflow identity to an appropriate RBAC role for automatic token usage
+- ✅ Ensure your user/org is assigned to an appropriate RBAC role
+
+**Security Notes:**
+- PATs should be treated as sensitive credentials and never committed to version control
+- Use GitHub's repository secrets or organization secrets for secure storage
+- Consider using different PATs for different environments (dev, staging, prod)
+- Audit PAT usage regularly through GitHub's security logs
 
 ---
 
