@@ -5,7 +5,7 @@ date: 2026-02-11 13:48:00 +0000
 author: Adam Tagscherer
 author_url: https://github.com/adamtagscherer
 categories: technical
-tags: [mcp, directory, oasf, ai-agents, cursor, ide-integration]
+tags: [mcp, directory, oasf, ai-agents, ide-integration]
 mermaid: true
 ---
 
@@ -15,7 +15,7 @@ The Model Context Protocol (MCP) has emerged as a powerful standard for connecti
 
 ## What is Directory?
 
-[Directory](https://github.com/agntcy/dir) is a distributed peer-to-peer network for publishing, exchanging, and discovering information about AI agents. It uses [OASF (Open Agent Standard Format)](https://github.com/agntcy/oasf) to describe AI agents with structured metadata, enabling:
+[Directory](https://github.com/agntcy/dir) is a distributed peer-to-peer network for publishing, exchanging, and discovering information about AI agents. It uses [OASF (Open Agentic Schema Framework)](https://github.com/agntcy/oasf) to describe AI agents with structured metadata, enabling:
 
 - **Capability-Based Discovery**: Find agents based on their functional characteristics using hierarchical skill and domain taxonomies
 - **Verifiable Claims**: Cryptographic mechanisms ensure data integrity and provenance tracking
@@ -24,7 +24,7 @@ The Model Context Protocol (MCP) has emerged as a powerful standard for connecti
 
 ## Why an MCP Server?
 
-While Directory provides CLI tools and SDKs for interacting with the network, developers increasingly work within AI-assisted IDEs like Cursor. The MCP server bridges this gap by exposing Directory functionality directly to AI assistants, allowing you to:
+While Directory provides CLI tools and SDKs for interacting with the network, developers increasingly work within AI-assisted IDEs like [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com) or [Codex](https://openai.com/codex/). The MCP server bridges this gap by exposing Directory functionality directly to AI assistants, allowing you to:
 
 - Search for agents using natural language
 - Validate and push agent records without leaving your editor
@@ -43,7 +43,7 @@ flowchart LR
     classDef mcp fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
     classDef external fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
 
-    subgraph IDE["IDE (Cursor, VS Code)"]
+    subgraph IDE["IDE (Cursor, VS Code, Codex)"]
         AI[AI Assistant]:::ide
     end
 
@@ -79,13 +79,17 @@ Before setting up the MCP server, you'll need:
      ```
    - **Remote server**: Use an existing Directory deployment (e.g., `prod.gateway.ads.outshift.io:443`)
 
-3. **An MCP-enabled IDE** - Such as [Cursor](https://cursor.sh/) or VS Code with an MCP extension.
+3. **An MCP-enabled IDE** - Such as [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com) or [Codex](https://openai.com/codex/) with an MCP extension.
 
 ## Setup
 
-The MCP server runs via the `dirctl` CLI tool. Add it to your Cursor configuration at `~/.cursor/mcp.json`:
+The MCP server runs via the `dirctl` CLI tool. Below are configuration instructions some AI IDEs, with both binary and Docker options.
 
-### Using the Binary
+### Cursor
+
+Add the MCP server to your Cursor configuration at `~/.cursor/mcp.json`:
+
+**Using the binary:**
 
 ```json
 {
@@ -102,7 +106,7 @@ The MCP server runs via the `dirctl` CLI tool. Add it to your Cursor configurati
 }
 ```
 
-### Using Docker
+**Using Docker:**
 
 ```json
 {
@@ -112,6 +116,7 @@ The MCP server runs via the `dirctl` CLI tool. Add it to your Cursor configurati
       "args": [
         "run", "--rm", "-i",
         "-e", "OASF_API_VALIDATION_SCHEMA_URL=https://schema.oasf.outshift.com",
+        "-e", "DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888",
         "ghcr.io/agntcy/dir-ctl:latest",
         "mcp", "serve"
       ]
@@ -120,62 +125,92 @@ The MCP server runs via the `dirctl` CLI tool. Add it to your Cursor configurati
 }
 ```
 
-**Note:** Environment variables must be passed via `-e` flags in the args array when using Docker, not in the `env` object.
+After saving, restart Cursor for the changes to take effect.
 
-### Connecting to a Remote Directory Server
+### VS Code
 
-To connect to a remote Directory server (e.g., the production gateway), you'll need to configure the server address and provide a GitHub Personal Access Token (PAT) for authentication:
+For VS Code with GitHub Copilot, add the MCP server to your workspace configuration at `.vscode/mcp.json`, or to your user settings at `~/.vscode/mcp.json` for global availability:
+
+**Using the binary:**
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "dir-mcp-server": {
       "command": "/path/to/dirctl",
       "args": ["mcp", "serve"],
       "env": {
         "OASF_API_VALIDATION_SCHEMA_URL": "https://schema.oasf.outshift.com",
-        "DIRECTORY_CLIENT_SERVER_ADDRESS": "prod.gateway.ads.outshift.io:443",
-        "DIRECTORY_CLIENT_AUTH_MODE": "github",
-        "DIRECTORY_CLIENT_GITHUB_TOKEN": "ghp_your_token_here"
+        "DIRECTORY_CLIENT_SERVER_ADDRESS": "localhost:8888"
       }
     }
   }
 }
 ```
 
+**Using Docker:**
+
+```json
+{
+  "servers": {
+    "dir-mcp-server": {
+      "command": "docker",
+      "args": [
+        "run", "--rm", "-i",
+        "-e", "OASF_API_VALIDATION_SCHEMA_URL=https://schema.oasf.outshift.com",
+        "-e", "DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888",
+        "ghcr.io/agntcy/dir-ctl:latest",
+        "mcp", "serve"
+      ]
+    }
+  }
+}
+```
+
+### Codex
+
+For OpenAI's Codex, you can also add the MCP server config to you workspace configuration at `.codex/config.toml` or to your settings at `~/.codex/config.toml`:
+
+**Using the binary:**
+
+```toml
+[mcp_servers.dir-mcp-server]
+command = "/path/to/dirctl"
+args = ["mcp", "serve"]
+
+[mcp_servers.dir-mcp-server.env]
+OASF_API_VALIDATION_SCHEMA_URL = "https://schema.oasf.outshift.com"
+DIRECTORY_CLIENT_SERVER_ADDRESS = "localhost:8888"
+```
+
+**Using Docker:**
+
+```toml
+[mcp_servers.dir-mcp-server]
+command = "docker"
+args = [
+  "run", "--rm", "-i",
+  "-e", "OASF_API_VALIDATION_SCHEMA_URL=https://schema.oasf.outshift.com",
+  "-e", "DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888",
+  "ghcr.io/agntcy/dir-ctl:latest",
+  "mcp", "serve"
+]
+```
+
+**Note:** When using Docker, environment variables must be passed via `-e` flags in the args array, not in the `env` section.
+
+### Connecting to a Remote Directory Server
+
+To connect to a remote Directory server (e.g., the production gateway), update the environment variables to include the server address and GitHub authentication:
+
+| Variable | Value |
+|----------|-------|
+| `OASF_API_VALIDATION_SCHEMA_URL` | `https://schema.oasf.outshift.com` |
+| `DIRECTORY_CLIENT_SERVER_ADDRESS` | `prod.gateway.ads.outshift.io:443` |
+| `DIRECTORY_CLIENT_AUTH_MODE` | `github` |
+| `DIRECTORY_CLIENT_GITHUB_TOKEN` | Your GitHub PAT |
+
 Generate a PAT at [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens) with `user:email` and `read:org` scopes.
-
-## Available Tools
-
-The MCP server exposes 11 tools that AI assistants can call directly:
-
-| Tool | Category | Description |
-|------|----------|-------------|
-| `agntcy_oasf_list_versions` | Schema | Lists all available OASF schema versions |
-| `agntcy_oasf_get_schema` | Schema | Retrieves complete schema JSON for a version |
-| `agntcy_oasf_get_schema_skills` | Schema | Navigates skill taxonomy hierarchically |
-| `agntcy_oasf_get_schema_domains` | Schema | Navigates domain taxonomy hierarchically |
-| `agntcy_oasf_validate_record` | Record | Validates record against schema |
-| `agntcy_dir_push_record` | Record | Pushes record to Directory server |
-| `agntcy_dir_pull_record` | Record | Retrieves record by CID |
-| `agntcy_dir_verify_record` | Record | Verifies digital signature and trust status |
-| `agntcy_dir_search_local` | Record | Searches records with wildcard filters |
-| `agntcy_oasf_import_record` | Format | Imports from MCP or A2A to OASF |
-| `agntcy_oasf_export_record` | Format | Exports OASF to A2A or GitHub Copilot |
-
-## Guided Workflows with Prompts
-
-Beyond individual tools, the MCP server provides 7 prompts—guided workflows that orchestrate multiple tool calls:
-
-| Prompt | Description |
-|--------|-------------|
-| `create_record` | Analyzes codebase and generates OASF record |
-| `validate_record` | Validates existing record against schema |
-| `push_record` | Validates and pushes record to Directory |
-| `search_records` | Translates natural language to structured search |
-| `pull_record` | Retrieves and displays record by CID |
-| `import_record` | Imports from MCP/A2A with enrichment |
-| `export_record` | Exports to A2A or GitHub Copilot format |
 
 ## Usage Examples
 
@@ -207,7 +242,7 @@ The AI translates this to a structured search:
 ```json
 {
   "skill_names": ["*translat*", "*language*"],
-  "locators": ["docker-image:*"]
+  "locators": ["container_image:*"]
 }
 ```
 
@@ -236,43 +271,6 @@ If you prefer a visual demonstration, check out this video where I walk through 
 <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-bottom: 1.5em;">
   <iframe src="https://www.youtube.com/embed/pdVqhlyJHo4" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen></iframe>
 </div>
-
-## Implementation Details
-
-The MCP server is implemented in Go using the [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk). Here's a simplified view of how tools are registered:
-
-```go
-server := mcp.NewServer(&mcp.Implementation{
-    Name:    "dir-mcp-server",
-    Version: "v0.1.0",
-}, nil)
-
-mcp.AddTool(server, &mcp.Tool{
-    Name: "agntcy_oasf_validate_record",
-    Description: `Validates an OASF agent record against the schema...`,
-}, tools.ValidateRecord)
-
-mcp.AddTool(server, &mcp.Tool{
-    Name: "agntcy_dir_search_local",
-    InputSchema: tools.SearchLocalInputSchema(),
-    Description: `Searches for agent records using structured filters...`,
-}, tools.SearchLocal)
-```
-
-Each tool handler receives structured input and returns results that the AI assistant can interpret and present to the user.
-
-Prompts work similarly but return instructional messages that guide the AI through multi-step workflows:
-
-```go
-server.AddPrompt(&mcp.Prompt{
-    Name: "create_record",
-    Description: "Analyzes the current directory and creates an OASF record.",
-    Arguments: []*mcp.PromptArgument{
-        {Name: "output_path", Required: false},
-        {Name: "schema_version", Required: false},
-    },
-}, prompts.CreateRecord)
-```
 
 ## The Bigger Picture
 
