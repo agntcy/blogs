@@ -214,55 +214,347 @@ Generate a PAT at [GitHub Settings > Developer settings > Personal access tokens
 
 ## Usage Examples
 
-Here are real-world scenarios showing the MCP server in action.
+Once the Directory MCP server is installed, you can use it to arrange different type of tasks. Here are two real-world scenarios.
 
-### Scenario 1: Publishing Your Agent to Directory
+### Scenario 1: Publishing Your Agents to Directory
 
-You've built an AI agent and want to share it with the community. Instead of manually crafting an OASF record, just ask:
+In this scenario, you've built a multi-agent system and want to publish each agent to Directory so others can discover them. We'll use the [Tourist Scheduling System](https://github.com/agntcy/agentic-apps/tree/main/tourist_scheduling_system) as an example—a system with 4 agents built with Google's Agent Development Kit (ADK).
 
-> "Create an OASF record for this project and push it to Directory"
+**Step 1: Generate OASF records for each agent**
 
-The AI assistant will:
-1. Analyze your codebase structure and README
-2. Extract metadata from `package.json`, `pyproject.toml`, or similar
-3. Query the OASF schema to find matching skills and domains
-4. Generate a complete, valid OASF record
-5. Show you the record for review
-6. Push it to Directory and return the CID
+Open your project in Cursor and ask the AI to create records for each agent:
 
-What would take 30+ minutes of reading documentation and manual JSON editing happens in seconds.
+> "Create OASF record `schema_version 1.0.0` for all agents in the src/agents/ folder. Use the installed directory mcp server's tools for this task. Save the created records in the project's root."
 
-### Scenario 2: Finding the Right Agent for Your Project
+The AI analyzes your codebase, queries the OASF schema for valid skills and domains, and generates complete records.
 
-You need an agent that can help with a specific task:
+**Scheduler Agent** - The central coordinator:
 
-> "Find me agents that can translate text between languages and run as Docker containers"
-
-The AI translates this to a structured search:
 ```json
 {
-  "skill_names": ["*translat*", "*language*"],
-  "locators": ["container_image:*"]
+  "schema_version": "1.0.0",
+  "name": "tourist-scheduler-agent",
+  "version": "1.0.0",
+  "description": "Central coordinator agent for the Tourist Scheduling System. Receives tour requests from tourists and availability offers from guides, runs a greedy scheduling algorithm to match tourists with guides based on preferences, availability, and budget. Exposed via A2A protocol with HTTP and SLIM transport support.",
+  "authors": ["AGNTCY Contributors"],
+  "created_at": "2026-02-11T14:00:00Z",
+  "skills": [
+    {"id": 1003, "name": "agent_orchestration/multi_agent_planning"},
+    {"id": 1004, "name": "agent_orchestration/agent_coordination"},
+    {"id": 1005, "name": "agent_orchestration/negotiation_resolution"},
+    {"id": 1002, "name": "agent_orchestration/role_assignment"}
+  ],
+  "domains": [
+    {"id": 1506, "name": "hospitality_and_tourism/travel_services"},
+    {"id": 1505, "name": "hospitality_and_tourism/tourism_management"}
+  ],
+  "locators": [
+    {"type": "source_code", "urls": ["https://github.com/agntcy/agentic-apps/tree/main/tourist_scheduling_system/src/agents/scheduler_agent.py"]}
+  ]
 }
 ```
 
-It then presents matching agents with their capabilities, versions, and how to deploy them.
+**Guide Agent** - Offers tour services:
 
-### Scenario 3: Converting Between Agent Formats
+```json
+{
+  "schema_version": "1.0.0",
+  "name": "tourist-guide-agent",
+  "version": "1.0.0",
+  "description": "Tour guide agent that communicates with the scheduler to offer tour services. Creates and sends guide offers with specializations, availability windows, hourly rates, and group size limits. Receives assignment confirmations and manages availability. Uses ADK RemoteA2aAgent with HTTP or SLIM transport.",
+  "authors": ["AGNTCY Contributors"],
+  "created_at": "2026-02-11T14:00:00Z",
+  "skills": [
+    {"id": 1004, "name": "agent_orchestration/agent_coordination"},
+    {"id": 1005, "name": "agent_orchestration/negotiation_resolution"}
+  ],
+  "domains": [
+    {"id": 1506, "name": "hospitality_and_tourism/travel_services"}
+  ],
+  "locators": [
+    {"type": "source_code", "urls": ["https://github.com/agntcy/agentic-apps/tree/main/tourist_scheduling_system/src/agents/guide_agent.py"]}
+  ]
+}
+```
 
-You found an A2A agent card but need it in OASF format for your workflow:
+**Tourist Agent** - Requests tour services:
 
-> "Import this A2A card and enrich it with proper OASF skills"
+```json
+{
+  "schema_version": "1.0.0",
+  "name": "tourist-tourist-agent",
+  "version": "1.0.0",
+  "description": "Tourist agent that communicates with the scheduler to request tour services. Creates and sends tour requests with preferences, availability windows, and budget constraints. Receives schedule proposals with matched guides. Uses ADK RemoteA2aAgent with HTTP or SLIM transport.",
+  "authors": ["AGNTCY Contributors"],
+  "created_at": "2026-02-11T14:00:00Z",
+  "skills": [
+    {"id": 1004, "name": "agent_orchestration/agent_coordination"}
+  ],
+  "domains": [
+    {"id": 1506, "name": "hospitality_and_tourism/travel_services"}
+  ],
+  "locators": [
+    {"type": "source_code", "urls": ["https://github.com/agntcy/agentic-apps/tree/main/tourist_scheduling_system/src/agents/tourist_agent.py"]}
+  ]
+}
+```
 
-The AI reads the A2A card, maps its capabilities to OASF's skill taxonomy, adds missing metadata, validates the result, and saves a complete OASF record.
+**UI Agent** - Real-time dashboard:
 
-### Scenario 4: Validating Before Deployment
+```json
+{
+  "schema_version": "1.0.0",
+  "name": "tourist-ui-agent",
+  "version": "1.0.0",
+  "description": "Dashboard agent that monitors the Tourist Scheduling System and provides real-time visibility into system state. Connects to the scheduler as a RemoteA2aAgent, maintains dashboard state (tourists, guides, assignments, metrics), and provides natural language summaries of scheduling activity via WebSocket updates.",
+  "authors": ["AGNTCY Contributors"],
+  "created_at": "2026-02-11T14:00:00Z",
+  "skills": [
+    {"id": 1004, "name": "agent_orchestration/agent_coordination"}
+  ],
+  "domains": [
+    {"id": 1506, "name": "hospitality_and_tourism/travel_services"}
+  ],
+  "locators": [
+    {"type": "source_code", "urls": ["https://github.com/agntcy/agentic-apps/tree/main/tourist_scheduling_system/src/agents/ui_agent.py"]}
+  ]
+}
+```
 
-Before pushing changes to your agent's OASF record:
+**Step 2: Validate the records**
 
-> "Validate agent.json against the latest OASF schema and fix any issues"
+Before publishing, validate each record against the OASF schema:
 
-The AI validates your record, identifies problems (missing required fields, invalid skill references, schema mismatches), and can automatically fix them while explaining what changed.
+> "Validate these OASF records with the MCP server's `agntcy_oasf_validate_record` tool."
+
+```json
+{"schema_version": "1.0.0", "valid": true, "validation_errors": ["WARNING: Recommended attribute \"modules\" is missing."]}
+```
+
+All records are valid. The warning about `modules` is optional—it's used for agents that expose MCP tools.
+
+**Step 3: Push to Directory**
+
+Push all agents to your Directory node:
+
+> "Push these records to Directory"
+
+| Agent | CID |
+|-------|-----|
+| tourist-scheduler-agent | `baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4` |
+| tourist-guide-agent | `baeareicotuifn25dker2qdxmh3ygummhfe3uduai5z546ywov43cwlxeoq` |
+| tourist-tourist-agent | `baeareibfhsxilernxc2szj2x3znbz4s5pdpymrt5qdhe6gsjgohulvldji` |
+| tourist-ui-agent | `baeareiff6cb7caqbq7fn4px25fykjof2toa4s47vfos7vvybxmdu2gadji` |
+
+Each CID (Content Identifier) is a unique, content-addressed hash that anyone can use to retrieve the agent's record from the Directory network.
+
+**Step 4: Sign the records**
+
+After pushing, sign the records to establish trust and provenance using the `dirctl` CLI. Directory uses [Sigstore](https://www.sigstore.dev/) for keyless signing—no need to manage your own keys.
+
+**Sign with OIDC (recommended):**
+
+```bash
+$ dirctl sign baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4
+Your browser will now be opened to:
+https://oauth2.sigstore.dev/auth/auth?access_type=online&client_id=sigstore&...
+Record is: signed
+```
+
+This opens a browser for authentication with Sigstore's OIDC provider (supports GitHub, Google, Microsoft). Sigstore issues a short-lived certificate from [Fulcio](https://docs.sigstore.dev/certificate_authority/overview/) tied to your identity, signs the record, and logs the signature to the [Rekor](https://docs.sigstore.dev/logging/overview/) transparency log.
+
+**Sign with a private key (for CI/CD):**
+
+```bash
+dirctl sign <cid> --key /path/to/cosign.key
+```
+
+Supports various key sources: local files, environment variables (`env://COSIGN_PRIVATE_KEY`), or KMS providers (AWS KMS, GCP KMS, Azure Key Vault, HashiCorp Vault).
+
+**Sign all agents:**
+
+```bash
+dirctl sign baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4
+dirctl sign baeareicotuifn25dker2qdxmh3ygummhfe3uduai5z546ywov43cwlxeoq
+dirctl sign baeareibfhsxilernxc2szj2x3znbz4s5pdpymrt5qdhe6gsjgohulvldji
+dirctl sign baeareiff6cb7caqbq7fn4px25fykjof2toa4s47vfos7vvybxmdu2gadji
+```
+
+**Step 5: Verify the signatures**
+
+Anyone can verify a record's signature using the MCP server:
+
+> "Verify the signature for record baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4"
+
+```json
+{
+  "success": true,
+  "message": "trusted",
+  "signers": [
+    {
+      "identity": "adam.tagscherer@gmail.com",
+      "issuer": "https://github.com/login/oauth"
+    }
+  ]
+}
+```
+
+All 4 agents are now verified as trusted:
+
+| Agent | Status | Signer |
+|-------|--------|--------|
+| tourist-scheduler-agent | trusted | adam.tagscherer@gmail.com (GitHub) |
+| tourist-guide-agent | trusted | adam.tagscherer@gmail.com (GitHub) |
+| tourist-tourist-agent | trusted | adam.tagscherer@gmail.com (GitHub) |
+| tourist-ui-agent | trusted | adam.tagscherer@gmail.com (GitHub) |
+
+This confirms each record was signed by a verified GitHub identity and hasn't been tampered with.
+
+**Step 6: Publish to the DHT**
+
+The final step is publishing your records to the distributed hash table (DHT), making them discoverable by other peers on the Directory network:
+
+```bash
+$ dirctl routing publish baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4
+Successfully submitted publication request
+Record will be discoverable by other peers once the publication service processes the request
+```
+
+**Publish all agents:**
+
+```bash
+dirctl routing publish baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4
+dirctl routing publish baeareicotuifn25dker2qdxmh3ygummhfe3uduai5z546ywov43cwlxeoq
+dirctl routing publish baeareibfhsxilernxc2szj2x3znbz4s5pdpymrt5qdhe6gsjgohulvldji
+dirctl routing publish baeareiff6cb7caqbq7fn4px25fykjof2toa4s47vfos7vvybxmdu2gadji
+```
+
+Your agents are now fully published to the Directory network—signed, verified, and discoverable by anyone!
+
+### Scenario 2: Discovering and Installing an Agent
+
+You're building an Azure application and need access to Microsoft's documentation directly in your IDE. Instead of switching between browser tabs, you ask your AI assistant to find an MCP server that can help.
+
+> We're using Microsoft Learn for this example because it's a **remote MCP server that requires no authentication**—making it easy to demonstrate.
+
+**Step 1: Search for an agent with the capability you need**
+
+> "Search Directory for agents that can help with Microsoft documentation"
+
+```json
+{
+  "count": 1,
+  "has_more": false,
+  "record_cids": ["baeareichybxgzdz36nr7kaskepwqu5hhizu5dbr5tsujx7p56kk3pgsdsi"]
+}
+```
+
+Found a match! Let's see what it is.
+
+**Step 2: Pull the record to inspect it**
+
+> "Pull that record and show me the details"
+
+```json
+{
+  "name": "microsoft-learn-mcp",
+  "version": "1.0.0",
+  "description": "Official Microsoft Learn MCP Server providing real-time, trusted documentation and code samples for AI assistants and LLMs.",
+  "authors": ["Microsoft"],
+  "skills": [
+    {"name": "natural_language_processing/information_retrieval_synthesis"},
+    {"name": "retrieval_augmented_generation/retrieval_of_information"}
+  ],
+  "modules": [
+    {
+      "name": "integration/mcp",
+      "data": {
+        "name": "microsoft-learn",
+        "connections": [
+          {
+            "type": "streamable-http",
+            "url": "https://learn.microsoft.com/api/mcp"
+          }
+        ],
+        "tools": [
+          {"name": "microsoft_docs_search", "description": "Search Microsoft Learn documentation"},
+          {"name": "microsoft_docs_fetch", "description": "Fetch full content from a documentation page"},
+          {"name": "microsoft_code_sample_search", "description": "Search for code samples"}
+        ]
+      }
+    }
+  ]
+}
+```
+
+This is exactly what we need—Microsoft's official MCP server. Notice the `connections` field shows this is a **remote MCP server** (`streamable-http`), so we don't need to install anything locally.
+
+**Step 3: Configure the MCP server in your IDE**
+
+Here's the key insight: **the AI assistant can update your IDE configuration directly**. Ask it to add the MCP server:
+
+> "Add the Microsoft Learn MCP server to my Cursor config"
+
+The assistant reads the connection details from the OASF record and updates `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "microsoft-learn": {
+      "url": "https://learn.microsoft.com/api/mcp"
+    }
+  }
+}
+```
+
+No manual configuration required—the assistant handles it.
+
+**Step 4: Start using the new capability**
+
+After restarting Cursor, you now have access to Microsoft's documentation tools. Let's try them:
+
+> "Explain Azure Blob Storage"
+
+The assistant uses the `microsoft_docs_search` tool:
+
+```json
+{
+  "results": [
+    {
+      "title": "Introduction to Azure Blob Storage",
+      "content": "Azure Blob Storage is Microsoft's object storage solution for the cloud. Blob Storage is optimized for storing massive amounts of unstructured data...",
+      "contentUrl": "https://learn.microsoft.com/azure/storage/blobs/storage-blobs-introduction"
+    }
+  ]
+}
+```
+
+And provides a comprehensive answer with up-to-date documentation:
+
+**Azure Blob Storage** is Microsoft's object storage solution optimized for storing massive amounts of unstructured data. It's designed for:
+- Serving images/documents directly to browsers
+- Storing files for distributed access
+- Streaming video and audio
+- Backup, disaster recovery, and archiving
+
+The storage hierarchy consists of **Storage Accounts** → **Containers** → **Blobs** (Block, Append, or Page blobs).
+
+> "Show me Python code samples for uploading to Azure Blob Storage"
+
+The assistant uses the `microsoft_code_sample_search` tool:
+
+```python
+from azure.storage.blob import BlobServiceClient
+
+connection_string = "your_connection_string"
+blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+
+container_client = blob_service_client.get_container_client("my-container")
+with open("local-file.txt", "rb") as data:
+    container_client.upload_blob(name="uploaded-file.txt", data=data)
+```
+
+This is the power of Directory: discoverable agents from trusted sources like Microsoft, with standardized metadata that the AI assistant can use to **automatically configure and start using new capabilities**.
 
 ## Video Walkthrough
 
