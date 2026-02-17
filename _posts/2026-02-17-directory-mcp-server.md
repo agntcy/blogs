@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Directory MCP Server: Bringing AI Agent Discovery to Your IDE"
-date: 2026-02-11 13:48:00 +0000
+date: 2026-02-17 10:00:00 +0000
 author: Adam Tagscherer
 author_url: https://github.com/adamtagscherer
 categories: technical
