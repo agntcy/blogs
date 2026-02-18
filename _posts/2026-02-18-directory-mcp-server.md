@@ -214,7 +214,7 @@ Generate a PAT at [GitHub Settings > Developer settings > Personal access tokens
 
 ## Usage Examples
 
-Once the Directory MCP server is installed, you can use it for a variety of tasks. Here are three real-world scenarios covering the full lifecycle: publishing agents, discovering and installing them, and auditing their provenance.
+Once the Directory MCP server is installed, you can use it for a variety of tasks. Here are three real-world scenarios covering the full lifecycle: distributing agents, discovering and installing them, and auditing their provenance.
 
 ### Scenario 1: Distributing Your Agents to Directory
 
@@ -366,7 +366,7 @@ The GitHub Actions workflow triggers automatically and handles everything:
 3. **Signs** with GitHub OIDC (keyless)
 4. **Publishes** to the DHT
 
-**Step 4: Verify the published records**
+**Step 4: Verify the distributed records**
 
 After the workflow completes, anyone can verify a record's signature using the MCP server:
 
@@ -390,7 +390,7 @@ The signature shows it was signed by a specific GitHub Actions workflow, providi
 - **When** it was signed (Rekor transparency log)
 - **What** was signed (content-addressed CID)
 
-Your agents are now fully published to the Directory network—signed, verified, and discoverable by anyone!
+Your agents are now fully distributed to the Directory network—signed, verified, and discoverable by anyone!
 
 > For a more complex multi-agent example, check out the [Lungo setup](https://github.com/agntcy/coffeeAgntcy/tree/main/coffeeAGNTCY/coffee_agents/lungo) which includes farm agents for Brazil, Colombia, and Vietnam, plus logistics agents (shipper, accountant) and supervisor agents for auction orchestration.
 
@@ -684,7 +684,7 @@ The Directory MCP server is part of a broader vision for AI agent interoperabili
 
 - Agents can find and collaborate with other agents
 - Developers can discover pre-built agents for their needs
-- Organizations can publish and share agents securely
+- Organizations can distribute and share agents securely
 
 The MCP server brings this infrastructure directly into developer workflows, reducing friction and enabling AI-assisted agent development.
 
@@ -695,7 +695,7 @@ Check out the [Directory documentation](https://docs.agntcy.org/dir/overview/) f
 - [Directory GitHub Repository](https://github.com/agntcy/dir)
 - [Directory MCP Server README](https://github.com/agntcy/dir/tree/main/mcp)
 - [Directory Documentation](https://docs.agntcy.org/dir/overview/)
-- [OASF (Open Agent Standard Format)](https://github.com/agntcy/oasf)
+- [OASF (Open Agentic Schema Framework)](https://github.com/agntcy/oasf)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
 - [MCP Go SDK](https://github.com/modelcontextprotocol/go-sdk)
 
