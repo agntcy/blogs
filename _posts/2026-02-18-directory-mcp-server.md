@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Directory MCP Server: Bringing AI Agent Discovery to Your IDE"
-date: 2026-02-18 10:00:00 +0000
+date: 2026-02-18 08:00:00 +0000
 author: Adam Tagscherer
 author_url: https://github.com/adamtagscherer
 categories: technical
@@ -48,8 +48,8 @@ flowchart LR
     end
 
     subgraph MCP["MCP Server (dirctl mcp serve)"]
-        Tools[Tools<br/>11 functions]:::mcp
-        Prompts[Prompts<br/>7 workflows]:::mcp
+        Tools[Tools]:::mcp
+        Prompts[Prompts]:::mcp
     end
 
     subgraph External["External Services"]
@@ -64,7 +64,7 @@ flowchart LR
     Prompts --> Tools
 ```
 
-The server communicates via stdin/stdout using the MCP protocol, making it compatible with any MCP-enabled IDE.
+The server communicates via stdin/stdout or streamable HTTP using the MCP protocol, making it compatible with any MCP-enabled IDE.
 
 ## Prerequisites
 
@@ -79,7 +79,7 @@ Before setting up the MCP server, you'll need:
      ```
    - **Remote server**: Use an existing Directory deployment (e.g., `prod.gateway.ads.outshift.io:443`)
 
-3. **An MCP-enabled IDE** - Such as [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com) or [Codex](https://openai.com/codex/) with an MCP extension.
+3. **An MCP-enabled IDE**
 
 ## Setup
 
@@ -216,9 +216,9 @@ Generate a PAT at [GitHub Settings > Developer settings > Personal access tokens
 
 Once the Directory MCP server is installed, you can use it for a variety of tasks. Here are three real-world scenarios covering the full lifecycle: publishing agents, discovering and installing them, and auditing their provenance.
 
-### Scenario 1: Publishing Your Agents to Directory
+### Scenario 1: Distributing Your Agents to Directory
 
-In this scenario, you've built a multi-agent system and want to publish each agent to Directory so others can discover them. We'll use [CoffeeAgntcy](https://github.com/agntcy/coffeeAgntcy)—AGNTCY's reference application demonstrating a coffee supply chain with multiple collaborating agents.
+In this scenario, you've built a multi-agent system and want to distribute each agent to Directory so others can discover them. We'll use [CoffeeAgntcy](https://github.com/agntcy/coffeeAgntcy)—AGNTCY's reference application demonstrating a coffee supply chain with multiple collaborating agents.
 
 For simplicity, we'll use the **Corto** setup which has two agents:
 - **Exchange Agent** - The coffee buyer that initiates purchases
@@ -239,7 +239,7 @@ The AI analyzes your codebase, queries the OASF schema for valid skills and doma
   "schema_version": "1.0.0",
   "name": "coffee-exchange-agent",
   "version": "1.0.0",
-  "created_at": "2026-02-17T10:00:00Z",
+  "created_at": "2026-02-18T10:00:00Z",
   "description": "Coffee exchange agent that initiates purchases from farm agents. Orchestrates the buying workflow using LangGraph, communicates via A2A protocol over SLIM transport, and integrates with the Observe SDK for tracing.",
   "authors": ["AGNTCY Contributors"],
   "skills": [
@@ -263,7 +263,7 @@ The AI analyzes your codebase, queries the OASF schema for valid skills and doma
   "schema_version": "1.0.0",
   "name": "coffee-farm-agent",
   "version": "1.0.0",
-  "created_at": "2026-02-17T10:00:00Z",
+  "created_at": "2026-02-18T10:00:00Z",
   "description": "Coffee farm agent that responds to purchase requests from the exchange. Manages inventory, processes orders, and communicates via A2A protocol. Exposes an A2A server endpoint for incoming requests.",
   "authors": ["AGNTCY Contributors"],
   "skills": [
@@ -281,12 +281,13 @@ The AI analyzes your codebase, queries the OASF schema for valid skills and doma
 
 **Step 2: Set up GitHub Actions for CI/CD**
 
-Directory provides [GitHub Actions](https://github.com/agntcy/dir/tree/main/.github/actions) that automate the entire publishing workflow: validation, pushing, signing, and DHT publication.
+Directory provides [GitHub Actions](https://github.com/agntcy/dir/tree/main/.github/actions) that automate the entire distribution workflow: validation, pushing, signing, and DHT publication.
 
 Create `.github/workflows/publish-agents.yaml` in your repository:
 
+{% raw %}
 ```yaml
-name: Publish Agents to Directory
+name: Distributing Agents to Directory
 
 on:
   push:
@@ -314,7 +315,6 @@ jobs:
         with:
           record_paths: |
             agents/*.json
-          fail_on_warning: false
 
       - name: Push to Directory
         id: push
@@ -339,6 +339,7 @@ jobs:
           server_addr: ${{ vars.DIRECTORY_ADDRESS }}
           github_token: ${{ secrets.DIRECTORY_TOKEN }}
 ```
+{% endraw %}
 
 This workflow:
 
@@ -522,7 +523,8 @@ The assistant uses the `search_issues` tool:
       "repository": "agntcy/oasf-sdk",
       "state": "open",
       "labels": ["enhancement"]
-    }
+    },
+    ...
   ]
 }
 ```
@@ -552,15 +554,29 @@ The assistant uses the `list_issues` tool:
       "title": "Revisit local deployment configuration",
       "state": "OPEN",
       "created_at": "2026-02-10T11:56:23Z"
-    }
+    },
+    ...
   ],
   "totalCount": 29
 }
 ```
 
-> "Get the full details for issue #863 in agntcy/dir including the description and comments"
+> "Get the full details for issue #942 in agntcy/dir including the description and comments"
 
-The assistant fetches the issue details and provides context about the work needed—all without leaving your IDE.
+```json
+{
+  "number": 942,
+  "title": "[Feature]: Resolve and improve test coverage",
+  "state": "open",
+  "author": "ramizpolic",
+  "labels": ["kind/test"],
+  "milestone": "DIR v1.2.0",
+  "created_at": "2026-02-12T13:59:57Z",
+  "body": "Currently, the test coverage results are not properly covering certain components (e.g. for apiserver, we are dropping the unit test coverage for the sake of e2e test coverage). Proposed solution: Make sure that all test results are properly combined/merged across different test-cases (unit, e2e, ...)."
+}
+```
+
+The assistant provides context about the work needed—all without leaving your IDE.
 
 This is the power of Directory: discoverable agents with standardized metadata that the AI assistant can use to **automatically configure and start using new capabilities**.
 
@@ -579,7 +595,8 @@ As an IT operations or security team member, you need to audit the agents deploy
   "record_cids": [
     "baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4",
     "baeareiarov6l6hcb274t5gxkwujbmcizi4ba5ullqoeyqrhlqc6ymz6fsm",
-    "baeareicotuifn25dker2qdxmh3ygummhfe3uduai5z546ywov43cwlxeoq",
+    "baeareigdnp76ayuix5467b7ixjrwwfio2dhnusqxpafidie2py2yw7dwla",
+    "baeareihg2hdnkfhdtkermrw7fohbgjffwx3c6jn3zqy4vwsbrru5vyj4tm",
     "..."
   ]
 }
@@ -593,30 +610,30 @@ The assistant checks each record:
 
 | CID | Agent Name | Status | Signer |
 |-----|------------|--------|--------|
-| `baeareifmeck...` | coffee-exchange-agent | Signed | GH Actions workflow (coffeeAgntcy) |
-| `baeareicotuif...` | coffee-farm-agent | Signed | GH Actions workflow (coffeeAgntcy) |
-| `baeareiarov6l...` | github-mcp | **Not signed** | - |
-| `baeareihxarg...` | test-agent | **Not signed** | - |
+| `baeareifmeck...` | coffee-exchange-agent | Signed | `agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@main` |
+| `baeareicotuif...` | coffee-farm-agent | Signed | `agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@main` |
+| `baeareigdnp7...` | fetch-mcp-server | **Not signed** | - |
+| `baeareihg2hd...` | memory-mcp-server | **Not signed** | - |
 
 **Step 3: Investigate unsigned agents**
 
-The audit reveals that `github-mcp` and `test-agent` are not signed. Let's get more details:
+The audit reveals that `fetch-mcp-server` and `memory-mcp-server` are not signed. Let's get more details:
 
-> "Pull record baeareiarov6l6hcb274t5gxkwujbmcizi4ba5ullqoeyqrhlqc6ymz6fsm and show its authors and locators"
+> "Pull record baeareigdnp76ayuix5467b7ixjrwwfio2dhnusqxpafidie2py2yw7dwla and show its authors and locators"
 
 ```json
 {
-  "name": "github-mcp",
-  "version": "1.0.0",
-  "authors": ["GitHub"],
-  "created_at": "2026-02-17T12:00:00Z",
+  "name": "fetch-mcp-server",
+  "version": "2025.3.28",
+  "authors": ["Anthropic"],
+  "created_at": "2026-02-17T10:00:00Z",
   "locators": [
-    {"type": "source_code", "urls": ["https://github.com/github/github-mcp-server"]}
+    {"type": "source_code", "urls": ["https://github.com/modelcontextprotocol/servers/tree/main/src/fetch"]}
   ]
 }
 ```
 
-The record claims to be from GitHub but has no cryptographic proof. This is a potential security risk—anyone could have created this record.
+The record claims to be from Anthropic but has no cryptographic proof. This is a potential security risk—anyone could have pushed this record claiming to be from that organization.
 
 **Step 4: Compare with signed records**
 
@@ -638,7 +655,7 @@ For comparison, let's look at a properly signed record:
 ```
 
 This signature confirms:
-- **Identity**: Signed by the coffeeAgntcy CI/CD workflow (not an individual)
+- **Identity**: Signed by the `agntcy/coffeeAgntcy` CI/CD workflow
 - **Issuer**: GitHub Actions OIDC provider
 - **Integrity**: The record hasn't been modified since signing
 
