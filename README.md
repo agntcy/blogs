@@ -1,14 +1,14 @@
 # AGNTCY Blogs
 
-This repository hosts the source code for the AGNTCY engineering blog.  Our
+This repository hosts the source code for the [AGNTCY](https://agntcy.org) engineering blog.  Our
 mission is to share technical insights, deep-dives, and updates about the
-open-source projects and technologies developed at **AGNTCY**, including:
+open-source projects and technologies developed at AGNTCY, including:
 
-*   **[Agent Directory](https://github.com/agntcy/dir)**: The trusted registry
+*   [Agent Directory Service](https://github.com/agntcy/dir): The trusted registry
 for discovering and verifying AI agents.
-*   **[OASF (Open Agent Safety Framework)](https://github.com/oasf/oasf)**: 
+*   [OASF (Open Agent Safety Framework)](https://github.com/agntcy/oasf): 
 Standards and tooling for responsible and safe agentic systems.
-*   **[Slim](https://github.com/agntcy/slim)**: A lightweight, efficient 
+*   [Slim](https://github.com/agntcy/slim): A lightweight, efficient 
 framework for building production-ready AI agents.
 
 ## Local Development
@@ -26,18 +26,18 @@ This site is built with [Jekyll](https://jekyllrb.com/) and managed with
 
 Use the `Taskfile` to manage common operations:
 
-1.  **Install dependencies**:
+1.  Install dependencies:
     ```bash
     task deps
     ```
 
-2.  **Run the local development server**:
+2.  Run the local development server:
     ```bash
     task run
     ```
     The site will be available at [http://0.0.0.0:4000/](http://0.0.0.0:4000/).
 
-3.  **Build the static site**:
+3.  Build the static site:
     ```bash
     task build
     ```
