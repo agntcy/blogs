@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Directory MCP Server: Bringing AI Agent Discovery to Your IDE"
-date: 2026-02-18 08:00:00 +0000
+date: 2026-02-19 08:00:00 +0000
 author: Adam Tagscherer
 author_url: https://github.com/adamtagscherer
 categories: technical
@@ -84,14 +84,14 @@ Before setting up the MCP server, you'll need:
 
 1. **dirctl CLI** - Install via [Homebrew](https://github.com/agntcy/dir/tree/main/HomebrewFormula) or download from [GitHub Releases](https://github.com/agntcy/dir/releases). Alternatively, use the Docker image.
 
-2. **A running Directory server** - Either:
+2. **An MCP-enabled IDE**
+
+3. **A running Directory server** - Either:
    - **Local development**: Start one with `task server:start` in the [Directory repository](https://github.com/agntcy/dir), or use Docker Compose:
      ```bash
      cd install/docker && docker compose up -d
      ```
-   - **Remote server**: Use an existing Directory deployment (e.g., `prod.gateway.ads.outshift.io:443`)
-
-3. **An MCP-enabled IDE**
+   - **Remote server**: Use an existing Directory deployment (e.g., the [AGNTCY public testbed](https://blogs.agntcy.org/technical/2026/02/12/dir-v1.html) at `prod.gateway.ads.outshift.io:443`)
 
 ## Setup
 
