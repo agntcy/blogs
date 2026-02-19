@@ -91,7 +91,7 @@ Before setting up the MCP server, you'll need:
      ```bash
      cd install/docker && docker compose up -d
      ```
-   - **Remote server**: Use an existing Directory deployment (e.g., the [AGNTCY public testbed](https://blogs.agntcy.org/technical/2026/02/12/dir-v1.html) at `prod.gateway.ads.outshift.io:443`)
+   - **Remote server**: Use an existing Directory deployment (e.g., the [AGNTCY public testbed](https://blogs.agntcy.org/technical/2026/02/19/dir-v1.html) at `prod.gateway.ads.outshift.io:443`)
 
 ## Setup
 
