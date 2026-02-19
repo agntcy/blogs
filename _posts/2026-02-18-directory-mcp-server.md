@@ -13,6 +13,18 @@ The Model Context Protocol (MCP) has emerged as a powerful standard for connecti
 
 <!--more-->
 
+**TL;DR:** The Directory MCP server lets your AI-powered IDE discover, validate, and use AI agents from the Directory network—without leaving your editor. It bridges Directory's decentralized agent registry with MCP-enabled tools like Cursor, VS Code, and Codex.
+
+### What You'll Learn
+
+In this post, you'll learn:
+
+- What Directory is and why MCP matters
+- How to install and configure the Directory MCP server in your IDE
+- How to distribute and sign OASF agent records through CI/CD
+- How to discover, import, and audit agents using natural language inside your IDE
+- How Directory enables secure agent ecosystems
+
 ## What is Directory?
 
 [Directory](https://github.com/agntcy/dir) is a distributed peer-to-peer network for publishing, exchanging, and discovering information about AI agents. It uses [OASF (Open Agentic Schema Framework)](https://github.com/agntcy/oasf) to describe AI agents with structured metadata, enabling:
