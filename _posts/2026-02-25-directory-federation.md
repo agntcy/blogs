@@ -219,6 +219,9 @@ spec:
     targetPort: 8443
     name: federation
 EOF
+
+# Wait for SPIRE server, agent, and OIDC discovery provider (agent and OIDC are slowest)
+kubectl wait --for=condition=ready pod -n spire-server -l app.kubernetes.io/instance=spire --timeout=300s
 ```
 
 **Partner:**
@@ -282,6 +285,9 @@ spec:
     targetPort: 8443
     name: federation
 EOF
+
+# Wait for SPIRE server, agent, and OIDC discovery provider (agent and OIDC are slowest)
+kubectl wait --for=condition=ready pod -n spire-server -l app.kubernetes.io/instance=spire --timeout=300s
 ```
 
 **Verify:**
