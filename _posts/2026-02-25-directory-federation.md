@@ -11,7 +11,7 @@ mermaid: true
 
 The **Agent Directory** enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need **SPIFFE federation**—cryptographic trust between SPIRE servers through trust bundle exchange.
 
-This post walks you through a **hands-on local setup** using two Kind clusters: SPIRE federation with the `https_spiffe` profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you're ready for production, the docs cover the `https_web` profile and joining the public Directory.
+This post walks you through a **hands-on local setup** using two Kind clusters: SPIRE federation with the `https_spiffe` profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you're ready for production, see [Getting Started](https://docs.agntcy.org/dir/getting-started/) and [Partner Federation with Prod](https://docs.agntcy.org/dir/partner-prod-federation/) for the `https_web` profile and joining the public Directory.
 
 <!--more-->
 
@@ -40,7 +40,7 @@ In this post, you'll learn:
 | **https_spiffe** | SPIRE SVIDs       | Manual exchange | Local Kind, air-gapped    |
 | **https_web**    | Let's Encrypt/CA  | None            | Production, public cloud  |
 
-We use `https_spiffe` here because it needs no cert-manager or public DNS. For production federation with the public Directory, use `https_web`. See the [Federation Profiles](https://docs.agntcy.org/dir/federation-profiles/) docs.
+We use `https_spiffe` here because it needs no cert-manager or public DNS. For production federation with the public Directory, use `https_web`. See [Federation Profiles](https://docs.agntcy.org/dir/federation-profiles/).
 
 ## Prerequisites
 
@@ -606,6 +606,8 @@ kind delete cluster --name partner
 
 ## Troubleshooting
 
+For federation-specific issues (trust bundles, certificates, SSL passthrough), see [Federation Troubleshooting](https://docs.agntcy.org/dir/federation-troubleshooting/) in the docs.
+
 | Issue | Check |
 |-------|-------|
 | dirctl auth failure | `authz_policies_csv` has `p,partner.testbed.local,*`; dirctl pods get SVIDs |
@@ -632,9 +634,12 @@ For **production** and joining the **public Directory network** at `prod.api.ads
 ## References
 
 - [Directory GitHub Repository](https://github.com/agntcy/dir)
-- [Directory Documentation](https://docs.agntcy.org/dir/overview/)
+- [Getting Started](https://docs.agntcy.org/dir/getting-started/) — local Kind deployment
+- [Production Deployment](https://docs.agntcy.org/dir/prod-deployment/) — EKS, NGINX Ingress
+- [Partner Federation with Prod](https://docs.agntcy.org/dir/partner-prod-federation/) — join the public Directory
+- [Federation Profiles](https://docs.agntcy.org/dir/federation-profiles/) — https_web vs https_spiffe
+- [Federation Troubleshooting](https://docs.agntcy.org/dir/federation-troubleshooting/) — best practices and common errors
 - [SPIFFE / SPIRE](https://spiffe.io)
-- [Federation Profiles](https://docs.agntcy.org/dir/federation-profiles/)
 - [Kind](https://kind.sigs.k8s.io/)
 - [MetalLB](https://metallb.org/)
 
