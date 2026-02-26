@@ -11,7 +11,7 @@ mermaid: true
 
 The [Agent Directory Service](https://docs.agntcy.org/dir/overview/) enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange.
 
-This post walks you through a **hands-on local setup** using two Kind clusters: SPIRE federation with the `https_spiffe` profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you're ready for production, see [Getting Started](https://docs.agntcy.org/dir/getting-started/) and [Partner Federation with Prod](https://docs.agntcy.org/dir/partner-prod-federation/) for the `https_web` profile and joining the public Directory.
+This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the `https_spiffe` profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you're ready for production, see [Getting Started](https://docs.agntcy.org/dir/getting-started/) and [Partner Federation with Prod](https://docs.agntcy.org/dir/partner-prod-federation/) for the `https_web` profile and joining the public Directory.
 
 <!--more-->
 
