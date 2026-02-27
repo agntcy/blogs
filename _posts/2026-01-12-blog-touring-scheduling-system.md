@@ -320,7 +320,7 @@ to the entire fleet, enabling a truly scalable and self-organizing marketplace.
 
 Before any discovery can happen, agents must announce themselves. We use the
 **Agent Directory SDK** to publish a **Directory Record** (often called an
-**Agent Card** in the context of the directory). Note that this is distinct from
+**Agent Card** in the context of the Directory). Note that this is distinct from
 the **A2A Agent Card** mentioned earlier; while the A2A Card defines the
 protocol interface, this Directory Record serves as the **registration entry**
 used for lookup and routing.
