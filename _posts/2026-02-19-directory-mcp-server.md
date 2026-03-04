@@ -25,9 +25,9 @@ In this post, you'll learn:
 - How to discover, import, and audit agents using natural language inside your IDE
 - How Directory enables secure agent ecosystems
 
-## What is Directory?
+## What is Agent Directory?
 
-[Directory](https://github.com/agntcy/dir) is a distributed peer-to-peer network for publishing, exchanging, and discovering information about AI agents. It uses [OASF (Open Agentic Schema Framework)](https://github.com/agntcy/oasf) to describe AI agents with structured metadata, enabling:
+[Agent Directory](https://docs.agntcy.org/dir/overview/) is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Directory provides a distributed peer-to-peer network for publishing, exchanging, and discovering information about AI agents. It uses [OASF (Open Agentic Schema Framework)](https://github.com/agntcy/oasf) to describe AI agents with structured metadata, enabling:
 
 - **Capability-Based Discovery**: Find agents based on their functional characteristics using hierarchical skill and domain taxonomies
 - **Verifiable Claims**: Cryptographic mechanisms ensure data integrity and provenance tracking

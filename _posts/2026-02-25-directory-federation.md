@@ -9,7 +9,7 @@ tags: [spiffe, spire, federation, mTLS, zero-trust, kind, kubernetes]
 mermaid: true
 ---
 
-The [Agent Directory Service](https://docs.agntcy.org/dir/overview/) enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange.
+[Agent Directory](https://docs.agntcy.org/dir/overview/) is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange.
 
 This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the `https_spiffe` profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you're ready for production, see [Getting Started](https://docs.agntcy.org/dir/getting-started/) and [Partner Federation with Prod](https://docs.agntcy.org/dir/partner-prod-federation/) for the `https_web` profile and joining the public Directory.
 
@@ -299,7 +299,7 @@ kubectl get svc -n spire-server spire-server-federation
 
 ## Step 3: Export Trust Bundles
 
-With `https_spiffe`, each SPIRE server needs the other's trust bundle to bootstrap the TLS connection. The **dir** and **dirctl** charts create `ClusterFederatedTrustDomain` automatically from their `spire.federation` config—you don't need to apply them manually. We export the bundles now so we can embed them in the Helm values.
+With `https_spiffe`, each SPIRE server needs the other's trust bundle to bootstrap the TLS connection. The **Directory** and **dirctl** charts create `ClusterFederatedTrustDomain` automatically from their `spire.federation` config—you don't need to apply them manually. We export the bundles now so we can embed them in the Helm values.
 
 ```bash
 kubectl config use-context kind-partner
@@ -315,7 +315,7 @@ kubectl exec -n spire-server spire-server-0 -c spire-server -- \
 
 ## Step 4: Deploy Directory on Testbed
 
-Deploy the Directory chart (API server, Zot registry, PostgreSQL) with SPIRE enabled and federation to `partner.testbed.local`. The **dir chart creates `ClusterFederatedTrustDomain`** from `apiserver.spire.federation`, so the testbed SPIRE server fetches the partner bundle and the API server can verify dirctl's X.509-SVID over mTLS.
+Deploy the Agent Directory chart (API server, Zot registry, PostgreSQL) with SPIRE enabled and federation to `partner.testbed.local`. The **Directory chart creates `ClusterFederatedTrustDomain`** from `apiserver.spire.federation`, so the testbed SPIRE server fetches the partner bundle and the API server can verify dirctl's X.509-SVID over mTLS.
 
 Ensure `./partner.bundle` exists before running (from Step 3).
 
@@ -621,14 +621,14 @@ For federation-specific issues (trust bundles, certificates, SSL passthrough), s
 
 ## Conclusion
 
-This hands-on setup demonstrates that **SPIFFE federation doesn't require production infrastructure**. With two Kind clusters, MetalLB, and the `https_spiffe` profile, you can run cross-cluster mTLS in under 20 minutes. The Directory and dirctl charts handle trust bundle configuration automatically—no manual `ClusterFederatedTrustDomain` applies needed. The concepts (trust bundles, workload identity, federation profiles) transfer directly to production; only the profile (`https_web`) and infrastructure (Ingress, cert-manager, DNS) change.
+This hands-on setup demonstrates that **SPIFFE federation doesn't require production infrastructure**. With two Kind clusters, MetalLB, and the `https_spiffe` profile, you can run cross-cluster mTLS in under 20 minutes. The Agent Directory and dirctl charts handle trust bundle configuration automatically—no manual `ClusterFederatedTrustDomain` applies needed. The concepts (trust bundles, workload identity, federation profiles) transfer directly to production; only the profile (`https_web`) and infrastructure (Ingress, cert-manager, DNS) change.
 
 ## Next Steps: Production and Public Directory
 
 For **production** and joining the **public Directory network** at `prod.api.ads.outshift.io`:
 
 1. **[Production Deployment](https://docs.agntcy.org/dir/prod-deployment/)** — EKS, NGINX Ingress, SSL passthrough, persistent storage, credential management.
-2. **[Partner Federation with Prod](https://docs.agntcy.org/dir/partner-prod-federation/)** — Step-by-step guide using the `https_web` profile (Let's Encrypt), public endpoints, and contributing your federation file to dir-staging.
+2. **[Partner Federation with Prod](https://docs.agntcy.org/dir/partner-prod-federation/)** — Step-by-step guide using the `https_web` profile (Let's Encrypt), public endpoints, and contributing your federation file to the Directory staging repository.
 
 ## References
 
@@ -644,4 +644,4 @@ For **production** and joining the **public Directory network** at `prod.api.ads
 
 ---
 
-*Have questions about Directory federation or SPIFFE? Join our [Slack community](https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ) or check out our [GitHub](https://github.com/agntcy).*
+*Have questions about Agent Directory federation or SPIFFE? Join our [Slack community](https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ) or check out our [GitHub](https://github.com/agntcy).*
