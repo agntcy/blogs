@@ -96,9 +96,11 @@ kind create cluster --name partner
 
 MetalLB provides LoadBalancer IPs in Kind. Inspect your Docker network and pick IPs from the kind subnet:
 
+{% raw %}
 ```bash
 docker network inspect kind --format '{{range .IPAM.Config}}{{.Subnet}} {{end}}'
 ```
+{% endraw %}
 
 **Testbed** (e.g. 172.18.255.1–172.18.255.9):
 
