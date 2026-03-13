@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Write Once, Run Everywhere: Why Rust + UniFFI is the Future of Multi-Language Libraries"
-date: 2026-01-22 13:43:00 +0000
+date: 2026-03-13 12:00:00 +0000
 author: Sam Betts
 author_url: https://github.com/tehsmash
 categories: technical
