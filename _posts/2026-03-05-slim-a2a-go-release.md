@@ -536,8 +536,8 @@ flowchart LR
 
 This 0.1.0 release establishes the core transport layer. On the roadmap:
 
-* **A2A v1.0 support** — the A2A specification is currently in release candidate;
-  we will update the library to track the final v1.0 release once it lands.
+* **A2A v1.0 support** — the A2A specification has just releases v1.0.0.
+  We will update the library to v1.0 release once a2a-go supports it.
 * **More ADK-Go examples** — multi-agent scenarios where ADK agents discover
   and call each other purely by SLIM name
 
