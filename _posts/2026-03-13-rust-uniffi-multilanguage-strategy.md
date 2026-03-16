@@ -234,4 +234,4 @@ The initial investment in learning Rust and setting up UniFFI pays off when you 
 
 ---
 
-*Interested in seeing Rust + UniFFI in action? Check out our [complete guide to integrating Rust and Go](/2026/01/20/integrating-rust-and-go-with-uniffi.html) or explore the [SLIM messaging library](https://github.com/agntcy/slim). Have questions? Join our [Slack community](https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ) or check out our [GitHub](https://github.com/agntcy).*
+*Interested in seeing Rust + UniFFI in action? Check out our [complete guide to integrating Rust and Go](https://blogs.agntcy.org/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html) or explore the [SLIM messaging library](https://github.com/agntcy/slim). Have questions? Join our [Slack community](https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ) or check out our [GitHub](https://github.com/agntcy).*
