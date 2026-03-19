@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Announcing slim-a2a-go 0.1.0: Native A2A over SLIM for Go"
-date:   2026-03-05 11:00:00 +0000
+date:   2026-03-19 11:00:00 +0000
 categories: [agents, go, slim, a2a, announcements]
 tags: [a2a, slim, go, adk-go, tutorial, release]
 mermaid: true
@@ -104,10 +104,12 @@ baked into the CI workflow in the `slim-a2a-go` repository.
 A SLIM node can be started locally in seconds:
 
 ```bash
-# via slimctl
+# Option 1 – via slimctl
 slimctl slim start --endpoint 127.0.0.1:46357
+```
 
-# via Docker
+```bash
+# Option 2 – via Docker
 docker run -p 46357:46357 ghcr.io/agntcy/slim:latest \
   /slim --config /config.yaml
 ```
@@ -134,8 +136,14 @@ demonstrates the full server + client lifecycle in about 80 lines each.
 
 ### The server
 
-An A2A server over SLIM has four steps: initialise the runtime, create an
-application identity, build the A2A handler stack, and call `Serve()`.
+An A2A server over SLIM has four steps:
+
+1. Initialise the runtime
+2. Create an application identity
+3. Build the A2A handler stack
+4. Call `Serve()`
+
+The full source is at [`examples/echo_agent/cmd/server/main.go`](https://github.com/agntcy/slim-a2a-go/blob/main/examples/echo_agent/cmd/server/main.go).
 
 ```go
 // examples/echo_agent/cmd/server/main.go
@@ -158,7 +166,7 @@ func run(endpoint string) error {
     slim_bindings.InitializeWithDefaults()
     svc := slim_bindings.GetGlobalService()
 
-    // 2. Create this agent's SLIM identity using a hierarchical name.
+    // 2. Create this agent's SLIM identity using a hierarchical name (org, namespace, service).
     name := slim_bindings.NewName("agntcy", "demo", "echo_agent")
     app, err := svc.CreateAppWithSecret(name, "my_shared_secret_for_testing_purposes_only")
     if err != nil {
@@ -234,6 +242,8 @@ the queue, exactly as it would for an HTTP or gRPC server.
 
 On the client side, swap the usual HTTP/gRPC transport for `slima2aclient.NewTransport`:
 
+The full source is at [`examples/echo_agent/cmd/client/main.go`](https://github.com/agntcy/slim-a2a-go/blob/main/examples/echo_agent/cmd/client/main.go).
+
 ```go
 // examples/echo_agent/cmd/client/main.go
 package main
@@ -252,6 +262,8 @@ func run(endpoint, text string) error {
     svc := slim_bindings.GetGlobalService()
 
     // The client needs its own SLIM identity so it can receive replies.
+    // The org and namespace don't have to match the server's — any unique
+    // name on the SLIM node works.
     localName := slim_bindings.NewName("agntcy", "demo", "client")
     app, err := svc.CreateAppWithSecret(localName, "my_shared_secret_for_testing_purposes_only")
     if err != nil {
@@ -378,6 +390,7 @@ const (
 // startWeatherAgentServer registers the ADK weather agent as an A2A service
 // over SLIM and returns its agent card.
 func startWeatherAgentServer(svc *slim_bindings.Service) *a2a.AgentCard {
+    // NewName takes (org, namespace, service).
     agentSLIMName := slim_bindings.NewName("agntcy", "demo", "weather_agent")
     app, err := svc.CreateAppWithSecret(agentSLIMName, sharedSecret)
     if err != nil {
@@ -398,6 +411,9 @@ func startWeatherAgentServer(svc *slim_bindings.Service) *a2a.AgentCard {
         Name:               adkAgent.Name(),
         Skills:             adka2a.BuildAgentSkills(adkAgent),
         PreferredTransport: slima2aclient.SLIMProtocol,
+        // URL must be the SLIM name in "org/namespace/service" form and must
+        // match the fields used in agentSLIMName — the client factory uses it
+        // to resolve the remote endpoint.
         URL:                "agntcy/demo/weather_agent",
         Capabilities:       a2a.AgentCapabilities{Streaming: true},
     }
