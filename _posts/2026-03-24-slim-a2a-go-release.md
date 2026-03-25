@@ -2,6 +2,8 @@
 layout: post
 title:  "Announcing slim-a2a-go 0.1.0: Native A2A over SLIM for Go"
 date:   2026-03-24 11:00:00 +0000
+author: Sam Betts
+author_url: https://github.com/tehsmash
 categories: [agents, go, slim, a2a, announcements]
 tags: [a2a, slim, go, adk-go, tutorial, release]
 mermaid: true
