@@ -314,6 +314,7 @@ stream terminates. If a member sends an error instead, that error counts as
 its EOS — the stream won't hang waiting for a member that has already failed.
 
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#ffffff", "primaryTextColor": "#1a1a1a", "primaryBorderColor": "#333333", "lineColor": "#555555", "edgeLabelBackground": "#ffffff"}}}%%
 flowchart LR
     A[receive message] --> B{status code?}
     B -->|Ok + empty| C[EOS: count++]
@@ -323,6 +324,14 @@ flowchart LR
     E --> F
     F -->|yes| G[stream ends]
     F -->|no| A
+
+    style A fill:#e9ecef,stroke:#333,stroke-width:2px,color:#1a1a1a
+    style B fill:#ffd166,stroke:#555,stroke-width:2px,color:#1a1a1a
+    style C fill:#d4edda,stroke:#2d6a4f,stroke-width:2px,color:#1a1a1a
+    style D fill:#d4edda,stroke:#2d6a4f,stroke-width:2px,color:#1a1a1a
+    style E fill:#f8d7da,stroke:#721c24,stroke-width:2px,color:#1a1a1a
+    style F fill:#ffd166,stroke:#555,stroke-width:2px,color:#1a1a1a
+    style G fill:#e9ecef,stroke:#333,stroke-width:2px,color:#1a1a1a
 ```
 
 ## A Complete Example
