@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "SlimRPC Multicast: One Call, Every Agent"
-date: 2026-03-29 11:00:00 +0000
+date: 2026-03-30 11:00:00 +0000
 author: Mauro Sardara
 author_url: https://github.com/msardara
 categories: [technical, slim, agents]
@@ -58,9 +58,9 @@ service Test {
 ```
 
 With standard SlimRPC (or gRPC), calling `ExampleUnaryUnary` talks to **one**
-server. If two servers are running the same service, SLIM's anycast routing
-picks one of them — great for load balancing, but useless when you need
-*all* of them to respond.
+server. Each server instance registers under its own distinct SLIM name
+(e.g. `agntcy/grpc/server1`, `agntcy/grpc/server2`), and the client already
+knows these names — but it still has to call each one individually.
 
 You could loop over servers and call each one sequentially, but that means:
 
@@ -617,13 +617,10 @@ single-server scenario.
 
 ## Getting Started
 
-1. **Install the SlimRPC compiler** — pre-built binaries for Python and Go are
-   available in the
-   [releases](https://github.com/agntcy/slim/releases):
-
-   ```bash
-   cargo install agntcy-protoc-slimrpc-plugin
-   ```
+1. **Install the SlimRPC compiler** — download pre-built binaries for your
+   platform from the
+   [releases page](https://github.com/agntcy/slim/releases?q=protoc-slimrpc-plugin)
+   and place them on your `PATH`.
 
 2. **Generate stubs** — the compiler now produces both `TestStub` and
    `TestGroupStub` (or `TestClient` and `TestGroupClient` in Go) from
