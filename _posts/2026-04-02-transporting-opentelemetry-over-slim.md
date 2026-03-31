@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "SLIM for Observability and Remediation: Beyond Agentic AI"
-date: 2026-03-30 07:00:00 +0000
+date: 2026-04-02 07:00:00 +0000
 author: Michele Papalini
 author_url: https://github.com/micpapal
 categories: technical
