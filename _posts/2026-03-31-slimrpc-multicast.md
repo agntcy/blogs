@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "SlimRPC Multicast: One Call, Every Agent"
-date: 2026-03-30 11:00:00 +0000
+date: 2026-03-31 11:00:00 +0000
 author: Mauro Sardara
 author_url: https://github.com/msardara
 categories: [technical, slim, agents]
