@@ -5,7 +5,7 @@ date: 2026-03-16 09:00:00 +0000
 author: Tibor Kircsi
 author_url: https://github.com/tkircsi
 categories: [security, authentication, directory]
-tags: [oidc, zitadel, github-actions, envoy, rbac, spiffe, zero-trust]
+tags: [oidc, dex, github-actions, envoy, rbac, spiffe, zero-trust]
 mermaid: true
 ---
 
@@ -46,20 +46,20 @@ flowchart LR
     classDef api fill:#03142b,stroke:#0251af,stroke-width:3px,color:#f3f6fd;
 
     H[Human Operator<br/>dirctl auth login]:::actor
-    M[Service User<br/>dirctl auth machine]:::actor
+    SU[Service User<br/>pre-issued token]:::actor
     GHA[GitHub Actions<br/>OIDC token]:::actor
 
-    Zitadel[Zitadel OIDC<br/>Issuer]:::idp
+    Dex[Dex OIDC<br/>Token Broker]:::idp
     GitHubOIDC[GitHub OIDC<br/>token.actions.githubusercontent.com]:::idp
 
     Envoy[Envoy Gateway<br/>jwt_authn + ext_authz]:::gateway
     API[Directory API<br/>SPIFFE-trusted backend]:::api
 
     H -->|OIDC token| Envoy
-    M -->|OIDC token| Envoy
+    SU -->|OIDC token| Envoy
     GHA -->|OIDC token| Envoy
 
-    Envoy -->|JWKS verify| Zitadel
+    Envoy -->|JWKS verify| Dex
     Envoy -->|JWKS verify| GitHubOIDC
 
     Envoy -->|Authorized request| API
@@ -81,7 +81,7 @@ In practice this is the "developer laptop" path: interactive browser login once,
 sequenceDiagram
     participant User as Developer
     participant CLI as dirctl
-    participant IdP as Zitadel OIDC
+    participant IdP as Dex OIDC
     participant Envoy as Envoy Gateway
     participant Authz as ext-authz
     participant API as Directory API
@@ -103,10 +103,10 @@ sequenceDiagram
 
 ## Request and dataflow (human path)
 
-1. `dirctl` gets an access token from Zitadel (PKCE) and caches it locally.
+1. `dirctl` gets an access token from Dex (PKCE) and caches it locally.
 2. CLI sends gRPC request with `Authorization: Bearer <token>` to Envoy.
 3. Envoy `jwt_authn` validates issuer/signature and routes only verified JWTs forward.
-4. `ext_authz` extracts canonical principal (typically `user:{iss}:{sub}`) and checks method permission in Casbin.
+4. `ext_authz` extracts canonical principal (typically `user:{iss}:{email}`) and checks method permission in Casbin.
 5. On allow, request is forwarded and backend sees the authorized identity context.
 
 This keeps authn/authz logic centralized at the edge while keeping backend behavior consistent.
@@ -115,9 +115,14 @@ This keeps authn/authz logic centralized at the edge while keeping backend behav
 
 ```bash
 export DIRECTORY_CLIENT_OIDC_ISSUER="https://prod.idp.ads.outshift.io"
-export DIRECTORY_CLIENT_OIDC_CLIENT_ID="<human-native-client-id>"
+export DIRECTORY_CLIENT_OIDC_CLIENT_ID="dirctl"
 
+# Interactive login (opens browser)
 dirctl auth login
+
+# Or device flow (no browser needed)
+dirctl auth login --device
+
 dirctl auth status
 
 dirctl search --version "v1.*" \
@@ -128,52 +133,30 @@ dirctl search --version "v1.*" \
 
 ---
 
-# Part 2: Service User / Machine OIDC
+# Part 2: Service User / Machine Authentication
 
-Machine auth now supports a one-step CLI path with client credentials.
+Service users (bots, automation, MCP agents) authenticate using pre-issued tokens passed via `--auth-token` or the `DIRECTORY_CLIENT_AUTH_TOKEN` environment variable.
 
 This is the preferred path for non-interactive automation outside GitHub Actions (for example bots, scheduled jobs, and service integrations).
 
-## One-step machine login
+## Pre-issued token usage
 
 ```bash
-dirctl auth machine \
-  --oidc-issuer "https://prod.idp.ads.outshift.io" \
-  --oidc-machine-client-id "<machine-client-id>" \
-  --oidc-machine-client-secret-file "/path/to/secret.txt" \
-  --oidc-machine-scope "openid profile email"
-```
+export DIRECTORY_CLIENT_AUTH_TOKEN="<service-user-jwt>"
+export DIRECTORY_CLIENT_SERVER_ADDRESS="prod.gateway.ads.outshift.io:443"
 
-The token is cached after login and reused by regular commands.
-
-## Request and dataflow (machine path)
-
-1. `dirctl auth machine` uses client credentials against the OIDC token endpoint.
-2. Returned token is cached and reused until expiry.
-3. Runtime requests go through the same edge chain: `jwt_authn` -> `ext_authz` -> backend.
-4. Principal is resolved as machine/workload identity (for example `client:{iss}:{client_id}` when configured).
-
-Important behavior: this path removes manual curl token acquisition and keeps machine auth consistent with human OIDC transport and policy enforcement.
-
-## Automatic token re-mint
-
-If the cached token expires, `dirctl` can mint a fresh token automatically during command execution when machine credentials are configured:
-
-```bash
-export DIRECTORY_CLIENT_OIDC_ISSUER="https://prod.idp.ads.outshift.io"
-export DIRECTORY_CLIENT_OIDC_MACHINE_CLIENT_ID="<machine-client-id>"
-export DIRECTORY_CLIENT_OIDC_MACHINE_CLIENT_SECRET_FILE="/path/to/secret.txt"
-export DIRECTORY_CLIENT_OIDC_MACHINE_SCOPES="openid,profile,email"
-```
-
-Then run commands normally:
-
-```bash
 dirctl search --version "v1.*" \
-  --server-addr "prod.gateway.ads.outshift.io:443" \
   --auth-mode=oidc \
   --output json
 ```
+
+## Request and dataflow (service user path)
+
+1. The pre-issued JWT is passed directly to Envoy via `Authorization: Bearer` header.
+2. Runtime requests go through the same edge chain: `jwt_authn` -> `ext_authz` -> backend.
+3. Principal is resolved as `client:{iss}:{email}` based on the token's claims and issuer configuration.
+
+This keeps service user auth consistent with human OIDC transport and policy enforcement, while supporting long-lived tokens for automation that cannot use interactive login.
 
 ---
 
@@ -214,7 +197,7 @@ steps:
 
   - name: Run search
     env:
-      DIRECTORY_CLIENT_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+      DIRECTORY_CLIENT_AUTH_TOKEN: ${{ steps.oidc.outputs.token }}
       DIRCTL_PATH: ${{ steps.build-dirctl.outputs.dirctl_path }}
     run: |
       "${DIRCTL_PATH}" search --name "*" \
@@ -228,7 +211,7 @@ This removes long-lived PAT dependence for workflow access to Directory.
 ## Request and dataflow (GitHub Actions path)
 
 1. Workflow requests OIDC token from GitHub (`id-token: write` permission).
-2. Token is passed to `dirctl` via `DIRECTORY_CLIENT_OIDC_TOKEN`.
+2. Token is passed to `dirctl` via `DIRECTORY_CLIENT_AUTH_TOKEN`.
 3. Envoy validates GitHub issuer/JWKS and expected audience.
 4. `ext_authz` maps trusted workflow claims to canonical workflow principal (`ghwf:...`) and applies Casbin role checks.
 5. Request is allowed only if workflow identity and method permissions match policy.
@@ -247,7 +230,7 @@ Before landing on the current setup, we evaluated multiple GitHub Actions integr
 |---|---|---|---|---|
 | Trust GitHub Actions OIDC directly at edge | High (short-lived, workflow identity) | Medium | Medium | ✅ Chosen |
 | GitHub OIDC -> broker/token exchange -> internal token | Very high | High | High | Later candidate |
-| Zitadel machine client credentials from GitHub secrets | Medium (long-lived secret) | Low | Low/Medium | Useful fallback |
+| Pre-issued service tokens from dedicated IdP | Medium (long-lived token) | Low | Low/Medium | Useful fallback |
 
 ## Why direct GitHub OIDC trust won for now
 
@@ -313,8 +296,8 @@ The verified JWT payload header (`x-jwt-payload`) is used by `ext_authz` for ext
 
 ## Principal types
 
-- Human users: `user:{iss}:{sub}`
-- Machine clients: `client:{iss}:{client_id}`
+- Human users: `user:{iss}:{email}`
+- Machine clients: `client:{iss}:{email}`
 - GitHub workflows: `ghwf:repo:{repo}:workflow:{file}:ref:{ref}[:env:{env}]`
 
 ## GitHub workflow wildcard support
@@ -366,9 +349,9 @@ Combined with short-lived OIDC tokens and explicit RBAC roles, this improves def
 If you still have legacy GitHub auth config/docs, this is the practical migration path:
 
 1. Switch CLI and workflows to `--auth-mode=oidc`
-2. Replace `DIRECTORY_CLIENT_GITHUB_TOKEN` with `DIRECTORY_CLIENT_OIDC_TOKEN` in CI
+2. Replace `DIRECTORY_CLIENT_GITHUB_TOKEN` with `DIRECTORY_CLIENT_AUTH_TOKEN` in CI
 3. Configure OIDC issuer/JWKS trust in Envoy
-4. Migrate RBAC principals from `github:<user>` to OIDC principal forms
+4. Migrate RBAC principals from `github:<user>` to OIDC principal forms (`user:{iss}:{email}`, `ghwf:...`)
 5. Add dedicated least-privilege roles for CI workflows
 
 ---
@@ -415,6 +398,7 @@ This is a meaningful step toward secure-by-default Directory operations at scale
 ## 📚 References
 
 - [Directory GitHub Repository](https://github.com/agntcy/dir)
+- [Dex OIDC Provider](https://dexidp.io/docs/)
 - [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)
 - [OAuth 2.0 Authorization Framework (RFC 6749)](https://datatracker.ietf.org/doc/html/rfc6749)
 - [GitHub Actions OIDC Documentation](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect)
