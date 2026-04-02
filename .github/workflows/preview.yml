@@ -26,7 +26,7 @@ jobs:
 
       - name: Keep only PR-changed posts
         run: |
-          # Find _posts/ files added or modified in this PR vs the base branch
+          git fetch origin ${{ github.base_ref }} --depth=1
           CHANGED=$(git diff --name-only --diff-filter=AM origin/${{ github.base_ref }}...HEAD -- '_posts/')
           if [ -z "$CHANGED" ]; then
             echo "No _posts changes in this PR."
