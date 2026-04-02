@@ -61,50 +61,6 @@ jobs:
           destination_dir: drafts/${{ steps.branch.outputs.safe }}
           keep_files: true
 
-      - name: Regenerate drafts index
-        run: |
-          # Check out gh-pages so we can list all preview dirs and update the index
-          git fetch origin gh-pages
-          git checkout gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          cat > drafts/index.html << 'HTMLEOF'
-          <!DOCTYPE html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <title>AGNTCY Blogs – PR Previews</title>
-            <style>
-              body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-              h1 { font-size: 1.5rem; }
-              ul { line-height: 2; }
-              a { color: #0070f3; }
-            </style>
-          </head>
-          <body>
-            <h1>PR Previews</h1>
-            <p>One entry per open pull request. Each link shows only the post(s) added in that PR.</p>
-            <ul>
-          HTMLEOF
-
-          for dir in drafts/*/; do
-            [ -d "$dir" ] || continue
-            NAME=$(basename "$dir")
-            echo "    <li><a href=\"/drafts/$NAME/\">$NAME</a></li>" >> drafts/index.html
-          done
-
-          cat >> drafts/index.html << 'HTMLEOF'
-            </ul>
-            <p><a href="/">← Back to blog</a></p>
-          </body>
-          </html>
-          HTMLEOF
-
-          git add drafts/index.html
-          git diff --cached --quiet || git commit -m "chore: update drafts index for ${{ github.head_ref }}"
-          git push origin gh-pages
-
       - name: Find existing preview comment
         uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3
         id: find-comment
@@ -126,3 +82,53 @@ jobs:
             Preview deployed to: ${{ steps.branch.outputs.url }}
 
             _Last updated: commit `${{ github.sha }}`_
+
+  update-index:
+    runs-on: ubuntu-latest
+    needs: preview
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+          cache-version: 0
+
+      - name: Build themed drafts index
+        run: |
+          git fetch origin gh-pages --depth=1
+          # List only subdirectories of drafts/ (not index.html)
+          DIRS=$(git ls-tree -d --name-only origin/gh-pages -- drafts/ 2>/dev/null || true)
+
+          mkdir -p drafts
+          printf -- '---\nlayout: default\ntitle: PR Previews\n---\n\n' > drafts/index.md
+
+          if [ -z "$DIRS" ]; then
+            echo 'No active PR previews.' >> drafts/index.md
+          else
+            echo '<ul>' >> drafts/index.md
+            while IFS= read -r dir; do
+              NAME=$(basename "$dir")
+              printf '  <li><a href="/drafts/%s/">%s</a></li>\n' "$NAME" "$NAME" >> drafts/index.md
+            done <<< "$DIRS"
+            echo '</ul>' >> drafts/index.md
+          fi
+
+          bundle exec jekyll build
+          cp _site/drafts/index.html /tmp/drafts-index.html
+
+      - name: Push themed index to gh-pages
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp /tmp/drafts-index.html drafts/index.html
+          git add drafts/index.html
+          git diff --cached --quiet || git commit -m "chore: update drafts index for ${{ github.head_ref }}"
+          git push origin gh-pages
