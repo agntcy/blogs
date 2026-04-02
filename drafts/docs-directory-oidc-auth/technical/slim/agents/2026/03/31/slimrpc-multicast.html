@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>SlimRPC Multicast: One Call, Every Agent | AGNTCY Blogs</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="SlimRPC Multicast: One Call, Every Agent" />
+<meta name="author" content="Mauro Sardara" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Standard RPC is point-to-point: one client talks to one server. But agentic AI workloads rarely fit that mold. A coordinator agent might need to fan out a task to a pool of workers and merge their results. A monitoring service might need to poll every node in a cluster with a single call. A voting protocol might need every participant to weigh in before a decision is made. Today we are releasing SlimRPC Multicast — also called Group RPC — as part of SLIM v1.3. It extends the familiar protobuf-based RPC model with native one-to-many semantics: broadcast a request to a group of servers, collect every response, and know exactly which member sent what. The best part? Your server code doesn’t change at all." />
+<meta property="og:description" content="Standard RPC is point-to-point: one client talks to one server. But agentic AI workloads rarely fit that mold. A coordinator agent might need to fan out a task to a pool of workers and merge their results. A monitoring service might need to poll every node in a cluster with a single call. A voting protocol might need every participant to weigh in before a decision is made. Today we are releasing SlimRPC Multicast — also called Group RPC — as part of SLIM v1.3. It extends the familiar protobuf-based RPC model with native one-to-many semantics: broadcast a request to a group of servers, collect every response, and know exactly which member sent what. The best part? Your server code doesn’t change at all." />
+<link rel="canonical" href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/slim/agents/2026/03/31/slimrpc-multicast.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/slim/agents/2026/03/31/slimrpc-multicast.html" />
+<meta property="og:site_name" content="AGNTCY Blogs" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-03-31T11:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="SlimRPC Multicast: One Call, Every Agent" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Mauro Sardara"},"dateModified":"2026-03-31T11:00:00+00:00","datePublished":"2026-03-31T11:00:00+00:00","description":"Standard RPC is point-to-point: one client talks to one server. But agentic AI workloads rarely fit that mold. A coordinator agent might need to fan out a task to a pool of workers and merge their results. A monitoring service might need to poll every node in a cluster with a single call. A voting protocol might need every participant to weigh in before a decision is made. Today we are releasing SlimRPC Multicast — also called Group RPC — as part of SLIM v1.3. It extends the familiar protobuf-based RPC model with native one-to-many semantics: broadcast a request to a group of servers, collect every response, and know exactly which member sent what. The best part? Your server code doesn’t change at all.","headline":"SlimRPC Multicast: One Call, Every Agent","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/slim/agents/2026/03/31/slimrpc-multicast.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/assets/images/logo-light.svg"},"name":"Mauro Sardara"},"url":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/slim/agents/2026/03/31/slimrpc-multicast.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/drafts/docs-directory-oidc-auth/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/drafts/docs-directory-oidc-auth/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/feed.xml" title="AGNTCY Blogs" /><script>
+    // Set theme immediately to prevent flash of wrong theme
+    (function() {
+      const theme = localStorage.getItem('theme-preference') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><div class="site-branding">
+      <a class="site-logo-link" rel="author" href="/drafts/docs-directory-oidc-auth/"><img class="site-logo logo-light" src="/drafts/docs-directory-oidc-auth/assets/images/logo-light.svg" alt="AGNTCY"><img class="site-logo logo-dark" src="/drafts/docs-directory-oidc-auth/assets/images/logo-dark.svg" alt="AGNTCY"></a>
+      <span class="site-title-text">Blogs</span>
+    </div><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/drafts/docs-directory-oidc-auth/archive/">Archive</a><a class="page-link" href="/drafts/docs-directory-oidc-auth/about/">About</a><button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </nav></div>
+</header>
+
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">SlimRPC Multicast: One Call, Every Agent</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-03-31T11:00:00+00:00" itemprop="datePublished">
+        March 31, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/msardara" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Mauro Sardara</a></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Standard RPC is point-to-point: one client talks to one server.
+But agentic AI workloads rarely fit that mold. A coordinator agent might need to
+fan out a task to a pool of workers and merge their results. A monitoring service
+might need to poll every node in a cluster with a single call. A voting protocol
+might need every participant to weigh in before a decision is made.</p>
+
+<p>Today we are releasing <strong>SlimRPC Multicast</strong> — also called <strong>Group RPC</strong> — as part
+of <a href="https://github.com/agntcy/slim">SLIM v1.3</a>. It extends the familiar
+protobuf-based RPC model with native one-to-many semantics: broadcast a request
+to a group of servers, collect every response, and know exactly which member
+sent what. The best part? <strong>Your server code doesn’t change at all.</strong></p>
+
+<!--more-->
+
+<h2 id="a-quick-recap-what-is-slimrpc">A Quick Recap: What Is SlimRPC?</h2>
+
+<p><a href="https://docs.agntcy.org/slim/slim-rpc/">SlimRPC</a> is a protobuf-based RPC
+framework that uses <a href="https://github.com/agntcy/slim">SLIM</a> as the transport
+layer instead of HTTP/2. You write a <code class="language-plaintext highlighter-rouge">.proto</code> file, run the
+<a href="https://docs.agntcy.org/slim/slim-slimrpc-compiler/">SlimRPC compiler</a>, and get
+type-safe client stubs and server servicers. Because the transport is SLIM,
+communication benefits from end-to-end MLS encryption, automatic service
+discovery, and reliable delivery with per-message acknowledgments.</p>
+
+<p>SlimRPC supports all four gRPC interaction patterns:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Pattern</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Unary-Unary</strong></td>
+      <td>Single request → single response</td>
+    </tr>
+    <tr>
+      <td><strong>Unary-Stream</strong></td>
+      <td>Single request → stream of responses</td>
+    </tr>
+    <tr>
+      <td><strong>Stream-Unary</strong></td>
+      <td>Stream of requests → single response</td>
+    </tr>
+    <tr>
+      <td><strong>Stream-Stream</strong></td>
+      <td>Bidirectional streaming</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Group RPC adds a multicast variant of each one.</p>
+
+<h2 id="the-problem-with-point-to-point">The Problem with Point-to-Point</h2>
+
+<p>Consider a simple protobuf service:</p>
+
+<div class="language-proto highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">service</span> <span class="n">Test</span> <span class="p">{</span>
+  <span class="k">rpc</span> <span class="n">ExampleUnaryUnary</span><span class="p">(</span><span class="n">ExampleRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">ExampleResponse</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">ExampleUnaryStream</span><span class="p">(</span><span class="n">ExampleRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">stream</span> <span class="n">ExampleResponse</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">ExampleStreamUnary</span><span class="p">(</span><span class="n">stream</span> <span class="n">ExampleRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">ExampleResponse</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">ExampleStreamStream</span><span class="p">(</span><span class="n">stream</span> <span class="n">ExampleRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">stream</span> <span class="n">ExampleResponse</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>With standard SlimRPC (or gRPC), calling <code class="language-plaintext highlighter-rouge">ExampleUnaryUnary</code> talks to <strong>one</strong>
+server. Each server instance registers under its own distinct SLIM name
+(e.g. <code class="language-plaintext highlighter-rouge">agntcy/grpc/server1</code>, <code class="language-plaintext highlighter-rouge">agntcy/grpc/server2</code>), and the client already
+knows these names — but it still has to call each one individually.</p>
+
+<p>You could loop over servers and call each one sequentially, but that means:</p>
+
+<ul>
+  <li><strong>N serial round-trips</strong> instead of one broadcast.</li>
+  <li><strong>N separate sessions</strong> instead of one shared group session.</li>
+  <li><strong>No built-in correlation</strong> between responses and their source.</li>
+  <li><strong>Manual bookkeeping</strong> for tracking which servers have replied and which
+have failed.</li>
+</ul>
+
+<p>Group RPC solves all of this at the transport level.</p>
+
+<h2 id="architecture-overview">Architecture Overview</h2>
+
+<pre><code class="language-mermaid">%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#ffffff", "primaryTextColor": "#1a1a1a", "primaryBorderColor": "#333333", "lineColor": "#555555", "edgeLabelBackground": "#ffffff"}}}%%
+flowchart LR
+    Client --&gt;|"one broadcast"| G(("GROUP&lt;br/&gt;session"))
+    G --&gt; S0["Server 0"]
+    G --&gt; S1["Server 1"]
+    G --&gt; S2["Server N"]
+    S0 -.-&gt;|"unicast reply"| G
+    S1 -.-&gt;|"unicast reply"| G
+    S2 -.-&gt;|"unicast reply"| G
+    G -.-&gt; Client
+
+    style Client fill:#d4edda,stroke:#2d6a4f,stroke-width:2px,color:#1a1a1a
+    style G fill:#ffd166,stroke:#555,stroke-width:2px,color:#1a1a1a
+    style S0 fill:#e9ecef,stroke:#333,stroke-width:2px,color:#1a1a1a
+    style S1 fill:#e9ecef,stroke:#333,stroke-width:2px,color:#1a1a1a
+    style S2 fill:#e9ecef,stroke:#333,stroke-width:2px,color:#1a1a1a
+</code></pre>
+
+<p>The design is straightforward:</p>
+
+<ol>
+  <li>The client creates a <strong>group channel</strong> via <code class="language-plaintext highlighter-rouge">Channel.new_group(app, members)</code>
+instead of the usual <code class="language-plaintext highlighter-rouge">Channel.new(app, remote)</code>.</li>
+  <li>Under the hood, the channel holds a single <strong>SLIM Multicast session</strong>. All
+members are auto-invited on the first RPC call.</li>
+  <li>Every request is <strong>broadcast</strong> to all members via the group session.</li>
+  <li>Each server runs the <strong>exact same handler</strong> it would run for a point-to-point
+call — it doesn’t know (or care) that it’s part of a group.</li>
+  <li>Responses are sent <strong>unicast</strong> directly back to the client, so members never
+see each other’s replies.</li>
+  <li>The client’s <code class="language-plaintext highlighter-rouge">ResponseDispatcher</code> multiplexes incoming messages by <code class="language-plaintext highlighter-rouge">rpc-id</code>,
+tagging each response with the identity of the member that sent it.</li>
+</ol>
+
+<h3 id="session-naming">Session Naming</h3>
+
+<p>The group session name is derived from the client’s own name to avoid
+collisions:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>client name:   org / namespace / my-client
+group name:    org / namespace / &lt;uuid-v4&gt;
+</code></pre></div></div>
+
+<p>This scopes the group address to the same org/namespace as the client.</p>
+
+<h2 id="what-changes-for-the-developer">What Changes for the Developer?</h2>
+
+<h3 id="server-nothing">Server: Nothing</h3>
+
+<p>The same <code class="language-plaintext highlighter-rouge">TestServicer</code> (Python) or <code class="language-plaintext highlighter-rouge">TestServer</code> (Go) implementation works
+for both point-to-point and multicast. Each server in the group receives the
+broadcast request and processes it through the same handler — it is not aware
+of being part of a group.</p>
+
+<h3 id="client-one-constructor-swap">Client: One Constructor Swap</h3>
+
+<p>The only change is how you create the channel. Instead of pointing at a single
+remote name, you supply a list of members:</p>
+
+<p><strong>Python — Point-to-Point:</strong></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">remote_name</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Name</span><span class="p">(</span><span class="s">"agntcy"</span><span class="p">,</span> <span class="s">"grpc"</span><span class="p">,</span> <span class="s">"server"</span><span class="p">),</span>
+
+<span class="n">channel</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Channel</span><span class="p">.</span><span class="n">new_with_connection</span><span class="p">(</span>
+    <span class="n">local_app</span><span class="p">,</span> <span class="n">remote_name</span><span class="p">,</span> <span class="n">conn_id</span>
+<span class="p">)</span>
+<span class="n">stub</span> <span class="o">=</span> <span class="n">TestStub</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+<span class="n">response</span> <span class="o">=</span> <span class="k">await</span> <span class="n">stub</span><span class="p">.</span><span class="n">ExampleUnaryUnary</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><strong>Python — Multicast:</strong></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">remote_names</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Name</span><span class="p">(</span><span class="s">"agntcy"</span><span class="p">,</span> <span class="s">"grpc"</span><span class="p">,</span> <span class="s">"server1"</span><span class="p">),</span>
+    <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Name</span><span class="p">(</span><span class="s">"agntcy"</span><span class="p">,</span> <span class="s">"grpc"</span><span class="p">,</span> <span class="s">"server2"</span><span class="p">),</span>
+<span class="p">]</span>
+
+<span class="n">channel</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Channel</span><span class="p">.</span><span class="n">new_group_with_connection</span><span class="p">(</span>
+    <span class="n">local_app</span><span class="p">,</span> <span class="n">server_names</span><span class="p">,</span> <span class="n">conn_id</span>
+<span class="p">)</span>
+<span class="n">stub</span> <span class="o">=</span> <span class="n">TestGroupStub</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">for</span> <span class="n">context</span><span class="p">,</span> <span class="n">response</span> <span class="ow">in</span> <span class="n">stub</span><span class="p">.</span><span class="n">ExampleUnaryUnary</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"[</span><span class="si">{</span><span class="n">context</span><span class="si">}</span><span class="s">] </span><span class="si">{</span><span class="n">response</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The key differences:</p>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">Channel.new_group_with_connection(app, members, conn_id)</code> replaces
+<code class="language-plaintext highlighter-rouge">Channel.new_with_connection(app, remote, conn_id)</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">TestGroupStub</code> replaces <code class="language-plaintext highlighter-rouge">TestStub</code> — both are auto-generated by the
+SlimRPC compiler from the same <code class="language-plaintext highlighter-rouge">.proto</code> file.</li>
+  <li>Every method returns an <strong>async generator</strong> of <code class="language-plaintext highlighter-rouge">(context, response)</code> tuples
+instead of a single response. The <code class="language-plaintext highlighter-rouge">context</code> tells you which member sent the response.</li>
+</ol>
+
+<h2 id="multicast-interaction-patterns">Multicast Interaction Patterns</h2>
+
+<p>All four standard patterns have multicast equivalents. The mental model is
+always the same: <strong>broadcast the request side, collect tagged responses from
+every member.</strong></p>
+
+<h3 id="multicast-unary-unary">Multicast Unary-Unary</h3>
+
+<p>One request in, one response per member out.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as Client
+    participant M0 as Server 0
+    participant M1 as Server 1
+
+    par broadcast
+        C-&gt;&gt;M0: request
+    and
+        C-&gt;&gt;M1: request
+    end
+
+    M0-&gt;&gt;C: response (unicast)
+    M1-&gt;&gt;C: response (unicast)
+
+    Note over C: Stream ends when all members reply
+</code></pre>
+
+<h3 id="multicast-unary-stream">Multicast Unary-Stream</h3>
+
+<p>One request in, each member streams multiple responses back.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as Client
+    participant M0 as Server 0
+    participant M1 as Server 1
+
+    par broadcast
+        C-&gt;&gt;M0: request
+    and
+        C-&gt;&gt;M1: request
+    end
+
+    M0-&gt;&gt;C: item 1
+    M0-&gt;&gt;C: item 2
+    M0-&gt;&gt;C: EOS
+
+    M1-&gt;&gt;C: item 1
+    M1-&gt;&gt;C: EOS
+
+    Note over C: Stream ends when all EOS received
+</code></pre>
+
+<h3 id="multicast-stream-unary">Multicast Stream-Unary</h3>
+
+<p>A stream of requests is broadcast to all; each member accumulates them and replies once.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as Client
+    participant M0 as Server 0
+    participant M1 as Server 1
+
+    par broadcast
+        C-&gt;&gt;M0: msg 1
+    and
+        C-&gt;&gt;M1: msg 1
+    end
+
+    par broadcast
+        C-&gt;&gt;M0: msg 2
+    and
+        C-&gt;&gt;M1: msg 2
+    end
+
+    par broadcast
+        C-&gt;&gt;M0: EOS (end of requests)
+    and
+        C-&gt;&gt;M1: EOS (end of requests)
+    end
+
+    M0-&gt;&gt;C: response (unicast)
+    M0-&gt;&gt;C: EOS
+
+    M1-&gt;&gt;C: response (unicast)
+    M1-&gt;&gt;C: EOS
+
+    Note over C: Stream ends when all EOS received
+</code></pre>
+
+<h3 id="multicast-stream-stream">Multicast Stream-Stream</h3>
+
+<p>A stream of requests is broadcast to all; each member streams its own responses.
+Client sends and receives concurrently.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant C as Client
+    participant M0 as Server 0
+    participant M1 as Server 1
+
+    par broadcast
+        C-&gt;&gt;M0: msg 1
+    and
+        C-&gt;&gt;M1: msg 1
+    end
+
+    M0-&gt;&gt;C: item 1 (unicast)
+    M1-&gt;&gt;C: item 1 (unicast)
+
+    par broadcast
+        C-&gt;&gt;M0: msg 2
+    and
+        C-&gt;&gt;M1: msg 2
+    end
+
+    M0-&gt;&gt;C: item 2 (unicast)
+    M1-&gt;&gt;C: item 2 (unicast)
+
+    par broadcast
+        C-&gt;&gt;M0: EOS (end of requests)
+    and
+        C-&gt;&gt;M1: EOS (end of requests)
+    end
+
+    M0-&gt;&gt;C: EOS
+    M1-&gt;&gt;C: EOS
+
+    Note over C: 4 items total, stream ends when all EOS received
+</code></pre>
+
+<h2 id="the-eos-protocol">The EOS Protocol</h2>
+
+<p>Knowing when <em>all</em> members are done is critical. SlimRPC uses an explicit
+<strong>End-Of-Stream (EOS)</strong> marker — an empty-payload message with status code <code class="language-plaintext highlighter-rouge">Ok</code>.
+Every server handler sends an EOS after its last response, regardless of
+the interaction pattern:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Pattern</th>
+      <th>Server sends</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Unary-Unary</td>
+      <td>response → EOS</td>
+    </tr>
+    <tr>
+      <td>Unary-Stream</td>
+      <td>item… → EOS</td>
+    </tr>
+    <tr>
+      <td>Stream-Unary</td>
+      <td>response → EOS</td>
+    </tr>
+    <tr>
+      <td>Stream-Stream</td>
+      <td>item… → EOS</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The client counts EOS markers. When <code class="language-plaintext highlighter-rouge">eos_count == num_members</code>, the response
+stream terminates. If a member sends an error instead, that error counts as
+its EOS — the stream won’t hang waiting for a member that has already failed.</p>
+
+<pre><code class="language-mermaid">%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#ffffff", "primaryTextColor": "#1a1a1a", "primaryBorderColor": "#333333", "lineColor": "#555555", "edgeLabelBackground": "#ffffff"}}}%%
+flowchart LR
+    A[receive message] --&gt; B{status code?}
+    B --&gt;|Ok + empty| C[EOS: count++]
+    B --&gt;|Ok + payload| D[yield MulticastItem]
+    B --&gt;|error| E[yield Err, count++]
+    C --&gt; F{count == N?}
+    E --&gt; F
+    F --&gt;|yes| G[stream ends]
+    F --&gt;|no| A
+
+    style A fill:#e9ecef,stroke:#333,stroke-width:2px,color:#1a1a1a
+    style B fill:#ffd166,stroke:#555,stroke-width:2px,color:#1a1a1a
+    style C fill:#d4edda,stroke:#2d6a4f,stroke-width:2px,color:#1a1a1a
+    style D fill:#d4edda,stroke:#2d6a4f,stroke-width:2px,color:#1a1a1a
+    style E fill:#f8d7da,stroke:#721c24,stroke-width:2px,color:#1a1a1a
+    style F fill:#ffd166,stroke:#555,stroke-width:2px,color:#1a1a1a
+    style G fill:#e9ecef,stroke:#333,stroke-width:2px,color:#1a1a1a
+</code></pre>
+
+<h2 id="a-complete-example">A Complete Example</h2>
+
+<p>Let’s walk through a full working example. We’ll use the same protobuf
+definition from above and run <strong>two server instances</strong> with <strong>one multicast
+client</strong>.</p>
+
+<h3 id="the-proto-file">The Proto File</h3>
+
+<p>Create a file called <code class="language-plaintext highlighter-rouge">example.proto</code>. This is a standard protobuf service
+definition — nothing multicast-specific here:</p>
+
+<div class="language-proto highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">syntax</span> <span class="o">=</span> <span class="s">"proto3"</span><span class="p">;</span>
+<span class="kn">package</span> <span class="nn">example_service</span><span class="p">;</span>
+
+<span class="kd">service</span> <span class="n">Test</span> <span class="p">{</span>
+  <span class="k">rpc</span> <span class="n">ExampleUnaryUnary</span><span class="p">(</span><span class="n">ExampleRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">ExampleResponse</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">ExampleUnaryStream</span><span class="p">(</span><span class="n">ExampleRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">stream</span> <span class="n">ExampleResponse</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">ExampleStreamUnary</span><span class="p">(</span><span class="n">stream</span> <span class="n">ExampleRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">ExampleResponse</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">ExampleStreamStream</span><span class="p">(</span><span class="n">stream</span> <span class="n">ExampleRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">stream</span> <span class="n">ExampleResponse</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kd">message</span> <span class="nc">ExampleRequest</span> <span class="p">{</span>
+  <span class="kt">string</span> <span class="na">example_string</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">int64</span>  <span class="na">example_integer</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="kd">message</span> <span class="nc">ExampleResponse</span> <span class="p">{</span>
+  <span class="kt">string</span> <span class="na">example_string</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">int64</span>  <span class="na">example_integer</span> <span class="o">=</span> <span class="mi">2</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="generating-the-stubs">Generating the Stubs</h3>
+
+<p>We use <a href="https://buf.build/">buf</a> to compile the proto file. First, download
+the SlimRPC protoc plugin (version <strong>&gt;= 1.3.0</strong>) for your language from the
+<a href="https://github.com/agntcy/slim/releases/tag/protoc-slimrpc-plugin-v1.3.0">releases page</a>
+and place the binary on your <code class="language-plaintext highlighter-rouge">PATH</code>.</p>
+
+<p>Then create a <code class="language-plaintext highlighter-rouge">buf.gen.yaml</code> alongside <code class="language-plaintext highlighter-rouge">example.proto</code>.</p>
+
+<p><strong>Python</strong> — generates <code class="language-plaintext highlighter-rouge">*_pb2.py</code> (protobuf types), <code class="language-plaintext highlighter-rouge">*_pb2.pyi</code> (type stubs),
+and <code class="language-plaintext highlighter-rouge">*_pb2_slimrpc.py</code> (SlimRPC stubs):</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">version</span><span class="pi">:</span> <span class="s">v2</span>
+<span class="na">managed</span><span class="pi">:</span>
+  <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+<span class="na">inputs</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">proto_file</span><span class="pi">:</span> <span class="s">example.proto</span>
+<span class="na">plugins</span><span class="pi">:</span>
+  <span class="c1"># SlimRPC stubs (TestStub + TestGroupStub + TestServicer)</span>
+  <span class="pi">-</span> <span class="na">local</span><span class="pi">:</span> <span class="s">protoc-gen-slimrpc-python</span>
+    <span class="na">out</span><span class="pi">:</span> <span class="s">types</span>
+  <span class="c1"># Standard protobuf types</span>
+  <span class="pi">-</span> <span class="na">remote</span><span class="pi">:</span> <span class="s">buf.build/protocolbuffers/python:v29.3</span>
+    <span class="na">out</span><span class="pi">:</span> <span class="s">types</span>
+  <span class="c1"># Type stubs for IDE support</span>
+  <span class="pi">-</span> <span class="na">remote</span><span class="pi">:</span> <span class="s">buf.build/protocolbuffers/pyi:v31.1</span>
+    <span class="na">out</span><span class="pi">:</span> <span class="s">types</span>
+</code></pre></div></div>
+
+<p><strong>Go</strong> — generates <code class="language-plaintext highlighter-rouge">*.pb.go</code> (protobuf types) and <code class="language-plaintext highlighter-rouge">*_slimrpc.pb.go</code>
+(SlimRPC stubs):</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">version</span><span class="pi">:</span> <span class="s">v2</span>
+<span class="na">managed</span><span class="pi">:</span>
+  <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+<span class="na">plugins</span><span class="pi">:</span>
+  <span class="c1"># Standard protobuf types</span>
+  <span class="pi">-</span> <span class="na">remote</span><span class="pi">:</span> <span class="s">buf.build/protocolbuffers/go</span>
+    <span class="na">out</span><span class="pi">:</span> <span class="s">types</span>
+    <span class="na">opt</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">paths=source_relative</span>
+  <span class="c1"># SlimRPC stubs (TestClient + TestGroupClient + TestServer)</span>
+  <span class="pi">-</span> <span class="na">local</span><span class="pi">:</span> <span class="s">protoc-gen-slimrpc-go</span>
+    <span class="na">out</span><span class="pi">:</span> <span class="s">types</span>
+    <span class="na">opt</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s">paths=source_relative</span>
+</code></pre></div></div>
+
+<p>Run the code generation:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>buf generate
+</code></pre></div></div>
+
+<p>The SlimRPC compiler produces <strong>both</strong> the standard point-to-point stubs
+(<code class="language-plaintext highlighter-rouge">TestStub</code> / <code class="language-plaintext highlighter-rouge">TestClient</code>) <strong>and</strong> the multicast stubs (<code class="language-plaintext highlighter-rouge">TestGroupStub</code> /
+<code class="language-plaintext highlighter-rouge">TestGroupClient</code>) from the same proto definition — no extra annotations
+needed.</p>
+
+<h3 id="server-python--unchanged">Server (Python) — Unchanged</h3>
+
+<p>The server implementation is identical to a standard SlimRPC server. It
+doesn’t know whether it’s serving a point-to-point or multicast client.
+The handlers are the same you’d write for any SlimRPC service:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">TestService</span><span class="p">(</span><span class="n">TestServicer</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">ExampleUnaryUnary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ExampleResponse</span><span class="p">(</span>
+            <span class="n">example_integer</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">example_string</span><span class="o">=</span><span class="s">"Hello, World!"</span>
+        <span class="p">)</span>
+
+    <span class="k">async</span> <span class="k">def</span> <span class="nf">ExampleStreamStream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request_iterator</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="k">async</span> <span class="k">for</span> <span class="n">request</span> <span class="ow">in</span> <span class="n">request_iterator</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">ExampleResponse</span><span class="p">(</span>
+                <span class="n">example_integer</span><span class="o">=</span><span class="n">request</span><span class="p">.</span><span class="n">example_integer</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span>
+                <span class="n">example_string</span><span class="o">=</span><span class="sa">f</span><span class="s">"Echo: </span><span class="si">{</span><span class="n">request</span><span class="p">.</span><span class="n">example_string</span><span class="si">}</span><span class="s">"</span><span class="p">,</span>
+            <span class="p">)</span>
+</code></pre></div></div>
+
+<p>The only thing we parameterise is the <strong>instance name</strong>, which becomes the
+third component of the SLIM name. This lets us run multiple copies of the
+same server side by side:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># The instance name becomes the SLIM address:
+# "server1" → agntcy/grpc/server1,  "server2" → agntcy/grpc/server2
+</span><span class="n">local_name</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Name</span><span class="p">(</span><span class="s">"agntcy"</span><span class="p">,</span> <span class="s">"grpc"</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Launch two instances in separate terminals:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Terminal 1 — registers as agntcy/grpc/server1</span>
+python server.py <span class="nt">--instance</span> server1
+
+<span class="c"># Terminal 2 — registers as agntcy/grpc/server2</span>
+python server.py <span class="nt">--instance</span> server2
+</code></pre></div></div>
+
+<blockquote>
+  <p>📄 Full server source:
+<a href="https://github.com/agntcy/slim/blob/slim-v1.3.0/data-plane/bindings/python/examples/slimrpc/simple/server.py">server.py</a></p>
+</blockquote>
+
+<h3 id="multicast-client-python">Multicast Client (Python)</h3>
+
+<p>The client creates a <strong>group channel</strong> targeting both servers — this is the
+only line that differs from a regular point-to-point client:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># P2P:   Channel.new_with_connection(app, one_server, conn_id)
+# Group:
+</span><span class="n">server_names</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Name</span><span class="p">(</span><span class="s">"agntcy"</span><span class="p">,</span> <span class="s">"grpc"</span><span class="p">,</span> <span class="s">"server1"</span><span class="p">),</span>
+    <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Name</span><span class="p">(</span><span class="s">"agntcy"</span><span class="p">,</span> <span class="s">"grpc"</span><span class="p">,</span> <span class="s">"server2"</span><span class="p">),</span>
+<span class="p">]</span>
+<span class="n">channel</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Channel</span><span class="p">.</span><span class="n">new_group_with_connection</span><span class="p">(</span>
+    <span class="n">local_app</span><span class="p">,</span> <span class="n">server_names</span><span class="p">,</span> <span class="n">conn_id</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>Then use the generated <code class="language-plaintext highlighter-rouge">TestGroupStub</code> instead of <code class="language-plaintext highlighter-rouge">TestStub</code>. Every method
+becomes an async generator that yields <code class="language-plaintext highlighter-rouge">(context, response)</code> tuples — one
+per member:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">stub</span> <span class="o">=</span> <span class="n">TestGroupStub</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+
+<span class="c1"># === Multicast Unary-Unary ===
+</span><span class="n">request</span> <span class="o">=</span> <span class="n">ExampleRequest</span><span class="p">(</span><span class="n">example_integer</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">example_string</span><span class="o">=</span><span class="s">"hello"</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">for</span> <span class="n">context</span><span class="p">,</span> <span class="n">resp</span> <span class="ow">in</span> <span class="n">stub</span><span class="p">.</span><span class="n">ExampleUnaryUnary</span><span class="p">(</span>
+    <span class="n">request</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"  [</span><span class="si">{</span><span class="n">context</span><span class="si">}</span><span class="s">] </span><span class="si">{</span><span class="n">resp</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+<span class="c1"># Output:
+#   [agntcy/grpc/server1] example_integer: 1, example_string: "Hello, World!"
+#   [agntcy/grpc/server2] example_integer: 1, example_string: "Hello, World!"
+</span></code></pre></div></div>
+
+<p>Streaming works the same way — responses from all members are interleaved
+and tagged:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># === Multicast Stream-Stream ===
+</span><span class="k">async</span> <span class="k">def</span> <span class="nf">stream_requests</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">ExampleRequest</span><span class="p">(</span><span class="n">example_integer</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">example_string</span><span class="o">=</span><span class="sa">f</span><span class="s">"item </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+
+<span class="k">async</span> <span class="k">for</span> <span class="n">context</span><span class="p">,</span> <span class="n">resp</span> <span class="ow">in</span> <span class="n">stub</span><span class="p">.</span><span class="n">ExampleStreamStream</span><span class="p">(</span>
+    <span class="n">stream_requests</span><span class="p">(),</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"  [</span><span class="si">{</span><span class="n">context</span><span class="si">}</span><span class="s">] </span><span class="si">{</span><span class="n">resp</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+<span class="c1"># Each server echoes all 3 items → 6 responses total, tagged by source
+</span></code></pre></div></div>
+
+<blockquote>
+  <p>📄 Full client source:
+<a href="https://github.com/agntcy/slim/blob/slim-v1.3.0/data-plane/bindings/python/examples/slimrpc/simple/client_group.py">client_group.py</a></p>
+</blockquote>
+
+<h3 id="multicast-client-go">Multicast Client (Go)</h3>
+
+<p>The same pattern in Go — <code class="language-plaintext highlighter-rouge">ChannelNewGroupWithConnection</code> plus the generated
+<code class="language-plaintext highlighter-rouge">TestGroupClient</code>:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">serverNames</span> <span class="o">:=</span> <span class="p">[]</span><span class="o">*</span><span class="n">slim_bindings</span><span class="o">.</span><span class="n">Name</span><span class="p">{</span>
+    <span class="n">slim_bindings</span><span class="o">.</span><span class="n">NewName</span><span class="p">(</span><span class="s">"agntcy"</span><span class="p">,</span> <span class="s">"grpc"</span><span class="p">,</span> <span class="s">"server1"</span><span class="p">),</span>
+    <span class="n">slim_bindings</span><span class="o">.</span><span class="n">NewName</span><span class="p">(</span><span class="s">"agntcy"</span><span class="p">,</span> <span class="s">"grpc"</span><span class="p">,</span> <span class="s">"server2"</span><span class="p">),</span>
+<span class="p">}</span>
+<span class="n">channel</span><span class="p">,</span> <span class="n">_</span> <span class="o">:=</span> <span class="n">slim_bindings</span><span class="o">.</span><span class="n">ChannelNewGroupWithConnection</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">serverNames</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">connId</span><span class="p">)</span>
+<span class="n">client</span> <span class="o">:=</span> <span class="n">pb</span><span class="o">.</span><span class="n">NewTestGroupClient</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+
+<span class="n">stream</span><span class="p">,</span> <span class="n">_</span> <span class="o">:=</span> <span class="n">client</span><span class="o">.</span><span class="n">ExampleUnaryUnary</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pb</span><span class="o">.</span><span class="n">ExampleRequest</span><span class="p">{</span>
+    <span class="n">ExampleInteger</span><span class="o">:</span> <span class="m">1</span><span class="p">,</span>
+    <span class="n">ExampleString</span><span class="o">:</span>  <span class="s">"hello"</span><span class="p">,</span>
+<span class="p">})</span>
+<span class="k">for</span> <span class="p">{</span>
+    <span class="n">item</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">stream</span><span class="o">.</span><span class="n">Recv</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span> <span class="n">log</span><span class="o">.</span><span class="n">Fatal</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="p">}</span>
+    <span class="k">if</span> <span class="n">item</span> <span class="o">==</span> <span class="no">nil</span> <span class="p">{</span> <span class="k">break</span> <span class="p">}</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"[%s] %+v"</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">item</span><span class="o">.</span><span class="n">Value</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p>📄 Full client source:
+<a href="https://github.com/agntcy/slim/blob/slim-v1.3.0/data-plane/bindings/go/examples/slimrpc/simple/cmd/client_group/client_group.go">client_group.go</a></p>
+</blockquote>
+
+<p>Both the Go <code class="language-plaintext highlighter-rouge">TestGroupClient</code> and the Python <code class="language-plaintext highlighter-rouge">TestGroupStub</code> are generated
+from the same <code class="language-plaintext highlighter-rouge">.proto</code> file by the SlimRPC compiler.</p>
+
+<h2 id="multiplexing-concurrent-rpcs">Multiplexing Concurrent RPCs</h2>
+
+<p>Every outgoing request carries a unique <code class="language-plaintext highlighter-rouge">rpc-id</code> (UUID). Each server echoes it
+back on its responses. A single background task reads all incoming messages
+from the group session and dispatches them to per-RPC channels keyed by
+<code class="language-plaintext highlighter-rouge">rpc-id</code>. When an RPC caller is done (or dropped), a <code class="language-plaintext highlighter-rouge">DispatcherGuard</code>
+automatically unregisters its channel.</p>
+
+<p>This means <strong>multiple concurrent RPCs can share the same persistent group
+session</strong> — no session-per-call overhead.</p>
+
+<h2 id="message-metadata">Message Metadata</h2>
+
+<p>SlimRPC uses a small set of metadata keys to coordinate the protocol:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Key</th>
+      <th>Set by</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">service</code></td>
+      <td>Client</td>
+      <td>Service name (absent on responses)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">method</code></td>
+      <td>Client</td>
+      <td>Method name (absent on responses)</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">rpc-id</code></td>
+      <td>Client</td>
+      <td>UUID identifying the call; echoed on responses</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">slimrpc-code</code></td>
+      <td>Server</td>
+      <td>Integer status code; present on every response</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">slimrpc-timeout</code></td>
+      <td>Client</td>
+      <td>Deadline as Unix timestamp</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>A message is an <strong>EOS</strong> when <code class="language-plaintext highlighter-rouge">slimrpc-code = 0</code> (Ok) and the payload is empty.
+A message is a <strong>request</strong> when <code class="language-plaintext highlighter-rouge">service</code> is present. A message is a <strong>response</strong>
+when <code class="language-plaintext highlighter-rouge">slimrpc-code</code> is present and <code class="language-plaintext highlighter-rouge">service</code> is absent.</p>
+
+<h2 id="error-handling">Error Handling</h2>
+
+<p>In a multicast scenario, one member might fail while others succeed. SlimRPC
+represents this with dedicated error variants so the client always knows
+<strong>what</strong> went wrong and <strong>who</strong> caused it:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">enum</span> <span class="n">RpcError</span> <span class="p">{</span>
+    <span class="cd">/// Standard RPC error (same as point-to-point)</span>
+    <span class="n">Rpc</span> <span class="p">{</span> <span class="n">code</span><span class="p">:</span> <span class="n">RpcCode</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">String</span><span class="p">,</span> <span class="n">details</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;&gt;</span> <span class="p">},</span>
+
+    <span class="cd">/// Error from a specific group member — `origin` is the member's SLIM name</span>
+    <span class="n">MulticastRpc</span> <span class="p">{</span> <span class="n">origin</span><span class="p">:</span> <span class="nb">String</span><span class="p">,</span> <span class="n">code</span><span class="p">:</span> <span class="n">RpcCode</span><span class="p">,</span> <span class="n">message</span><span class="p">:</span> <span class="nb">String</span><span class="p">,</span> <span class="n">details</span><span class="p">:</span> <span class="nb">Option</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;&gt;</span> <span class="p">},</span>
+
+    <span class="cd">/// The session died before all members replied</span>
+    <span class="n">MulticastSessionClosed</span> <span class="p">{</span> <span class="n">completed</span><span class="p">:</span> <span class="nb">u64</span><span class="p">,</span> <span class="n">total</span><span class="p">:</span> <span class="nb">u64</span><span class="p">,</span> <span class="n">received</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">String</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">missing</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">String</span><span class="o">&gt;</span> <span class="p">},</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The three variants cover every failure mode:</p>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">MulticastRpc</code></strong> — a single member returned an error. The <code class="language-plaintext highlighter-rouge">origin</code> field
+identifies which one. This error is yielded as an <code class="language-plaintext highlighter-rouge">Err</code> item in the
+response stream, <strong>counts as that member’s EOS</strong>, and does not affect
+other members — they continue sending responses normally.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">MulticastSessionClosed</code></strong> — the underlying group session dropped before
+all members finished. The <code class="language-plaintext highlighter-rouge">received</code> and <code class="language-plaintext highlighter-rouge">missing</code> lists tell you exactly
+which members completed and which didn’t.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">Rpc</code></strong> — a transport-level or client-side error (e.g. timeout,
+serialisation failure) that is not tied to a specific member.</li>
+</ul>
+
+<h2 id="cross-language-support">Cross-Language Support</h2>
+
+<p>SlimRPC Multicast works across all languages supported by the SLIM bindings,
+thanks to the <a href="https://mozilla.github.io/uniffi-rs/">UniFFI</a> binding layer.
+The core implementation is in Rust, with UniFFI-compatible wrappers for
+types that don’t map directly to foreign languages (like async streams):</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>UniFFI Type</th>
+      <th>Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MulticastResponseReader</code></td>
+      <td>Pull-based reader for unary-input multicast results</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MulticastBidiStreamHandler</code></td>
+      <td>Concurrent send/receive for stream-input multicast</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">MulticastStreamMessage</code></td>
+      <td><code class="language-plaintext highlighter-rouge">Data(RpcMulticastItem) \| Error \| End</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">RpcMulticastItem</code></td>
+      <td>Payload + <code class="language-plaintext highlighter-rouge">RpcMessageContext{source: Name}</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>This means the same multicast semantics are available in <strong>Python, Go, Kotlin,
+Java, .NET</strong>, and of course <strong>Rust</strong> natively.</p>
+
+<h2 id="key-design-decisions">Key Design Decisions</h2>
+
+<h3 id="servers-dont-know-about-groups">Servers Don’t Know About Groups</h3>
+
+<p>This is perhaps the most important design choice. Servers run the <strong>exact same
+handlers</strong> for both point-to-point and multicast calls. The multicast
+coordination — broadcasting, EOS counting, response tagging — is entirely a
+client-side and transport-level concern. This means:</p>
+
+<ul>
+  <li>Existing services gain multicast support for free.</li>
+  <li>No server-side code changes or redeployment needed.</li>
+  <li>The same server can serve both P2P and multicast clients simultaneously.</li>
+</ul>
+
+<h3 id="unicast-responses">Unicast Responses</h3>
+
+<p>Responses travel <strong>directly</strong> from each member to the client via unicast publish.
+Members never see each other’s responses. This keeps each member’s session
+free of cross-member traffic and avoids O(N²) message amplification.</p>
+
+<h3 id="persistent-session-with-lazy-initialization">Persistent Session with Lazy Initialization</h3>
+
+<p>The group session is created on the first RPC call and reused for all
+subsequent calls. If the session dies, it’s transparently recreated. Members
+are re-invited on every session creation. This amortizes the session
+handshake cost across many RPC calls.</p>
+
+<h3 id="smart-constructor">Smart Constructor</h3>
+
+<p>The <code class="language-plaintext highlighter-rouge">Channel</code> constructor is smart about the member list:</p>
+
+<ul>
+  <li><strong>1 member</strong>: creates a standard P2P channel (no multicast overhead).</li>
+  <li><strong>Many members</strong>: creates a GROUP channel with a generated session name.</li>
+</ul>
+
+<p>This means library code can accept a member list without special-casing the
+single-server scenario.</p>
+
+<h2 id="getting-started">Getting Started</h2>
+
+<ol>
+  <li>
+    <p><strong>Install the SlimRPC compiler</strong> — download pre-built binaries (version
+<strong>&gt;= 1.3.0</strong>) for your platform from the
+<a href="https://github.com/agntcy/slim/releases/tag/protoc-slimrpc-plugin-v1.3.0">releases page</a>
+and place them on your <code class="language-plaintext highlighter-rouge">PATH</code>.</p>
+  </li>
+  <li>
+    <p><strong>Generate stubs</strong> — the compiler now produces both <code class="language-plaintext highlighter-rouge">TestStub</code> and
+<code class="language-plaintext highlighter-rouge">TestGroupStub</code> (or <code class="language-plaintext highlighter-rouge">TestClient</code> and <code class="language-plaintext highlighter-rouge">TestGroupClient</code> in Go) from
+the same <code class="language-plaintext highlighter-rouge">.proto</code> file:</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>buf generate
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p><strong>Write your server</strong> — implement the servicer exactly as you would for
+standard SlimRPC or gRPC.</p>
+  </li>
+  <li>
+    <p><strong>Write your client</strong> — use <code class="language-plaintext highlighter-rouge">Channel.new_group_with_connection</code> and the
+generated <code class="language-plaintext highlighter-rouge">GroupStub</code>/<code class="language-plaintext highlighter-rouge">GroupClient</code>.</p>
+  </li>
+  <li>
+    <p><strong>Run it</strong> — start a SLIM node, launch your servers, and run the client.
+Complete examples are in the repository:</p>
+    <ul>
+      <li><a href="https://github.com/agntcy/slim/tree/slim-v1.3.0/data-plane/bindings/python/examples/slimrpc/simple">Python example</a></li>
+      <li><a href="https://github.com/agntcy/slim/tree/slim-v1.3.0/data-plane/bindings/go/examples/slimrpc/simple">Go example</a></li>
+    </ul>
+  </li>
+</ol>
+
+<h2 id="whats-next">What’s Next</h2>
+
+<p>Group RPC in SLIM v1.3 lays the foundation for a number of exciting
+extensions we’re exploring:</p>
+
+<ul>
+  <li><strong>Context propagation</strong>: allowing group members to observe each other’s
+responses within the same session, enabling collaborative reasoning patterns.</li>
+  <li><strong>Dynamic membership</strong>: inviting and removing members from a live group
+session without recreating it.</li>
+  <li><strong>Aggregation primitives</strong>: built-in reducers (majority vote, first-response,
+quorum) that collapse multicast responses into a single result.</li>
+</ul>
+
+<p>If you’re building multi-agent systems, we’d love to hear your use cases.
+Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a>
+or open an issue on <a href="https://github.com/agntcy/slim">GitHub</a>.</p>
+
+<hr />
+
+<p><em>Have questions? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"><span class="post-nav-label">← Previous</span>
+        <a href="/drafts/docs-directory-oidc-auth/agents/go/slim/a2a/announcements/2026/03/24/slim-a2a-go-release.html">Announcing slim-a2a-go 0.1.0: Native A2A over SLIM for Go</a></div>
+    <div class="post-nav-next"><span class="post-nav-label">Next →</span>
+        <a href="/drafts/docs-directory-oidc-auth/technical/2026/04/02/transporting-opentelemetry-over-slim.html">SLIM for Observability and Remediation: Beyond Agentic AI</a></div>
+  </nav>
+
+  <a class="u-url" href="/drafts/docs-directory-oidc-auth/technical/slim/agents/2026/03/31/slimrpc-multicast.html" hidden></a>
+</article>
+
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/drafts/docs-directory-oidc-auth/"></data>
+
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">
+        <h2 class="footer-heading">AGNTCY Blogs</h2>
+        <p class="footer-copyright">Copyright © AGNTCY a Series of LF Projects, LLC</p>
+      </div>
+
+      <div class="footer-col">
+        <ul class="social-media-list"><li>
+            <a href="https://github.com/agntcy">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#github"></use></svg>
+              <span class="username">GitHub</span>
+            </a>
+          </li><li>
+            <a href="https://www.linkedin.com/company/agntcyproject">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#linkedin"></use></svg>
+              <span class="username">LinkedIn</span>
+            </a>
+          </li><li>
+            <a href="https://www.youtube.com/@agntcy-lf">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#youtube"></use></svg>
+              <span class="username">YouTube</span>
+            </a>
+          </li><li>
+            <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">
+              <svg class="svg-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.362 10.11c0 .926-.756 1.681-1.681 1.681S0 11.036 0 10.111c0-.926.756-1.681 1.681-1.681h1.681v1.68zm.846 0c0-.926.756-1.681 1.681-1.681s1.681.756 1.681 1.681v4.21c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681v-4.21zM5.89 3.362c-.926 0-1.681-.756-1.681-1.681S4.964 0 5.89 0s1.681.756 1.681 1.681v1.681H5.89zm0 .846c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681H1.68C.756 7.57 0 6.814 0 5.889s.756-1.681 1.681-1.681h4.21zm6.749 1.681c0-.926.756-1.681 1.681-1.681S16 4.964 16 5.889s-.756 1.681-1.681 1.681h-1.681V5.89zm-.846 0c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681V1.68C8.43.756 9.186 0 10.111 0s1.681.756 1.681 1.681v4.21zm-1.681 6.749c.926 0 1.681.756 1.681 1.681S11.036 16 10.111 16s-1.681-.756-1.681-1.681v-1.681h1.681zm0-.846c-.926 0-1.681-.756-1.681-1.681s.756-1.681 1.681-1.681h4.21c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681h-4.21z"/>
+              </svg>
+              <span class="username">Slack</span>
+            </a>
+          </li></ul>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-description">Building infrastructure for the Internet of Agents</p>
+      </div>
+
+    </div>
+  </div>
+
+</footer>
+<script src="/drafts/docs-directory-oidc-auth/assets/js/theme-toggle.js"></script>
+    <script src="/drafts/docs-directory-oidc-auth/assets/js/code-copy.js"></script>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      async function renderMermaid() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Agntcy color scheme for mermaid
+        const agntcyTheme = {
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: isDark ? {
+            // Dark mode - agntcy slate theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#e3e3e3',
+            secondaryColor: '#002a4d',
+            tertiaryColor: '#03142b',
+            background: '#03142b',
+            mainBkg: '#03142b',
+            secondBkg: '#002a4d',
+            textColor: '#e3e3e3',
+            nodeBorder: '#0251af',
+            clusterBkg: '#002a4d',
+            clusterBorder: '#0251af',
+            titleColor: '#fbaf46',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#e3e3e3',
+            signalColor: '#e3e3e3',
+            signalTextColor: '#e3e3e3',
+            labelBoxBkgColor: '#002a4d',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#e3e3e3',
+            loopTextColor: '#e3e3e3',
+            noteBkgColor: '#002a4d',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#e3e3e3',
+            activationBkgColor: '#002a4d',
+            activationBorderColor: '#fbaf46',
+            sequenceNumberColor: '#03142b'
+          } : {
+            // Light mode - agntcy blue theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#1c1e21',
+            secondaryColor: '#e8eefb',
+            tertiaryColor: '#eff3fc',
+            background: '#eff3fc',
+            mainBkg: '#eff3fc',
+            secondBkg: '#e8eefb',
+            textColor: '#1c1e21',
+            nodeBorder: '#0251af',
+            clusterBkg: '#e8eefb',
+            clusterBorder: '#0251af',
+            titleColor: '#0251af',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#1c1e21',
+            signalColor: '#1c1e21',
+            signalTextColor: '#1c1e21',
+            labelBoxBkgColor: '#e8eefb',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#1c1e21',
+            loopTextColor: '#1c1e21',
+            noteBkgColor: '#e8eefb',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#1c1e21',
+            activationBkgColor: '#e8eefb',
+            activationBorderColor: '#0251af',
+            sequenceNumberColor: '#f3f6fd'
+          }
+        };
+
+        mermaid.initialize(agntcyTheme);
+        await mermaid.run();
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
+              newDiv.textContent = graphDefinition;
+
+              container.replaceWith(newDiv);
+          });
+
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      });
+    </script>
+    <style>
+    #cookie-notice {
+        padding: 2rem 2rem;
+        display: none;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #1a1a1a;
+        color: #ffffff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 9999;
+        border-top: 3px solid #4a90e2;
+    }
+    #cookie-notice span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    #cookie-notice a {
+        display: inline-block;
+        cursor: pointer;
+        padding: 0.875rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: #4a90e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    #cookie-notice a:hover {
+        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    @media (max-width: 767px) {
+        #cookie-notice {
+            padding: 1.5rem 1rem;
+        }
+        #cookie-notice span {
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        #cookie-notice a {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+<div id="cookie-notice"><span>We would like to use third party cookies and scripts to improve the functionality of this website.</span><a id="cookie-notice-accept" class="btn btn-primary">Approve</a></div>
+<script>
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
+    function loadGoogleAnalytics() {
+        
+        // Load Google Analytics V4
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-3D9938KZCN";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-3D9938KZCN');
+        
+    }
+
+    if(readCookie('cookie-notice-dismissed')=='true') {
+        loadGoogleAnalytics();
+    } else {
+        document.getElementById('cookie-notice').style.display = 'block';
+    }
+
+    document.getElementById('cookie-notice-accept').addEventListener("click",function() {
+        createCookie('cookie-notice-dismissed','true',31);
+        document.getElementById('cookie-notice').style.display = 'none';
+        location.reload();
+    });
+
+</script>
+
+  </body>
+
+</html>
+

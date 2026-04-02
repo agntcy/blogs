@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Directory MCP Server: Bringing AI Agent Discovery to Your IDE | AGNTCY Blogs</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Directory MCP Server: Bringing AI Agent Discovery to Your IDE" />
+<meta name="author" content="Adam Tagscherer" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="The Model Context Protocol (MCP) has emerged as a powerful standard for connecting AI assistants with external tools and data sources. In this post, we’ll explore the Directory MCP server—a feature that brings AI agent discovery and management directly into your IDE, enabling seamless interaction with the Directory ecosystem." />
+<meta property="og:description" content="The Model Context Protocol (MCP) has emerged as a powerful standard for connecting AI assistants with external tools and data sources. In this post, we’ll explore the Directory MCP server—a feature that brings AI agent discovery and management directly into your IDE, enabling seamless interaction with the Directory ecosystem." />
+<link rel="canonical" href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/2026/02/19/directory-mcp-server.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/2026/02/19/directory-mcp-server.html" />
+<meta property="og:site_name" content="AGNTCY Blogs" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-02-19T08:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Directory MCP Server: Bringing AI Agent Discovery to Your IDE" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Adam Tagscherer"},"dateModified":"2026-02-19T08:00:00+00:00","datePublished":"2026-02-19T08:00:00+00:00","description":"The Model Context Protocol (MCP) has emerged as a powerful standard for connecting AI assistants with external tools and data sources. In this post, we’ll explore the Directory MCP server—a feature that brings AI agent discovery and management directly into your IDE, enabling seamless interaction with the Directory ecosystem.","headline":"Directory MCP Server: Bringing AI Agent Discovery to Your IDE","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/2026/02/19/directory-mcp-server.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/assets/images/logo-light.svg"},"name":"Adam Tagscherer"},"url":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/2026/02/19/directory-mcp-server.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/drafts/docs-directory-oidc-auth/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/drafts/docs-directory-oidc-auth/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/feed.xml" title="AGNTCY Blogs" /><script>
+    // Set theme immediately to prevent flash of wrong theme
+    (function() {
+      const theme = localStorage.getItem('theme-preference') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><div class="site-branding">
+      <a class="site-logo-link" rel="author" href="/drafts/docs-directory-oidc-auth/"><img class="site-logo logo-light" src="/drafts/docs-directory-oidc-auth/assets/images/logo-light.svg" alt="AGNTCY"><img class="site-logo logo-dark" src="/drafts/docs-directory-oidc-auth/assets/images/logo-dark.svg" alt="AGNTCY"></a>
+      <span class="site-title-text">Blogs</span>
+    </div><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/drafts/docs-directory-oidc-auth/archive/">Archive</a><a class="page-link" href="/drafts/docs-directory-oidc-auth/about/">About</a><button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </nav></div>
+</header>
+
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Directory MCP Server: Bringing AI Agent Discovery to Your IDE</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-02-19T08:00:00+00:00" itemprop="datePublished">
+        February 19, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/adamtagscherer" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Adam Tagscherer</a></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>The Model Context Protocol (MCP) has emerged as a powerful standard for connecting AI assistants with external tools and data sources. In this post, we’ll explore the Directory MCP server—a feature that brings AI agent discovery and management directly into your IDE, enabling seamless interaction with the Directory ecosystem.</p>
+
+<!--more-->
+
+<p><strong>TL;DR:</strong> The Directory MCP server lets your AI-powered IDE discover, validate, and use AI agents from the Directory network—without leaving your editor. It bridges Directory’s decentralized agent registry with MCP-enabled tools like Cursor, VS Code, and Codex.</p>
+
+<h3 id="what-youll-learn">What You’ll Learn</h3>
+
+<p>In this post, you’ll learn:</p>
+
+<ul>
+  <li>What Directory is and why MCP matters</li>
+  <li>How to install and configure the Directory MCP server in your IDE</li>
+  <li>How to distribute and sign OASF agent records through CI/CD</li>
+  <li>How to discover, import, and audit agents using natural language inside your IDE</li>
+  <li>How Directory enables secure agent ecosystems</li>
+</ul>
+
+<h2 id="what-is-agent-directory">What is Agent Directory?</h2>
+
+<p><a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a> is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Directory provides a distributed peer-to-peer network for publishing, exchanging, and discovering information about AI agents. It uses <a href="https://github.com/agntcy/oasf">OASF (Open Agentic Schema Framework)</a> to describe AI agents with structured metadata, enabling:</p>
+
+<ul>
+  <li><strong>Capability-Based Discovery</strong>: Find agents based on their functional characteristics using hierarchical skill and domain taxonomies</li>
+  <li><strong>Verifiable Claims</strong>: Cryptographic mechanisms ensure data integrity and provenance tracking</li>
+  <li><strong>Distributed Architecture</strong>: Content-addressing and distributed hash tables (DHT) for scalable discovery across decentralized networks</li>
+  <li><strong>Multi-Format Support</strong>: Import and export between OASF, A2A (Agent-to-Agent), and MCP formats</li>
+</ul>
+
+<h2 id="why-an-mcp-server">Why an MCP Server?</h2>
+
+<p>While Directory provides CLI tools and SDKs for interacting with the network, developers increasingly work within AI-assisted IDEs like <a href="https://cursor.com">Cursor</a>, <a href="https://code.visualstudio.com">VS Code</a> or <a href="https://openai.com/codex/">Codex</a>. The MCP server bridges this gap by exposing Directory functionality directly to AI assistants, allowing you to:</p>
+
+<ul>
+  <li>Search for agents using natural language</li>
+  <li>Validate and push agent records without leaving your editor</li>
+  <li>Generate OASF records by analyzing your codebase</li>
+  <li>Import and export between different agent formats</li>
+</ul>
+
+<p>Instead of context-switching to the terminal, you can simply ask your AI assistant to perform these operations.</p>
+
+<h2 id="architecture">Architecture</h2>
+
+<p>The MCP server acts as a bridge between your AI assistant and the Directory ecosystem:</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    classDef ide fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+    classDef mcp fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef external fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+
+    subgraph IDE["IDE (Cursor, VS Code, Codex)"]
+        AI[AI Assistant]:::ide
+    end
+
+    subgraph MCP["MCP Server (dirctl mcp serve)"]
+        Tools[Tools]:::mcp
+        Prompts[Prompts]:::mcp
+    end
+
+    subgraph External["External Services"]
+        Dir[Directory Server&lt;br/&gt;Agent Records]:::external
+        Schema[OASF Schema Server&lt;br/&gt;Validation]:::external
+    end
+
+    AI --&gt;|"Tool calls&lt;br/&gt;(search, push, pull)"| Tools
+    AI --&gt;|"Prompt invocations&lt;br/&gt;(create_record, search_records)"| Prompts
+    Tools --&gt; Dir
+    Tools --&gt; Schema
+    Prompts --&gt; Tools
+</code></pre>
+
+<p>The server communicates via stdin/stdout or streamable HTTP using the MCP protocol, making it compatible with any MCP-enabled IDE.</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<p>Before setting up the MCP server, you’ll need:</p>
+
+<ol>
+  <li>
+    <p><strong>dirctl CLI</strong> - Install via <a href="https://github.com/agntcy/dir/tree/main/HomebrewFormula">Homebrew</a> or download from <a href="https://github.com/agntcy/dir/releases">GitHub Releases</a>. Alternatively, use the Docker image.</p>
+  </li>
+  <li>
+    <p><strong>An MCP-enabled IDE</strong></p>
+  </li>
+  <li>
+    <p><strong>A running Directory server</strong> - Either:</p>
+    <ul>
+      <li><strong>Local development</strong>: Start one with <code class="language-plaintext highlighter-rouge">task server:start</code> in the <a href="https://github.com/agntcy/dir">Directory repository</a>, or use Docker Compose:
+        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd install</span>/docker <span class="o">&amp;&amp;</span> docker compose up <span class="nt">-d</span>
+</code></pre></div>        </div>
+      </li>
+      <li><strong>Remote server</strong>: Use an existing Directory deployment (e.g., the <a href="https://blogs.agntcy.org/technical/2026/02/19/dir-v1.html">AGNTCY public testbed</a> at <code class="language-plaintext highlighter-rouge">prod.gateway.ads.outshift.io:443</code>)</li>
+    </ul>
+  </li>
+</ol>
+
+<h2 id="setup">Setup</h2>
+
+<p>The MCP server runs via the <code class="language-plaintext highlighter-rouge">dirctl</code> CLI tool. Below are configuration instructions for some AI IDEs, with both binary and Docker options.</p>
+
+<h3 id="cursor">Cursor</h3>
+
+<p>Add the MCP server to your Cursor configuration at <code class="language-plaintext highlighter-rouge">~/.cursor/mcp.json</code>:</p>
+
+<p><strong>Using the binary:</strong></p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"dir-mcp-server"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/dirctl"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"mcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"serve"</span><span class="p">],</span><span class="w">
+      </span><span class="nl">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"OASF_API_VALIDATION_SCHEMA_URL"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://schema.oasf.outshift.com"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"DIRECTORY_CLIENT_SERVER_ADDRESS"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost:8888"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Using Docker:</strong></p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"dir-mcp-server"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"docker"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"run"</span><span class="p">,</span><span class="w"> </span><span class="s2">"--rm"</span><span class="p">,</span><span class="w"> </span><span class="s2">"-i"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"OASF_API_VALIDATION_SCHEMA_URL=https://schema.oasf.outshift.com"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"ghcr.io/agntcy/dir-ctl:latest"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"mcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"serve"</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>After saving, restart Cursor for the changes to take effect.</p>
+
+<h3 id="vs-code">VS Code</h3>
+
+<p>For VS Code with GitHub Copilot, add the MCP server to your workspace configuration at <code class="language-plaintext highlighter-rouge">.vscode/mcp.json</code>, or to your user settings at <code class="language-plaintext highlighter-rouge">~/.vscode/mcp.json</code> for global availability:</p>
+
+<p><strong>Using the binary:</strong></p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"servers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"dir-mcp-server"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/dirctl"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"mcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"serve"</span><span class="p">],</span><span class="w">
+      </span><span class="nl">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"OASF_API_VALIDATION_SCHEMA_URL"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://schema.oasf.outshift.com"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"DIRECTORY_CLIENT_SERVER_ADDRESS"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost:8888"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Using Docker:</strong></p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"servers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"dir-mcp-server"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"docker"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="s2">"run"</span><span class="p">,</span><span class="w"> </span><span class="s2">"--rm"</span><span class="p">,</span><span class="w"> </span><span class="s2">"-i"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"OASF_API_VALIDATION_SCHEMA_URL=https://schema.oasf.outshift.com"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"ghcr.io/agntcy/dir-ctl:latest"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"mcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"serve"</span><span class="w">
+      </span><span class="p">]</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="codex">Codex</h3>
+
+<p>For OpenAI’s Codex, you can also add the MCP server config to your workspace configuration at <code class="language-plaintext highlighter-rouge">.codex/config.toml</code> or to your settings at <code class="language-plaintext highlighter-rouge">~/.codex/config.toml</code>:</p>
+
+<p><strong>Using the binary:</strong></p>
+
+<div class="language-toml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[mcp_servers.dir-mcp-server]</span>
+<span class="py">command</span> <span class="p">=</span> <span class="s">"/path/to/dirctl"</span>
+<span class="py">args</span> <span class="p">=</span> <span class="p">[</span><span class="s">"mcp"</span><span class="p">,</span> <span class="s">"serve"</span><span class="p">]</span>
+
+<span class="nn">[mcp_servers.dir-mcp-server.env]</span>
+<span class="py">OASF_API_VALIDATION_SCHEMA_URL</span> <span class="p">=</span> <span class="s">"https://schema.oasf.outshift.com"</span>
+<span class="py">DIRECTORY_CLIENT_SERVER_ADDRESS</span> <span class="p">=</span> <span class="s">"localhost:8888"</span>
+</code></pre></div></div>
+
+<p><strong>Using Docker:</strong></p>
+
+<div class="language-toml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[mcp_servers.dir-mcp-server]</span>
+<span class="py">command</span> <span class="p">=</span> <span class="s">"docker"</span>
+<span class="py">args</span> <span class="p">=</span> <span class="p">[</span>
+  <span class="s">"run"</span><span class="p">,</span> <span class="s">"--rm"</span><span class="p">,</span> <span class="s">"-i"</span><span class="p">,</span>
+  <span class="s">"-e"</span><span class="p">,</span> <span class="py">"OASF_API_VALIDATION_SCHEMA_URL</span><span class="p">=</span><span class="err">https://schema.oasf.outshift.com</span><span class="s">",</span><span class="err">
+</span>  <span class="s">"-e"</span><span class="p">,</span> <span class="py">"DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="p">=</span><span class="err">localhost:</span><span class="mi">8888</span><span class="s">",</span><span class="err">
+</span>  <span class="s">"ghcr.io/agntcy/dir-ctl:latest"</span><span class="p">,</span>
+  <span class="s">"mcp"</span><span class="p">,</span> <span class="s">"serve"</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<p><strong>Note:</strong> When using Docker, environment variables must be passed via <code class="language-plaintext highlighter-rouge">-e</code> flags in the args array, not in the <code class="language-plaintext highlighter-rouge">env</code> section.</p>
+
+<h3 id="connecting-to-a-remote-directory-server">Connecting to a Remote Directory Server</h3>
+
+<p>To connect to a remote Directory server (e.g., the production gateway), update the environment variables to include the server address and GitHub authentication:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Variable</th>
+      <th>Value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">OASF_API_VALIDATION_SCHEMA_URL</code></td>
+      <td><code class="language-plaintext highlighter-rouge">https://schema.oasf.outshift.com</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_SERVER_ADDRESS</code></td>
+      <td><code class="language-plaintext highlighter-rouge">prod.gateway.ads.outshift.io:443</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_AUTH_MODE</code></td>
+      <td><code class="language-plaintext highlighter-rouge">github</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_GITHUB_TOKEN</code></td>
+      <td>Your GitHub PAT</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Generate a PAT at <a href="https://github.com/settings/tokens">GitHub Settings &gt; Developer settings &gt; Personal access tokens</a> with <code class="language-plaintext highlighter-rouge">user:email</code> and <code class="language-plaintext highlighter-rouge">read:org</code> scopes.</p>
+
+<h2 id="usage-examples">Usage Examples</h2>
+
+<p>Once the Directory MCP server is installed, you can use it for a variety of tasks. Here are three real-world scenarios covering the full lifecycle: distributing agents, discovering and installing them, and auditing their provenance.</p>
+
+<h3 id="scenario-1-distributing-your-agents-to-directory">Scenario 1: Distributing Your Agents to Directory</h3>
+
+<p>In this scenario, you’ve built a multi-agent system and want to distribute each agent to Directory so others can discover them. We’ll use <a href="https://github.com/agntcy/coffeeAgntcy">CoffeeAgntcy</a>—AGNTCY’s reference application demonstrating a coffee supply chain with multiple collaborating agents.</p>
+
+<p>For simplicity, we’ll use the <strong>Corto</strong> setup which has two agents:</p>
+<ul>
+  <li><strong>Exchange Agent</strong> - The coffee buyer that initiates purchases</li>
+  <li><strong>Farm Agent</strong> - The coffee farm that responds to purchase requests</li>
+</ul>
+
+<p><strong>Step 1: Generate OASF records for each agent</strong></p>
+
+<p>Open your project in Cursor and ask the AI to create records for each agent:</p>
+
+<blockquote>
+  <p>“Analyze the Exchange and Farm agents in coffeeAGNTCY/coffee_agents/corto/ and create OASF records (schema_version 1.0.0) for each. Use the Directory MCP tools to fetch valid skills and domains from the OASF schema. Save as agents/coffee-exchange-agent.json and agents/coffee-farm-agent.json”</p>
+</blockquote>
+
+<p>The AI analyzes your codebase, queries the OASF schema for valid skills and domains, and generates complete records.</p>
+
+<p><strong>Exchange Agent</strong> - The coffee buyer:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"coffee-exchange-agent"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-18T10:00:00Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Coffee exchange agent that initiates purchases from farm agents. Orchestrates the buying workflow using LangGraph, communicates via A2A protocol over SLIM transport, and integrates with the Observe SDK for tracing."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"authors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"AGNTCY Contributors"</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"skills"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1004</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agent_orchestration/agent_coordination"</span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1005</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agent_orchestration/negotiation_resolution"</span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1801</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"retail_and_ecommerce/supply_chain_management"</span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2301</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agriculture/crop_management"</span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"locators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"source_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"urls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://github.com/agntcy/coffeeAgntcy/tree/main/coffeeAGNTCY/coffee_agents/corto/exchange"</span><span class="p">]}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Farm Agent</strong> - The coffee seller:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"coffee-farm-agent"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-18T10:00:00Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Coffee farm agent that responds to purchase requests from the exchange. Manages inventory, processes orders, and communicates via A2A protocol. Exposes an A2A server endpoint for incoming requests."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"authors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"AGNTCY Contributors"</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"skills"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1004</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agent_orchestration/agent_coordination"</span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2301</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agriculture/crop_management"</span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1801</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"retail_and_ecommerce/supply_chain_management"</span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"locators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"source_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"urls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://github.com/agntcy/coffeeAgntcy/tree/main/coffeeAGNTCY/coffee_agents/corto/farm"</span><span class="p">]}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Step 2: Set up GitHub Actions for CI/CD</strong></p>
+
+<p>Directory provides <a href="https://github.com/agntcy/dir/tree/main/.github/actions">GitHub Actions</a> that automate the entire distribution workflow: validation, pushing, signing, and DHT publication.</p>
+
+<p>Create <code class="language-plaintext highlighter-rouge">.github/workflows/publish-agents.yaml</code> in your repository:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">Distributing Agents to Directory</span>
+
+<span class="na">on</span><span class="pi">:</span>
+  <span class="na">push</span><span class="pi">:</span>
+    <span class="na">branches</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">main</span><span class="pi">]</span>
+    <span class="na">paths</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s1">'</span><span class="s">agents/*.json'</span>
+
+<span class="na">permissions</span><span class="pi">:</span>
+  <span class="na">id-token</span><span class="pi">:</span> <span class="s">write</span>  <span class="c1"># Required for keyless signing</span>
+  <span class="na">contents</span><span class="pi">:</span> <span class="s">read</span>
+
+<span class="na">jobs</span><span class="pi">:</span>
+  <span class="na">publish</span><span class="pi">:</span>
+    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
+    <span class="na">steps</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v4</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Setup dirctl</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/setup-dirctl@main</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">version</span><span class="pi">:</span> <span class="s">latest</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Validate OASF records</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/validate-record@main</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">record_paths</span><span class="pi">:</span> <span class="pi">|</span>
+            <span class="s">agents/*.json</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Push to Directory</span>
+        <span class="na">id</span><span class="pi">:</span> <span class="s">push</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/push-record@main</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">record_paths</span><span class="pi">:</span> <span class="s">agents/*.json</span>
+          <span class="na">server_addr</span><span class="pi">:</span> <span class="s">${{ vars.DIRECTORY_ADDRESS }}</span>
+          <span class="na">github_token</span><span class="pi">:</span> <span class="s">${{ secrets.DIRECTORY_TOKEN }}</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Sign records (keyless with GitHub OIDC)</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/sign-record@main</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">cids</span><span class="pi">:</span> <span class="s">${{ steps.push.outputs.cids }}</span>
+          <span class="na">server_addr</span><span class="pi">:</span> <span class="s">${{ vars.DIRECTORY_ADDRESS }}</span>
+          <span class="na">github_token</span><span class="pi">:</span> <span class="s">${{ secrets.DIRECTORY_TOKEN }}</span>
+          <span class="na">oidc_client_id</span><span class="pi">:</span> <span class="s">https://github.com/${{ github.repository }}/.github/workflows/publish-agents.yaml@${{ github.ref }}</span>
+
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Publish to DHT</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/publish-record@main</span>
+        <span class="na">with</span><span class="pi">:</span>
+          <span class="na">cids</span><span class="pi">:</span> <span class="s">${{ steps.push.outputs.cids }}</span>
+          <span class="na">server_addr</span><span class="pi">:</span> <span class="s">${{ vars.DIRECTORY_ADDRESS }}</span>
+          <span class="na">github_token</span><span class="pi">:</span> <span class="s">${{ secrets.DIRECTORY_TOKEN }}</span>
+</code></pre></div></div>
+
+<p>This workflow:</p>
+
+<ol>
+  <li><strong>Validates</strong> all agent records against the OASF schema, failing early if any record is invalid</li>
+  <li><strong>Pushes</strong> records to Directory, outputting CIDs for each file</li>
+  <li><strong>Signs</strong> records using GitHub OIDC (keyless)—no secrets to manage, signatures tied to your GitHub identity</li>
+  <li><strong>Publishes</strong> to the DHT, making agents discoverable across the Directory network</li>
+</ol>
+
+<p>The signing step uses <a href="https://www.sigstore.dev/">Sigstore</a> with GitHub’s OIDC tokens—Sigstore issues a short-lived certificate from <a href="https://docs.sigstore.dev/certificate_authority/overview/">Fulcio</a> tied to your workflow identity, signs the records, and logs signatures to the <a href="https://docs.sigstore.dev/logging/overview/">Rekor</a> transparency log.</p>
+
+<p><strong>Step 3: Commit and push</strong></p>
+
+<p>Once your records are ready, commit them to your repository:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git add agents/
+git commit <span class="nt">-m</span> <span class="s2">"Add OASF records for Exchange and Farm agents"</span>
+git push origin main
+</code></pre></div></div>
+
+<p>The GitHub Actions workflow triggers automatically and handles everything:</p>
+<ol>
+  <li><strong>Validates</strong> records against the OASF schema</li>
+  <li><strong>Pushes</strong> to Directory (outputs CIDs)</li>
+  <li><strong>Signs</strong> with GitHub OIDC (keyless)</li>
+  <li><strong>Publishes</strong> to the DHT</li>
+</ol>
+
+<p><strong>Step 4: Verify the distributed records</strong></p>
+
+<p>After the workflow completes, anyone can verify a record’s signature using the MCP server:</p>
+
+<blockquote>
+  <p>“Search Directory for coffee-exchange-agent, then verify its signature and show the signer identity”</p>
+</blockquote>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"success"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"trusted"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"signers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"identity"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://github.com/agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@refs/heads/main"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"issuer"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://token.actions.githubusercontent.com"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The signature shows it was signed by a specific GitHub Actions workflow, providing full provenance tracking:</p>
+<ul>
+  <li><strong>Who</strong> signed it (the workflow identity)</li>
+  <li><strong>When</strong> it was signed (Rekor transparency log)</li>
+  <li><strong>What</strong> was signed (content-addressed CID)</li>
+</ul>
+
+<p>Your agents are now fully distributed to the Directory network—signed, verified, and discoverable by anyone!</p>
+
+<blockquote>
+  <p>For a more complex multi-agent example, check out the <a href="https://github.com/agntcy/coffeeAgntcy/tree/main/coffeeAGNTCY/coffee_agents/lungo">Lungo setup</a> which includes farm agents for Brazil, Colombia, and Vietnam, plus logistics agents (shipper, accountant) and supervisor agents for auction orchestration.</p>
+</blockquote>
+
+<h3 id="scenario-2-discovering-and-installing-an-agent">Scenario 2: Discovering and Installing an Agent</h3>
+
+<p>You need GitHub integration in your IDE—listing issues, searching code, managing pull requests—without leaving your editor. Instead of manually configuring MCP servers, you ask your AI assistant to find one in Directory.</p>
+
+<p><strong>Step 1: Search for an agent with the capability you need</strong></p>
+
+<blockquote>
+  <p>“Search Directory for MCP servers with GitHub API integration skills”</p>
+</blockquote>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"count"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"has_more"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"record_cids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"baeareiarov6l6hcb274t5gxkwujbmcizi4ba5ullqoeyqrhlqc6ymz6fsm"</span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Found a match! Let’s see what it offers.</p>
+
+<p><strong>Step 2: Pull the record to inspect it</strong></p>
+
+<blockquote>
+  <p>“Pull record baeareiarov6l6hcb274t5gxkwujbmcizi4ba5ullqoeyqrhlqc6ymz6fsm and show me its capabilities”</p>
+</blockquote>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"github-mcp"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Official GitHub MCP Server providing repository management, issue tracking, pull request workflows, code search, and GitHub API access for AI assistants."</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"authors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"GitHub"</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"skills"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tool_interaction/api_schema_understanding"</span><span class="p">,</span><span class="w"> </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1401</span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tool_interaction/workflow_automation"</span><span class="p">,</span><span class="w"> </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1402</span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"devops_mlops/ci_cd_configuration"</span><span class="p">,</span><span class="w"> </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1203</span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"technology/software_engineering"</span><span class="p">,</span><span class="w"> </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">102</span><span class="p">}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"locators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"source_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"urls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://github.com/github/github-mcp-server"</span><span class="p">]}</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"modules"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"integration/mcp"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"data"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"github"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GitHub API access for repository management, issues, PRs, and code search"</span><span class="p">,</span><span class="w">
+        </span><span class="nl">"connections"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+          </span><span class="p">{</span><span class="w">
+            </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"streamable-http"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://api.githubcopilot.com/mcp/"</span><span class="p">,</span><span class="w">
+            </span><span class="nl">"headers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+              </span><span class="nl">"Authorization"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Bearer ${GITHUB_PAT}"</span><span class="w">
+            </span><span class="p">}</span><span class="w">
+          </span><span class="p">}</span><span class="w">
+        </span><span class="p">],</span><span class="w">
+        </span><span class="nl">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"search_repositories"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Search for GitHub repositories"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"search_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Search code across repositories"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"get_file_contents"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Get contents of a file from a repository"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"list_issues"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"List issues in a repository"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"get_issue"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Get details of a specific issue"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"create_issue"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Create a new issue"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"list_pull_requests"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"List pull requests in a repository"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"get_pull_request"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Get details of a specific pull request"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"create_pull_request"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Create a new pull request"</span><span class="p">},</span><span class="w">
+          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"get_me"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Get the authenticated user's profile"</span><span class="p">}</span><span class="w">
+        </span><span class="p">]</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>This is exactly what we need—GitHub’s official MCP server. The <code class="language-plaintext highlighter-rouge">modules</code> field contains the MCP configuration: a remote server (<code class="language-plaintext highlighter-rouge">streamable-http</code>) requiring a GitHub Personal Access Token for authentication.</p>
+
+<p><strong>Step 3: Configure the MCP server in your IDE</strong></p>
+
+<p>Here’s the key insight: <strong>the AI assistant can update your IDE configuration directly</strong>. Ask it to add the MCP server:</p>
+
+<blockquote>
+  <p>“Add this GitHub MCP server to my Cursor configuration at ~/.cursor/mcp.json using the connection details from the record”</p>
+</blockquote>
+
+<p>The assistant reads the connection details from the OASF record and updates <code class="language-plaintext highlighter-rouge">~/.cursor/mcp.json</code>:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"github"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://api.githubcopilot.com/mcp/"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"headers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="nl">"Authorization"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Bearer ${GITHUB_PAT}"</span><span class="w">
+      </span><span class="p">}</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>You’ll need a GitHub PAT with appropriate scopes (repo, read:user). Generate one at <a href="https://github.com/settings/tokens">GitHub Settings &gt; Developer settings &gt; Personal access tokens</a>.</p>
+
+<p><strong>Step 4: Start using the new capability</strong></p>
+
+<p>After restarting Cursor, you have full GitHub access. Let’s try it:</p>
+
+<blockquote>
+  <p>“List all open GitHub issues assigned to me across all repositories”</p>
+</blockquote>
+
+<p>The assistant uses the <code class="language-plaintext highlighter-rouge">search_issues</code> tool:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"total_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"items"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">863</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Name resolution + verified record name on remote nodes"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"repository"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agntcy/dir"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"go"</span><span class="p">],</span><span class="w">
+      </span><span class="nl">"milestone"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DIR v1.1.0"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">39</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Blog: How to use AGNTCY MCP server"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"repository"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agntcy/blogs"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Gather requirements for Migration SDK"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"repository"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agntcy/oasf-sdk"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"enhancement"</span><span class="p">]</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="err">...</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<blockquote>
+  <p>“List the 5 most recent open issues in the agntcy/dir repository”</p>
+</blockquote>
+
+<p>The assistant uses the <code class="language-plaintext highlighter-rouge">list_issues</code> tool:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"issues"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">942</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"[Feature]: Resolve and improve test coverage"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OPEN"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"kind/test"</span><span class="p">],</span><span class="w">
+      </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-12T13:59:57Z"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">929</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"[Feature]: Remove sync monitor in favor of reconciler indexer task"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OPEN"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-10T15:59:58Z"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">926</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Revisit local deployment configuration"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OPEN"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-10T11:56:23Z"</span><span class="w">
+    </span><span class="p">},</span><span class="w">
+    </span><span class="err">...</span><span class="w">
+  </span><span class="p">],</span><span class="w">
+  </span><span class="nl">"totalCount"</span><span class="p">:</span><span class="w"> </span><span class="mi">29</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<blockquote>
+  <p>“Get the full details for issue #942 in agntcy/dir including the description and comments”</p>
+</blockquote>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">942</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"[Feature]: Resolve and improve test coverage"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"author"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ramizpolic"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"kind/test"</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"milestone"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DIR v1.2.0"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-12T13:59:57Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"body"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Currently, the test coverage results are not properly covering certain components (e.g. for apiserver, we are dropping the unit test coverage for the sake of e2e test coverage). Proposed solution: Make sure that all test results are properly combined/merged across different test-cases (unit, e2e, ...)."</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The assistant provides context about the work needed—all without leaving your IDE.</p>
+
+<p>This is the power of Directory: discoverable agents with standardized metadata that the AI assistant can use to <strong>automatically configure and start using new capabilities</strong>.</p>
+
+<h3 id="scenario-3-auditing-agent-provenance-itops">Scenario 3: Auditing Agent Provenance (ITOps)</h3>
+
+<p>As an IT operations or security team member, you need to audit the agents deployed in your environment to ensure they’re from trusted sources and properly signed. Directory’s verification capabilities make this straightforward.</p>
+
+<p><strong>Step 1: List all agents in your environment</strong></p>
+
+<blockquote>
+  <p>“Search Directory for all agent records and list their CIDs”</p>
+</blockquote>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"count"</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"has_more"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"record_cids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"baeareiarov6l6hcb274t5gxkwujbmcizi4ba5ullqoeyqrhlqc6ymz6fsm"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"baeareigdnp76ayuix5467b7ixjrwwfio2dhnusqxpafidie2py2yw7dwla"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"baeareihg2hdnkfhdtkermrw7fohbgjffwx3c6jn3zqy4vwsbrru5vyj4tm"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"..."</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p><strong>Step 2: Verify signatures for each agent</strong></p>
+
+<blockquote>
+  <p>“For each of these CIDs, verify the signature and report which agents are signed vs unsigned”</p>
+</blockquote>
+
+<p>The assistant checks each record:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>CID</th>
+      <th>Agent Name</th>
+      <th>Status</th>
+      <th>Signer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">baeareifmeck...</code></td>
+      <td>coffee-exchange-agent</td>
+      <td>Signed</td>
+      <td><code class="language-plaintext highlighter-rouge">agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@main</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">baeareicotuif...</code></td>
+      <td>coffee-farm-agent</td>
+      <td>Signed</td>
+      <td><code class="language-plaintext highlighter-rouge">agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@main</code></td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">baeareigdnp7...</code></td>
+      <td>fetch-mcp-server</td>
+      <td><strong>Not signed</strong></td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">baeareihg2hd...</code></td>
+      <td>memory-mcp-server</td>
+      <td><strong>Not signed</strong></td>
+      <td>-</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Step 3: Investigate unsigned agents</strong></p>
+
+<p>The audit reveals that <code class="language-plaintext highlighter-rouge">fetch-mcp-server</code> and <code class="language-plaintext highlighter-rouge">memory-mcp-server</code> are not signed. Let’s get more details:</p>
+
+<blockquote>
+  <p>“Pull record baeareigdnp76ayuix5467b7ixjrwwfio2dhnusqxpafidie2py2yw7dwla and show its authors and locators”</p>
+</blockquote>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fetch-mcp-server"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2025.3.28"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"authors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Anthropic"</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-17T10:00:00Z"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"locators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"source_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"urls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://github.com/modelcontextprotocol/servers/tree/main/src/fetch"</span><span class="p">]}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The record claims to be from Anthropic but has no cryptographic proof. This is a potential security risk—anyone could have pushed this record claiming to be from that organization.</p>
+
+<p><strong>Step 4: Compare with signed records</strong></p>
+
+<p>For comparison, let’s look at a properly signed record:</p>
+
+<blockquote>
+  <p>“Verify the signature for coffee-exchange-agent (CID baeareifmeck…) and show full signer details”</p>
+</blockquote>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"success"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"trusted"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"signers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="p">{</span><span class="w">
+      </span><span class="nl">"identity"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://github.com/agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@refs/heads/main"</span><span class="p">,</span><span class="w">
+      </span><span class="nl">"issuer"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://token.actions.githubusercontent.com"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>This signature confirms:</p>
+<ul>
+  <li><strong>Identity</strong>: Signed by the <code class="language-plaintext highlighter-rouge">agntcy/coffeeAgntcy</code> CI/CD workflow</li>
+  <li><strong>Issuer</strong>: GitHub Actions OIDC provider</li>
+  <li><strong>Integrity</strong>: The record hasn’t been modified since signing</li>
+</ul>
+
+<p><strong>Audit recommendations</strong></p>
+
+<p>Based on this audit, you might:</p>
+
+<ol>
+  <li><strong>Flag unsigned agents</strong> for review before use in production</li>
+  <li><strong>Require signatures</strong> from specific identities (e.g., <code class="language-plaintext highlighter-rouge">@yourcompany.com</code> emails or <code class="language-plaintext highlighter-rouge">https://github.com/yourorg/...</code> workflows)</li>
+  <li><strong>Set up alerts</strong> for new unsigned records appearing in your environment</li>
+  <li><strong>Establish a policy</strong> that all production agents must be signed by CI/CD workflows (not individual developers)</li>
+</ol>
+
+<p>This provenance tracking is what makes Directory suitable for enterprise environments—you always know where an agent came from and whether you can trust it.</p>
+
+<h2 id="video-walkthrough">Video Walkthrough</h2>
+
+<p>If you prefer a visual demonstration, check out this video where I walk through the Directory MCP server in action:</p>
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-bottom: 1.5em;">
+  <iframe src="https://www.youtube.com/embed/pdVqhlyJHo4" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen=""></iframe>
+</div>
+
+<h2 id="the-bigger-picture">The Bigger Picture</h2>
+
+<p>The Directory MCP server is part of a broader vision for AI agent interoperability. By standardizing how agents describe their capabilities (OASF), how they’re discovered (Directory), and how they communicate (A2A), we’re building infrastructure for an ecosystem where:</p>
+
+<ul>
+  <li>Agents can find and collaborate with other agents</li>
+  <li>Developers can discover pre-built agents for their needs</li>
+  <li>Organizations can distribute and share agents securely</li>
+</ul>
+
+<p>The MCP server brings this infrastructure directly into developer workflows, reducing friction and enabling AI-assisted agent development.</p>
+
+<p>Check out the <a href="https://docs.agntcy.org/dir/overview/">Directory documentation</a> for a complete walkthrough, and the <a href="https://github.com/agntcy/dir/tree/main/mcp">MCP server README</a> for detailed configuration options.</p>
+
+<h2 id="references">References</h2>
+
+<ul>
+  <li><a href="https://github.com/agntcy/dir">Directory GitHub Repository</a></li>
+  <li><a href="https://github.com/agntcy/dir/tree/main/mcp">Directory MCP Server README</a></li>
+  <li><a href="https://docs.agntcy.org/dir/overview/">Directory Documentation</a></li>
+  <li><a href="https://github.com/agntcy/oasf">OASF (Open Agentic Schema Framework)</a></li>
+  <li><a href="https://modelcontextprotocol.io/">Model Context Protocol</a></li>
+  <li><a href="https://github.com/modelcontextprotocol/go-sdk">MCP Go SDK</a></li>
+</ul>
+
+<hr />
+
+<p><em>Have questions about Directory or the MCP server? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"><span class="post-nav-label">← Previous</span>
+        <a href="/drafts/docs-directory-oidc-auth/technical/2026/02/19/dir-v1.html">Agent Directory v1.0: Distributed Announce and Discovery of Multi-Agentic-Systems</a></div>
+    <div class="post-nav-next"><span class="post-nav-label">Next →</span>
+        <a href="/drafts/docs-directory-oidc-auth/technical/security/directory/2026/02/25/directory-federation.html">Directory Federation Hands-On: SPIRE and SPIFFE in a Local Kind Environment</a></div>
+  </nav>
+
+  <a class="u-url" href="/drafts/docs-directory-oidc-auth/technical/2026/02/19/directory-mcp-server.html" hidden></a>
+</article>
+
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/drafts/docs-directory-oidc-auth/"></data>
+
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">
+        <h2 class="footer-heading">AGNTCY Blogs</h2>
+        <p class="footer-copyright">Copyright © AGNTCY a Series of LF Projects, LLC</p>
+      </div>
+
+      <div class="footer-col">
+        <ul class="social-media-list"><li>
+            <a href="https://github.com/agntcy">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#github"></use></svg>
+              <span class="username">GitHub</span>
+            </a>
+          </li><li>
+            <a href="https://www.linkedin.com/company/agntcyproject">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#linkedin"></use></svg>
+              <span class="username">LinkedIn</span>
+            </a>
+          </li><li>
+            <a href="https://www.youtube.com/@agntcy-lf">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#youtube"></use></svg>
+              <span class="username">YouTube</span>
+            </a>
+          </li><li>
+            <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">
+              <svg class="svg-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.362 10.11c0 .926-.756 1.681-1.681 1.681S0 11.036 0 10.111c0-.926.756-1.681 1.681-1.681h1.681v1.68zm.846 0c0-.926.756-1.681 1.681-1.681s1.681.756 1.681 1.681v4.21c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681v-4.21zM5.89 3.362c-.926 0-1.681-.756-1.681-1.681S4.964 0 5.89 0s1.681.756 1.681 1.681v1.681H5.89zm0 .846c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681H1.68C.756 7.57 0 6.814 0 5.889s.756-1.681 1.681-1.681h4.21zm6.749 1.681c0-.926.756-1.681 1.681-1.681S16 4.964 16 5.889s-.756 1.681-1.681 1.681h-1.681V5.89zm-.846 0c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681V1.68C8.43.756 9.186 0 10.111 0s1.681.756 1.681 1.681v4.21zm-1.681 6.749c.926 0 1.681.756 1.681 1.681S11.036 16 10.111 16s-1.681-.756-1.681-1.681v-1.681h1.681zm0-.846c-.926 0-1.681-.756-1.681-1.681s.756-1.681 1.681-1.681h4.21c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681h-4.21z"/>
+              </svg>
+              <span class="username">Slack</span>
+            </a>
+          </li></ul>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-description">Building infrastructure for the Internet of Agents</p>
+      </div>
+
+    </div>
+  </div>
+
+</footer>
+<script src="/drafts/docs-directory-oidc-auth/assets/js/theme-toggle.js"></script>
+    <script src="/drafts/docs-directory-oidc-auth/assets/js/code-copy.js"></script>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      async function renderMermaid() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Agntcy color scheme for mermaid
+        const agntcyTheme = {
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: isDark ? {
+            // Dark mode - agntcy slate theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#e3e3e3',
+            secondaryColor: '#002a4d',
+            tertiaryColor: '#03142b',
+            background: '#03142b',
+            mainBkg: '#03142b',
+            secondBkg: '#002a4d',
+            textColor: '#e3e3e3',
+            nodeBorder: '#0251af',
+            clusterBkg: '#002a4d',
+            clusterBorder: '#0251af',
+            titleColor: '#fbaf46',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#e3e3e3',
+            signalColor: '#e3e3e3',
+            signalTextColor: '#e3e3e3',
+            labelBoxBkgColor: '#002a4d',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#e3e3e3',
+            loopTextColor: '#e3e3e3',
+            noteBkgColor: '#002a4d',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#e3e3e3',
+            activationBkgColor: '#002a4d',
+            activationBorderColor: '#fbaf46',
+            sequenceNumberColor: '#03142b'
+          } : {
+            // Light mode - agntcy blue theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#1c1e21',
+            secondaryColor: '#e8eefb',
+            tertiaryColor: '#eff3fc',
+            background: '#eff3fc',
+            mainBkg: '#eff3fc',
+            secondBkg: '#e8eefb',
+            textColor: '#1c1e21',
+            nodeBorder: '#0251af',
+            clusterBkg: '#e8eefb',
+            clusterBorder: '#0251af',
+            titleColor: '#0251af',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#1c1e21',
+            signalColor: '#1c1e21',
+            signalTextColor: '#1c1e21',
+            labelBoxBkgColor: '#e8eefb',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#1c1e21',
+            loopTextColor: '#1c1e21',
+            noteBkgColor: '#e8eefb',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#1c1e21',
+            activationBkgColor: '#e8eefb',
+            activationBorderColor: '#0251af',
+            sequenceNumberColor: '#f3f6fd'
+          }
+        };
+
+        mermaid.initialize(agntcyTheme);
+        await mermaid.run();
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
+              newDiv.textContent = graphDefinition;
+
+              container.replaceWith(newDiv);
+          });
+
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      });
+    </script>
+    <style>
+    #cookie-notice {
+        padding: 2rem 2rem;
+        display: none;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #1a1a1a;
+        color: #ffffff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 9999;
+        border-top: 3px solid #4a90e2;
+    }
+    #cookie-notice span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    #cookie-notice a {
+        display: inline-block;
+        cursor: pointer;
+        padding: 0.875rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: #4a90e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    #cookie-notice a:hover {
+        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    @media (max-width: 767px) {
+        #cookie-notice {
+            padding: 1.5rem 1rem;
+        }
+        #cookie-notice span {
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        #cookie-notice a {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+<div id="cookie-notice"><span>We would like to use third party cookies and scripts to improve the functionality of this website.</span><a id="cookie-notice-accept" class="btn btn-primary">Approve</a></div>
+<script>
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
+    function loadGoogleAnalytics() {
+        
+        // Load Google Analytics V4
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-3D9938KZCN";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-3D9938KZCN');
+        
+    }
+
+    if(readCookie('cookie-notice-dismissed')=='true') {
+        loadGoogleAnalytics();
+    } else {
+        document.getElementById('cookie-notice').style.display = 'block';
+    }
+
+    document.getElementById('cookie-notice-accept').addEventListener("click",function() {
+        createCookie('cookie-notice-dismissed','true',31);
+        document.getElementById('cookie-notice').style.display = 'none';
+        location.reload();
+    });
+
+</script>
+
+  </body>
+
+</html>
+

@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Directory v1.x: Unified OIDC Authentication for Humans, Machines, and CI | AGNTCY Blogs</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Directory v1.x: Unified OIDC Authentication for Humans, Machines, and CI" />
+<meta name="author" content="Tibor Kircsi" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Authentication in Directory has evolved significantly. We moved from a mixed model centered on GitHub OAuth for user access to a unified OIDC-first model that supports three real-world access patterns with one consistent trust and authorization pipeline: Human interactive login Service user (machine-to-machine) login GitHub Actions workload identity This post explains the architecture, security model, migration path, and practical usage patterns for the new OIDC-based setup." />
+<meta property="og:description" content="Authentication in Directory has evolved significantly. We moved from a mixed model centered on GitHub OAuth for user access to a unified OIDC-first model that supports three real-world access patterns with one consistent trust and authorization pipeline: Human interactive login Service user (machine-to-machine) login GitHub Actions workload identity This post explains the architecture, security model, migration path, and practical usage patterns for the new OIDC-based setup." />
+<link rel="canonical" href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/03/16/directory-oidc-authentication-unified-access.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/03/16/directory-oidc-authentication-unified-access.html" />
+<meta property="og:site_name" content="AGNTCY Blogs" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-03-16T09:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Directory v1.x: Unified OIDC Authentication for Humans, Machines, and CI" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Tibor Kircsi"},"dateModified":"2026-03-16T09:00:00+00:00","datePublished":"2026-03-16T09:00:00+00:00","description":"Authentication in Directory has evolved significantly. We moved from a mixed model centered on GitHub OAuth for user access to a unified OIDC-first model that supports three real-world access patterns with one consistent trust and authorization pipeline: Human interactive login Service user (machine-to-machine) login GitHub Actions workload identity This post explains the architecture, security model, migration path, and practical usage patterns for the new OIDC-based setup.","headline":"Directory v1.x: Unified OIDC Authentication for Humans, Machines, and CI","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/03/16/directory-oidc-authentication-unified-access.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/assets/images/logo-light.svg"},"name":"Tibor Kircsi"},"url":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/03/16/directory-oidc-authentication-unified-access.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/drafts/docs-directory-oidc-auth/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/drafts/docs-directory-oidc-auth/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/feed.xml" title="AGNTCY Blogs" /><script>
+    // Set theme immediately to prevent flash of wrong theme
+    (function() {
+      const theme = localStorage.getItem('theme-preference') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><div class="site-branding">
+      <a class="site-logo-link" rel="author" href="/drafts/docs-directory-oidc-auth/"><img class="site-logo logo-light" src="/drafts/docs-directory-oidc-auth/assets/images/logo-light.svg" alt="AGNTCY"><img class="site-logo logo-dark" src="/drafts/docs-directory-oidc-auth/assets/images/logo-dark.svg" alt="AGNTCY"></a>
+      <span class="site-title-text">Blogs</span>
+    </div><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/drafts/docs-directory-oidc-auth/archive/">Archive</a><a class="page-link" href="/drafts/docs-directory-oidc-auth/about/">About</a><button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </nav></div>
+</header>
+
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Directory v1.x: Unified OIDC Authentication for Humans, Machines, and CI</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-03-16T09:00:00+00:00" itemprop="datePublished">
+        March 16, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/tkircsi" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Tibor Kircsi</a></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Authentication in Directory has evolved significantly. We moved from a mixed model centered on GitHub OAuth for user access to a <strong>unified OIDC-first model</strong> that supports three real-world access patterns with one consistent trust and authorization pipeline:</p>
+
+<ol>
+  <li>Human interactive login</li>
+  <li>Service user (machine-to-machine) login</li>
+  <li>GitHub Actions workload identity</li>
+</ol>
+
+<p>This post explains the architecture, security model, migration path, and practical usage patterns for the new OIDC-based setup.</p>
+
+<!--more-->
+
+<h2 id="why-we-changed">Why We Changed</h2>
+
+<p>The previous model solved an important problem, but it became limiting as usage expanded:</p>
+
+<ul>
+  <li>Human operators needed browser-based login and cached session behavior</li>
+  <li>Service users needed one-step non-interactive auth without manual token curl flows</li>
+  <li>CI pipelines needed short-lived workload identity without long-lived PAT secrets</li>
+</ul>
+
+<p>A single OIDC model gives us:</p>
+
+<ul>
+  <li>✅ One identity protocol across humans, machines, and workflows</li>
+  <li>✅ Short-lived bearer tokens instead of long-lived static credentials</li>
+  <li>✅ Cleaner RBAC principal mapping in <code class="language-plaintext highlighter-rouge">envoy-authz</code></li>
+  <li>✅ Better security posture for automation and public gateway usage</li>
+</ul>
+
+<h2 id="the-new-model-at-a-glance">The New Model at a Glance</h2>
+
+<p>Directory now uses <strong>OIDC for caller identity</strong>, while preserving <strong>SPIFFE-based service trust</strong> inside the platform.</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    classDef actor fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef idp fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+    classDef gateway fill:#0251af,stroke:#f3f6fd,stroke-width:3px,color:#f3f6fd;
+    classDef api fill:#03142b,stroke:#0251af,stroke-width:3px,color:#f3f6fd;
+
+    H[Human Operator&lt;br/&gt;dirctl auth login]:::actor
+    SU[Service User&lt;br/&gt;pre-issued token]:::actor
+    GHA[GitHub Actions&lt;br/&gt;OIDC token]:::actor
+
+    Dex[Dex OIDC&lt;br/&gt;Token Broker]:::idp
+    GitHubOIDC[GitHub OIDC&lt;br/&gt;token.actions.githubusercontent.com]:::idp
+
+    Envoy[Envoy Gateway&lt;br/&gt;jwt_authn + ext_authz]:::gateway
+    API[Directory API&lt;br/&gt;SPIFFE-trusted backend]:::api
+
+    H --&gt;|OIDC token| Envoy
+    SU --&gt;|OIDC token| Envoy
+    GHA --&gt;|OIDC token| Envoy
+
+    Envoy --&gt;|JWKS verify| Dex
+    Envoy --&gt;|JWKS verify| GitHubOIDC
+
+    Envoy --&gt;|Authorized request| API
+</code></pre>
+
+<p>Key idea: <strong>identity is OIDC at the edge, authorization is policy-driven in ext-authz, backend trust remains SPIFFE-aware.</strong></p>
+
+<hr />
+
+<h1 id="part-1-human-interactive-oidc">Part 1: Human Interactive OIDC</h1>
+
+<p>Human users authenticate with OIDC PKCE via <code class="language-plaintext highlighter-rouge">dirctl auth login</code>.</p>
+
+<p>In practice this is the “developer laptop” path: interactive browser login once, then cached token reuse for normal CLI operations.</p>
+
+<h2 id="flow">Flow</h2>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant User as Developer
+    participant CLI as dirctl
+    participant IdP as Dex OIDC
+    participant Envoy as Envoy Gateway
+    participant Authz as ext-authz
+    participant API as Directory API
+
+    User-&gt;&gt;CLI: dirctl auth login
+    CLI-&gt;&gt;IdP: PKCE auth code flow
+    IdP-&gt;&gt;CLI: access token
+    CLI-&gt;&gt;CLI: cache token (~/.config/dirctl/auth-token.json)
+
+    User-&gt;&gt;CLI: dirctl search --auth-mode=oidc
+    CLI-&gt;&gt;Envoy: gRPC + Bearer token
+    Envoy-&gt;&gt;Envoy: jwt_authn validates issuer/signature
+    Envoy-&gt;&gt;Authz: principal + method check
+    Authz-&gt;&gt;Envoy: allow/deny
+    Envoy-&gt;&gt;API: forward authorized call
+    API-&gt;&gt;Envoy: response
+    Envoy-&gt;&gt;CLI: response
+</code></pre>
+
+<h2 id="request-and-dataflow-human-path">Request and dataflow (human path)</h2>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">dirctl</code> gets an access token from Dex (PKCE) and caches it locally.</li>
+  <li>CLI sends gRPC request with <code class="language-plaintext highlighter-rouge">Authorization: Bearer &lt;token&gt;</code> to Envoy.</li>
+  <li>Envoy <code class="language-plaintext highlighter-rouge">jwt_authn</code> validates issuer/signature and routes only verified JWTs forward.</li>
+  <li><code class="language-plaintext highlighter-rouge">ext_authz</code> extracts canonical principal (typically <code class="language-plaintext highlighter-rouge">user:{iss}:{email}</code>) and checks method permission in Casbin.</li>
+  <li>On allow, request is forwarded and backend sees the authorized identity context.</li>
+</ol>
+
+<p>This keeps authn/authz logic centralized at the edge while keeping backend behavior consistent.</p>
+
+<h2 id="example">Example</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_OIDC_ISSUER</span><span class="o">=</span><span class="s2">"https://prod.idp.ads.outshift.io"</span>
+<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_OIDC_CLIENT_ID</span><span class="o">=</span><span class="s2">"dirctl"</span>
+
+<span class="c"># Interactive login (opens browser)</span>
+dirctl auth login
+
+<span class="c"># Or device flow (no browser needed)</span>
+dirctl auth login <span class="nt">--device</span>
+
+dirctl auth status
+
+dirctl search <span class="nt">--version</span> <span class="s2">"v1.*"</span> <span class="se">\</span>
+  <span class="nt">--server-addr</span> <span class="s2">"prod.gateway.ads.outshift.io:443"</span> <span class="se">\</span>
+  <span class="nt">--auth-mode</span><span class="o">=</span>oidc <span class="se">\</span>
+  <span class="nt">--output</span> json
+</code></pre></div></div>
+
+<hr />
+
+<h1 id="part-2-service-user--machine-authentication">Part 2: Service User / Machine Authentication</h1>
+
+<p>Service users (bots, automation, MCP agents) authenticate using pre-issued tokens passed via <code class="language-plaintext highlighter-rouge">--auth-token</code> or the <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_AUTH_TOKEN</code> environment variable.</p>
+
+<p>This is the preferred path for non-interactive automation outside GitHub Actions (for example bots, scheduled jobs, and service integrations).</p>
+
+<h2 id="pre-issued-token-usage">Pre-issued token usage</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_AUTH_TOKEN</span><span class="o">=</span><span class="s2">"&lt;service-user-jwt&gt;"</span>
+<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="o">=</span><span class="s2">"prod.gateway.ads.outshift.io:443"</span>
+
+dirctl search <span class="nt">--version</span> <span class="s2">"v1.*"</span> <span class="se">\</span>
+  <span class="nt">--auth-mode</span><span class="o">=</span>oidc <span class="se">\</span>
+  <span class="nt">--output</span> json
+</code></pre></div></div>
+
+<h2 id="request-and-dataflow-service-user-path">Request and dataflow (service user path)</h2>
+
+<ol>
+  <li>The pre-issued JWT is passed directly to Envoy via <code class="language-plaintext highlighter-rouge">Authorization: Bearer</code> header.</li>
+  <li>Runtime requests go through the same edge chain: <code class="language-plaintext highlighter-rouge">jwt_authn</code> -&gt; <code class="language-plaintext highlighter-rouge">ext_authz</code> -&gt; backend.</li>
+  <li>Principal is resolved as <code class="language-plaintext highlighter-rouge">client:{iss}:{email}</code> based on the token’s claims and issuer configuration.</li>
+</ol>
+
+<p>This keeps service user auth consistent with human OIDC transport and policy enforcement, while supporting long-lived tokens for automation that cannot use interactive login.</p>
+
+<hr />
+
+<h1 id="part-3-github-actions-oidc-no-pat">Part 3: GitHub Actions OIDC (No PAT)</h1>
+
+<p>CI now uses workload identity tokens from GitHub OIDC instead of <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_GITHUB_TOKEN</code> PAT flows.</p>
+
+<p>This gives per-run, short-lived identity and avoids storing long-lived credentials for Directory access in CI.</p>
+
+<h2 id="reusable-workflow-actions">Reusable workflow actions</h2>
+
+<p>We introduced reusable workflow actions to simplify secure CI usage:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">./.github/actions/build-dirctl</code></li>
+  <li><code class="language-plaintext highlighter-rouge">./.github/actions/fetch-oidc-token</code></li>
+</ul>
+
+<h2 id="minimal-pattern">Minimal pattern</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">permissions</span><span class="pi">:</span>
+  <span class="na">id-token</span><span class="pi">:</span> <span class="s">write</span>
+  <span class="na">contents</span><span class="pi">:</span> <span class="s">read</span>
+
+<span class="na">steps</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v4</span>
+
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Build dirctl from branch source</span>
+    <span class="na">id</span><span class="pi">:</span> <span class="s">build-dirctl</span>
+    <span class="na">uses</span><span class="pi">:</span> <span class="s">./.github/actions/build-dirctl</span>
+    <span class="na">with</span><span class="pi">:</span>
+      <span class="na">go_version</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1.26.1"</span>
+
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Fetch OIDC token</span>
+    <span class="na">id</span><span class="pi">:</span> <span class="s">oidc</span>
+    <span class="na">uses</span><span class="pi">:</span> <span class="s">./.github/actions/fetch-oidc-token</span>
+    <span class="na">with</span><span class="pi">:</span>
+      <span class="na">audience</span><span class="pi">:</span> <span class="s">dir</span>
+
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Run search</span>
+    <span class="na">env</span><span class="pi">:</span>
+      <span class="na">DIRECTORY_CLIENT_AUTH_TOKEN</span><span class="pi">:</span> <span class="s">$</span>
+      <span class="na">DIRCTL_PATH</span><span class="pi">:</span> <span class="s">$</span>
+    <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+      <span class="s">"${DIRCTL_PATH}" search --name "*" \</span>
+        <span class="s">--server-addr "prod.gateway.ads.outshift.io:443" \</span>
+        <span class="s">--auth-mode=oidc \</span>
+        <span class="s">--output json</span>
+</code></pre></div></div>
+
+<p>This removes long-lived PAT dependence for workflow access to Directory.</p>
+
+<h2 id="request-and-dataflow-github-actions-path">Request and dataflow (GitHub Actions path)</h2>
+
+<ol>
+  <li>Workflow requests OIDC token from GitHub (<code class="language-plaintext highlighter-rouge">id-token: write</code> permission).</li>
+  <li>Token is passed to <code class="language-plaintext highlighter-rouge">dirctl</code> via <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_AUTH_TOKEN</code>.</li>
+  <li>Envoy validates GitHub issuer/JWKS and expected audience.</li>
+  <li><code class="language-plaintext highlighter-rouge">ext_authz</code> maps trusted workflow claims to canonical workflow principal (<code class="language-plaintext highlighter-rouge">ghwf:...</code>) and applies Casbin role checks.</li>
+  <li>Request is allowed only if workflow identity and method permissions match policy.</li>
+</ol>
+
+<p>This is why CI identity is treated as workload identity, not human federation identity.</p>
+
+<hr />
+
+<h1 id="part-4-why-this-ci-model-decision-record">Part 4: Why This CI Model (Decision Record)</h1>
+
+<p>Before landing on the current setup, we evaluated multiple GitHub Actions integration patterns.</p>
+
+<h2 id="options-we-considered">Options we considered</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Option</th>
+      <th>Security</th>
+      <th>Effort</th>
+      <th>Operational Complexity</th>
+      <th>Final decision</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Trust GitHub Actions OIDC directly at edge</td>
+      <td>High (short-lived, workflow identity)</td>
+      <td>Medium</td>
+      <td>Medium</td>
+      <td>✅ Chosen</td>
+    </tr>
+    <tr>
+      <td>GitHub OIDC -&gt; broker/token exchange -&gt; internal token</td>
+      <td>Very high</td>
+      <td>High</td>
+      <td>High</td>
+      <td>Later candidate</td>
+    </tr>
+    <tr>
+      <td>Pre-issued service tokens from dedicated IdP</td>
+      <td>Medium (long-lived token)</td>
+      <td>Low</td>
+      <td>Low/Medium</td>
+      <td>Useful fallback</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="why-direct-github-oidc-trust-won-for-now">Why direct GitHub OIDC trust won for now</h2>
+
+<ul>
+  <li>It removes long-lived PAT/static-secret dependency in CI</li>
+  <li>It maps naturally to workflow-level identity claims</li>
+  <li>It fits our current Envoy + <code class="language-plaintext highlighter-rouge">jwt_authn</code> + <code class="language-plaintext highlighter-rouge">ext_authz</code> architecture</li>
+  <li>It delivered strong security quickly without introducing a new broker service</li>
+</ul>
+
+<h2 id="important-distinction">Important distinction</h2>
+
+<p>GitHub appears in two very different roles:</p>
+
+<ul>
+  <li><strong>GitHub federation for humans</strong> (browser login UX)</li>
+  <li><strong>GitHub Actions OIDC for workloads</strong> (ephemeral workflow identity)</li>
+</ul>
+
+<p>Treating workflow identity as machine/workload auth (not human federation) was a key design choice.</p>
+
+<hr />
+
+<h1 id="part-5-authorization-model-ext-authz--casbin">Part 5: Authorization Model (ext-authz + Casbin)</h1>
+
+<p>Identity and authorization are intentionally separated:</p>
+
+<ol>
+  <li>Envoy <code class="language-plaintext highlighter-rouge">jwt_authn</code> validates token issuer/signature/audience</li>
+  <li><code class="language-plaintext highlighter-rouge">envoy-authz</code> extracts canonical principal</li>
+  <li>Casbin enforces method-level role permissions</li>
+</ol>
+
+<h2 id="request-pipeline-details">Request pipeline details</h2>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Client (Bearer JWT)
+  -&gt; Envoy jwt_authn
+      - validates token (iss, signature, aud)
+      - forwards verified payload
+  -&gt; ext_authz
+      - computes canonical principal
+      - enforces Casbin role/method policy
+      - sets authorization identity headers
+  -&gt; backend
+      - receives request already authorized with canonical identity
+</code></pre></div></div>
+
+<h2 id="canonical-identity-consistency">Canonical identity consistency</h2>
+
+<p>A subtle but important behavior: the backend should see the <strong>same principal</strong> that authorization evaluated.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">jwt_authn</code> can expose identity from standard claims (e.g. <code class="language-plaintext highlighter-rouge">sub</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">ext_authz</code> computes canonical principal (<code class="language-plaintext highlighter-rouge">user:...</code>, <code class="language-plaintext highlighter-rouge">client:...</code>, <code class="language-plaintext highlighter-rouge">ghwf:...</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">ext_authz</code> returns headers so the backend gets that canonical identity, avoiding “authorized one identity, logged another” drift</li>
+</ul>
+
+<p>This improves auditability and reduces policy confusion.</p>
+
+<h2 id="forwarded-x--headers-for-backend-features">Forwarded <code class="language-plaintext highlighter-rouge">x-</code> headers for backend features</h2>
+
+<p>These identity headers are forwarded downstream after authorization and can be used by backend services for rate limits, audit logs, and feature controls:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">x-authorized-principal</code>: canonical identity used by Casbin (for example <code class="language-plaintext highlighter-rouge">user:...</code>, <code class="language-plaintext highlighter-rouge">client:...</code>, <code class="language-plaintext highlighter-rouge">ghwf:...</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">x-user-id</code>: set to the same canonical principal value for consistent identity handling</li>
+  <li><code class="language-plaintext highlighter-rouge">x-principal-type</code>: principal class (for example <code class="language-plaintext highlighter-rouge">user</code>, <code class="language-plaintext highlighter-rouge">service</code>, <code class="language-plaintext highlighter-rouge">github</code>, <code class="language-plaintext highlighter-rouge">public</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">x-user-issuer</code>: issuer claim projected by <code class="language-plaintext highlighter-rouge">jwt_authn</code> (<code class="language-plaintext highlighter-rouge">iss</code>)</li>
+</ul>
+
+<p>The verified JWT payload header (<code class="language-plaintext highlighter-rouge">x-jwt-payload</code>) is used by <code class="language-plaintext highlighter-rouge">ext_authz</code> for extraction/evaluation; client-supplied values are stripped at the edge before JWT validation.</p>
+
+<h2 id="principal-types">Principal types</h2>
+
+<ul>
+  <li>Human users: <code class="language-plaintext highlighter-rouge">user:{iss}:{email}</code></li>
+  <li>Machine clients: <code class="language-plaintext highlighter-rouge">client:{iss}:{email}</code></li>
+  <li>GitHub workflows: <code class="language-plaintext highlighter-rouge">ghwf:repo:{repo}:workflow:{file}:ref:{ref}[:env:{env}]</code></li>
+</ul>
+
+<h2 id="github-workflow-wildcard-support">GitHub workflow wildcard support</h2>
+
+<p>To avoid per-branch role churn, workflow principals support constrained wildcard matching:</p>
+
+<ul>
+  <li>Allowed: one trailing <code class="language-plaintext highlighter-rouge">*</code> in branch suffix under <code class="language-plaintext highlighter-rouge">:ref:refs/heads/</code></li>
+  <li>Example: <code class="language-plaintext highlighter-rouge">ghwf:repo:agntcy/dir:workflow:oidc-test.yml:ref:refs/heads/*</code></li>
+  <li>Not allowed: multiple wildcards, internal wildcards, wildcard outside branch segment</li>
+</ul>
+
+<p>This keeps matching practical while avoiding regex complexity and policy ambiguity.</p>
+
+<hr />
+
+<h1 id="part-6-claim-validation-and-policy-boundaries">Part 6: Claim Validation and Policy Boundaries</h1>
+
+<p>For GitHub workflow identity, trust is not just “issuer is GitHub.” We also bind authorization to stable workflow context claims.</p>
+
+<p>Typical checks include:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">iss == https://token.actions.githubusercontent.com</code></li>
+  <li><code class="language-plaintext highlighter-rouge">aud == &lt;expected audience&gt;</code></li>
+  <li><code class="language-plaintext highlighter-rouge">repository</code> and <code class="language-plaintext highlighter-rouge">repository_owner</code></li>
+  <li><code class="language-plaintext highlighter-rouge">ref</code> (branch/tag)</li>
+  <li><code class="language-plaintext highlighter-rouge">job_workflow_ref</code> (workflow file + ref)</li>
+  <li>optional <code class="language-plaintext highlighter-rouge">environment</code></li>
+</ul>
+
+<p>Design boundary we keep strict:</p>
+
+<ul>
+  <li><strong>Authentication claims</strong> prove identity context</li>
+  <li><strong>Roles and permissions</strong> come from deployment config/Casbin policy</li>
+  <li>We do not treat JWT role claims as authorization truth</li>
+</ul>
+
+<hr />
+
+<h1 id="part-7-security-hardening-improvements">Part 7: Security Hardening Improvements</h1>
+
+<p>The OIDC rollout included additional hardening:</p>
+
+<ul>
+  <li>Removed <code class="language-plaintext highlighter-rouge">grpc.reflection</code> from public auth server paths</li>
+  <li>Added ingress rate limits for publicly exposed gateway endpoints</li>
+</ul>
+
+<p>Combined with short-lived OIDC tokens and explicit RBAC roles, this improves default security for both human and CI traffic.</p>
+
+<hr />
+
+<h1 id="part-8-migration-notes">Part 8: Migration Notes</h1>
+
+<p>If you still have legacy GitHub auth config/docs, this is the practical migration path:</p>
+
+<ol>
+  <li>Switch CLI and workflows to <code class="language-plaintext highlighter-rouge">--auth-mode=oidc</code></li>
+  <li>Replace <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_GITHUB_TOKEN</code> with <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_AUTH_TOKEN</code> in CI</li>
+  <li>Configure OIDC issuer/JWKS trust in Envoy</li>
+  <li>Migrate RBAC principals from <code class="language-plaintext highlighter-rouge">github:&lt;user&gt;</code> to OIDC principal forms (<code class="language-plaintext highlighter-rouge">user:{iss}:{email}</code>, <code class="language-plaintext highlighter-rouge">ghwf:...</code>)</li>
+  <li>Add dedicated least-privilege roles for CI workflows</li>
+</ol>
+
+<hr />
+
+<h2 id="what-this-unlocks-next">What This Unlocks Next</h2>
+
+<p>Unified OIDC gives us a cleaner base for:</p>
+
+<ul>
+  <li>Consistent policy semantics across user and workload identities</li>
+  <li>Better auditability of authenticated principals</li>
+  <li>Easier enterprise IdP federation and rollout</li>
+  <li>Safer CI automation through ephemeral identities</li>
+  <li>Optional IdP role-claim mapping for user/service tokens to reduce per-principal config churn</li>
+</ul>
+
+<h3 id="future-direction-optional-role-claim-mapping">Future direction: optional role-claim mapping</h3>
+
+<p>A practical next step is to support an opt-in mode where trusted IdP role claims (for human or service-user tokens) can map directly to ext-authz roles.</p>
+
+<p>Potential benefits:</p>
+
+<ul>
+  <li>Faster onboarding for new users or service accounts</li>
+  <li>Fewer manual role principal entries in static config</li>
+  <li>Better alignment with enterprise IAM role management</li>
+</ul>
+
+<p>Guardrails we would keep:</p>
+
+<ul>
+  <li>Disabled by default (explicit opt-in)</li>
+  <li>Issuer-scoped trust policy (only configured issuers/claims accepted)</li>
+  <li>Strict allowlist mapping (<code class="language-plaintext highlighter-rouge">token-role</code> -&gt; <code class="language-plaintext highlighter-rouge">ext-authz role</code>) instead of free-form trust</li>
+  <li>Existing deny-list and method-level Casbin checks remain authoritative</li>
+  <li>Auditable logs showing claim-derived role resolution decisions</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Directory’s authentication model is now simpler and stronger:</p>
+
+<ul>
+  <li>✅ One OIDC-first model for humans, machines, and CI</li>
+  <li>✅ Explicit role-based authorization with method-level control</li>
+  <li>✅ Reduced secret sprawl by removing PAT dependence in CI</li>
+  <li>✅ Preserved service-to-service trust boundaries in backend infrastructure</li>
+</ul>
+
+<p>This is a meaningful step toward secure-by-default Directory operations at scale.</p>
+
+<h2 id="-references">📚 References</h2>
+
+<ul>
+  <li><a href="https://github.com/agntcy/dir">Directory GitHub Repository</a></li>
+  <li><a href="https://dexidp.io/docs/">Dex OIDC Provider</a></li>
+  <li><a href="https://openid.net/specs/openid-connect-core-1_0.html">OpenID Connect Core</a></li>
+  <li><a href="https://datatracker.ietf.org/doc/html/rfc6749">OAuth 2.0 Authorization Framework (RFC 6749)</a></li>
+  <li><a href="https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect">GitHub Actions OIDC Documentation</a></li>
+  <li><a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter">Envoy JWT Authentication Filter</a></li>
+  <li><a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter">Envoy External Authorization Filter</a></li>
+  <li><a href="https://spiffe.io">SPIFFE/SPIRE Documentation</a></li>
+</ul>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"><span class="post-nav-label">← Previous</span>
+        <a href="/drafts/docs-directory-oidc-auth/technical/2026/03/13/rust-uniffi-multilanguage-strategy.html">Write Once, Run Everywhere: Why Rust + UniFFI is the Future of Multi-Language Libraries</a></div>
+    <div class="post-nav-next"><span class="post-nav-label">Next →</span>
+        <a href="/drafts/docs-directory-oidc-auth/agents/go/slim/a2a/announcements/2026/03/24/slim-a2a-go-release.html">Announcing slim-a2a-go 0.1.0: Native A2A over SLIM for Go</a></div>
+  </nav>
+
+  <a class="u-url" href="/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/03/16/directory-oidc-authentication-unified-access.html" hidden></a>
+</article>
+
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/drafts/docs-directory-oidc-auth/"></data>
+
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">
+        <h2 class="footer-heading">AGNTCY Blogs</h2>
+        <p class="footer-copyright">Copyright © AGNTCY a Series of LF Projects, LLC</p>
+      </div>
+
+      <div class="footer-col">
+        <ul class="social-media-list"><li>
+            <a href="https://github.com/agntcy">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#github"></use></svg>
+              <span class="username">GitHub</span>
+            </a>
+          </li><li>
+            <a href="https://www.linkedin.com/company/agntcyproject">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#linkedin"></use></svg>
+              <span class="username">LinkedIn</span>
+            </a>
+          </li><li>
+            <a href="https://www.youtube.com/@agntcy-lf">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#youtube"></use></svg>
+              <span class="username">YouTube</span>
+            </a>
+          </li><li>
+            <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">
+              <svg class="svg-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.362 10.11c0 .926-.756 1.681-1.681 1.681S0 11.036 0 10.111c0-.926.756-1.681 1.681-1.681h1.681v1.68zm.846 0c0-.926.756-1.681 1.681-1.681s1.681.756 1.681 1.681v4.21c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681v-4.21zM5.89 3.362c-.926 0-1.681-.756-1.681-1.681S4.964 0 5.89 0s1.681.756 1.681 1.681v1.681H5.89zm0 .846c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681H1.68C.756 7.57 0 6.814 0 5.889s.756-1.681 1.681-1.681h4.21zm6.749 1.681c0-.926.756-1.681 1.681-1.681S16 4.964 16 5.889s-.756 1.681-1.681 1.681h-1.681V5.89zm-.846 0c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681V1.68C8.43.756 9.186 0 10.111 0s1.681.756 1.681 1.681v4.21zm-1.681 6.749c.926 0 1.681.756 1.681 1.681S11.036 16 10.111 16s-1.681-.756-1.681-1.681v-1.681h1.681zm0-.846c-.926 0-1.681-.756-1.681-1.681s.756-1.681 1.681-1.681h4.21c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681h-4.21z"/>
+              </svg>
+              <span class="username">Slack</span>
+            </a>
+          </li></ul>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-description">Building infrastructure for the Internet of Agents</p>
+      </div>
+
+    </div>
+  </div>
+
+</footer>
+<script src="/drafts/docs-directory-oidc-auth/assets/js/theme-toggle.js"></script>
+    <script src="/drafts/docs-directory-oidc-auth/assets/js/code-copy.js"></script>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      async function renderMermaid() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Agntcy color scheme for mermaid
+        const agntcyTheme = {
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: isDark ? {
+            // Dark mode - agntcy slate theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#e3e3e3',
+            secondaryColor: '#002a4d',
+            tertiaryColor: '#03142b',
+            background: '#03142b',
+            mainBkg: '#03142b',
+            secondBkg: '#002a4d',
+            textColor: '#e3e3e3',
+            nodeBorder: '#0251af',
+            clusterBkg: '#002a4d',
+            clusterBorder: '#0251af',
+            titleColor: '#fbaf46',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#e3e3e3',
+            signalColor: '#e3e3e3',
+            signalTextColor: '#e3e3e3',
+            labelBoxBkgColor: '#002a4d',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#e3e3e3',
+            loopTextColor: '#e3e3e3',
+            noteBkgColor: '#002a4d',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#e3e3e3',
+            activationBkgColor: '#002a4d',
+            activationBorderColor: '#fbaf46',
+            sequenceNumberColor: '#03142b'
+          } : {
+            // Light mode - agntcy blue theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#1c1e21',
+            secondaryColor: '#e8eefb',
+            tertiaryColor: '#eff3fc',
+            background: '#eff3fc',
+            mainBkg: '#eff3fc',
+            secondBkg: '#e8eefb',
+            textColor: '#1c1e21',
+            nodeBorder: '#0251af',
+            clusterBkg: '#e8eefb',
+            clusterBorder: '#0251af',
+            titleColor: '#0251af',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#1c1e21',
+            signalColor: '#1c1e21',
+            signalTextColor: '#1c1e21',
+            labelBoxBkgColor: '#e8eefb',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#1c1e21',
+            loopTextColor: '#1c1e21',
+            noteBkgColor: '#e8eefb',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#1c1e21',
+            activationBkgColor: '#e8eefb',
+            activationBorderColor: '#0251af',
+            sequenceNumberColor: '#f3f6fd'
+          }
+        };
+
+        mermaid.initialize(agntcyTheme);
+        await mermaid.run();
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
+              newDiv.textContent = graphDefinition;
+
+              container.replaceWith(newDiv);
+          });
+
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      });
+    </script>
+    <style>
+    #cookie-notice {
+        padding: 2rem 2rem;
+        display: none;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #1a1a1a;
+        color: #ffffff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 9999;
+        border-top: 3px solid #4a90e2;
+    }
+    #cookie-notice span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    #cookie-notice a {
+        display: inline-block;
+        cursor: pointer;
+        padding: 0.875rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: #4a90e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    #cookie-notice a:hover {
+        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    @media (max-width: 767px) {
+        #cookie-notice {
+            padding: 1.5rem 1rem;
+        }
+        #cookie-notice span {
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        #cookie-notice a {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+<div id="cookie-notice"><span>We would like to use third party cookies and scripts to improve the functionality of this website.</span><a id="cookie-notice-accept" class="btn btn-primary">Approve</a></div>
+<script>
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
+    function loadGoogleAnalytics() {
+        
+        // Load Google Analytics V4
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-3D9938KZCN";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-3D9938KZCN');
+        
+    }
+
+    if(readCookie('cookie-notice-dismissed')=='true') {
+        loadGoogleAnalytics();
+    } else {
+        document.getElementById('cookie-notice').style.display = 'block';
+    }
+
+    document.getElementById('cookie-notice-accept').addEventListener("click",function() {
+        createCookie('cookie-notice-dismissed','true',31);
+        document.getElementById('cookie-notice').style.display = 'none';
+        location.reload();
+    });
+
+</script>
+
+  </body>
+
+</html>
+

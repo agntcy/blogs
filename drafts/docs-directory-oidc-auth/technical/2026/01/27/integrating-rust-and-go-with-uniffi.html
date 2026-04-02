@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Integrating Rust and Go with UniFFI: A Complete Guide | AGNTCY Blogs</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Integrating Rust and Go with UniFFI: A Complete Guide" />
+<meta name="author" content="Sam Betts" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Rust and Go are both excellent languages, but they excel in different areas. Rust provides memory safety and zero-cost abstractions, while Go offers simplicity and fast compilation. What if you could combine the strengths of both? This post explores how we use UniFFI to create seamless Rust-Go integrations for the SLIM messaging library." />
+<meta property="og:description" content="Rust and Go are both excellent languages, but they excel in different areas. Rust provides memory safety and zero-cost abstractions, while Go offers simplicity and fast compilation. What if you could combine the strengths of both? This post explores how we use UniFFI to create seamless Rust-Go integrations for the SLIM messaging library." />
+<link rel="canonical" href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html" />
+<meta property="og:site_name" content="AGNTCY Blogs" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-01-27T15:50:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Integrating Rust and Go with UniFFI: A Complete Guide" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Sam Betts"},"dateModified":"2026-01-27T15:50:00+00:00","datePublished":"2026-01-27T15:50:00+00:00","description":"Rust and Go are both excellent languages, but they excel in different areas. Rust provides memory safety and zero-cost abstractions, while Go offers simplicity and fast compilation. What if you could combine the strengths of both? This post explores how we use UniFFI to create seamless Rust-Go integrations for the SLIM messaging library.","headline":"Integrating Rust and Go with UniFFI: A Complete Guide","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/assets/images/logo-light.svg"},"name":"Sam Betts"},"url":"https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/drafts/docs-directory-oidc-auth/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/drafts/docs-directory-oidc-auth/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/feed.xml" title="AGNTCY Blogs" /><script>
+    // Set theme immediately to prevent flash of wrong theme
+    (function() {
+      const theme = localStorage.getItem('theme-preference') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><div class="site-branding">
+      <a class="site-logo-link" rel="author" href="/drafts/docs-directory-oidc-auth/"><img class="site-logo logo-light" src="/drafts/docs-directory-oidc-auth/assets/images/logo-light.svg" alt="AGNTCY"><img class="site-logo logo-dark" src="/drafts/docs-directory-oidc-auth/assets/images/logo-dark.svg" alt="AGNTCY"></a>
+      <span class="site-title-text">Blogs</span>
+    </div><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/drafts/docs-directory-oidc-auth/archive/">Archive</a><a class="page-link" href="/drafts/docs-directory-oidc-auth/about/">About</a><button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </nav></div>
+</header>
+
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Integrating Rust and Go with UniFFI: A Complete Guide</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-01-27T15:50:00+00:00" itemprop="datePublished">
+        January 27, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/tehsmash" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Sam Betts</a></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Rust and Go are both excellent languages, but they excel in different areas. Rust provides memory safety and zero-cost abstractions, while Go offers simplicity and fast compilation. What if you could combine the strengths of both? This post explores how we use UniFFI to create seamless Rust-Go integrations for the SLIM messaging library.</p>
+
+<!--more-->
+
+<h2 id="why-integrate-rust-and-go">Why Integrate Rust and Go?</h2>
+
+<p>Before diving into the technical details, let’s understand when and why you might want to integrate Rust with Go:</p>
+
+<p><strong>Rust’s Strengths:</strong></p>
+<ul>
+  <li>Memory safety without garbage collection</li>
+  <li>Zero-cost abstractions</li>
+  <li>Excellent cryptography libraries</li>
+  <li>Strong type system with powerful error handling</li>
+  <li>Performance-critical operations</li>
+</ul>
+
+<p><strong>Go’s Strengths:</strong></p>
+<ul>
+  <li>Simple, readable syntax</li>
+  <li>Fast compilation times</li>
+  <li>Excellent concurrency model</li>
+  <li>Great standard library for networking and HTTP</li>
+  <li>Easy deployment (single binary)</li>
+</ul>
+
+<p><strong>When to Integrate:</strong></p>
+<ul>
+  <li>You have performance-critical code that benefits from Rust’s zero-cost abstractions</li>
+  <li>You need cryptographic operations best handled by Rust’s mature ecosystem</li>
+  <li>You want Go’s deployment simplicity but need Rust’s safety guarantees</li>
+  <li>You’re building a library that needs to support multiple languages</li>
+</ul>
+
+<h2 id="the-challenge-foreign-function-interface-ffi">The Challenge: Foreign Function Interface (FFI)</h2>
+
+<p>Calling Rust from Go requires crossing the FFI boundary through C. The traditional approach involves:</p>
+
+<ol>
+  <li>Writing a C-compatible API in Rust using <code class="language-plaintext highlighter-rouge">extern "C"</code></li>
+  <li>Creating C header files manually</li>
+  <li>Writing Go code with CGO to call the C functions</li>
+  <li>Manual memory management at the boundary</li>
+  <li>Custom error handling and type conversions</li>
+</ol>
+
+<p>This is tedious, error-prone, and requires maintaining three separate codebases (Rust, C headers, and Go bindings).</p>
+
+<h2 id="enter-uniffi-automated-binding-generation">Enter UniFFI: Automated Binding Generation</h2>
+
+<p><a href="https://mozilla.github.io/uniffi-rs/">UniFFI</a> (Unified Foreign Function Interface) is Mozilla’s solution to this problem. Instead of manually writing FFI code, you:</p>
+
+<ol>
+  <li>Write your Rust library with normal Rust types</li>
+  <li>Define an interface using UniFFI’s macro system</li>
+  <li>UniFFI automatically generates:
+    <ul>
+      <li>C-compatible FFI layer</li>
+      <li>C header files</li>
+      <li>Language bindings (Go, Python, Swift, Kotlin, etc.)</li>
+    </ul>
+  </li>
+</ol>
+
+<p>For Go specifically, we use <a href="https://github.com/NordSecurity/uniffi-bindgen-go">uniffi-bindgen-go</a>, a Go binding generator maintained by NordSecurity.</p>
+
+<h2 id="our-implementation-slim-go-bindings">Our Implementation: SLIM Go Bindings</h2>
+
+<p>Let’s walk through how we integrated Rust and Go for the <a href="https://github.com/agntcy/slim">SLIM messaging library</a>.</p>
+
+<h3 id="step-1-define-the-rust-api">Step 1: Define the Rust API</h3>
+
+<p>First, we write our Rust library with normal Rust types and use UniFFI macros to expose the API:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// src/lib.rs</span>
+<span class="k">use</span> <span class="n">uniffi</span><span class="p">;</span>
+
+<span class="nd">#[uniffi::export]</span>
+<span class="k">pub</span> <span class="k">fn</span> <span class="nf">create_identity</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">String</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="n">Identity</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="c1">// Implementation using normal Rust code</span>
+    <span class="nn">Identity</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nd">#[derive(uniffi::Object)]</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="n">Identity</span> <span class="p">{</span>
+    <span class="n">inner</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">IdentityInner</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="nd">#[uniffi::export]</span>
+<span class="k">impl</span> <span class="n">Identity</span> <span class="p">{</span>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">public_key</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span> <span class="p">{</span>
+        <span class="k">self</span><span class="py">.inner.public_key</span><span class="nf">.clone</span><span class="p">()</span>
+    <span class="p">}</span>
+    
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">sign</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
+        <span class="k">self</span><span class="py">.inner</span><span class="nf">.sign</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="nd">#[derive(uniffi::Error)]</span>
+<span class="k">pub</span> <span class="k">enum</span> <span class="n">SlimError</span> <span class="p">{</span>
+    <span class="n">InvalidInput</span> <span class="p">{</span> <span class="n">message</span><span class="p">:</span> <span class="nb">String</span> <span class="p">},</span>
+    <span class="n">CryptoError</span> <span class="p">{</span> <span class="n">message</span><span class="p">:</span> <span class="nb">String</span> <span class="p">},</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Key Points:</strong></p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">#[uniffi::export]</code> marks functions for export</li>
+  <li><code class="language-plaintext highlighter-rouge">#[derive(uniffi::Object)]</code> for complex types that need methods</li>
+  <li><code class="language-plaintext highlighter-rouge">#[derive(uniffi::Error)]</code> for error enums</li>
+  <li>Use standard Rust types like <code class="language-plaintext highlighter-rouge">String</code>, <code class="language-plaintext highlighter-rouge">Vec&lt;u8&gt;</code>, <code class="language-plaintext highlighter-rouge">Result</code></li>
+  <li>UniFFI reads the Rust macros directly—no separate <code class="language-plaintext highlighter-rouge">.udl</code> file needed!</li>
+</ul>
+
+<h3 id="step-2-configure-the-rust-crate-to-use-uniffi">Step 2: Configure the Rust Crate to Use UniFFI</h3>
+
+<p>Add UniFFI to your <code class="language-plaintext highlighter-rouge">Cargo.toml</code> with the CLI feature:</p>
+
+<div class="language-toml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[lib]</span>
+<span class="py">crate-type</span> <span class="p">=</span> <span class="nn">["staticlib"]</span>
+<span class="py">name</span> <span class="p">=</span> <span class="s">"slim_bindings"</span>
+
+<span class="nn">[dependencies]</span>
+<span class="nn">uniffi</span> <span class="o">=</span> <span class="p">{</span> <span class="py">version</span> <span class="p">=</span> <span class="s">"0.28.3"</span><span class="p">,</span> <span class="py">features</span> <span class="p">=</span> <span class="nn">["cli"]</span> <span class="p">}</span>
+
+<span class="nn">[dev-dependencies]</span>
+<span class="nn">uniffi</span> <span class="o">=</span> <span class="p">{</span> <span class="py">version</span> <span class="p">=</span> <span class="s">"0.28.3"</span><span class="p">,</span> <span class="py">features</span> <span class="p">=</span> <span class="nn">["build"]</span> <span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Important:</strong> We use <code class="language-plaintext highlighter-rouge">crate-type = ["staticlib"]</code> to produce a static library (<code class="language-plaintext highlighter-rouge">.a</code> archive) rather than a dynamic library. This allows the Go compiler to statically link the native code into the final binary, ensuring there are no external runtime dependencies.</p>
+
+<p>Then add the scaffolding macro to your <code class="language-plaintext highlighter-rouge">lib.rs</code>:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// src/lib.rs</span>
+<span class="nn">uniffi</span><span class="p">::</span><span class="nd">setup_scaffolding!</span><span class="p">();</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">setup_scaffolding!()</code> macro generates all the FFI glue code at compile time—no build script needed when using proc-macros!</p>
+
+<h3 id="step-3-build-the-rust-library">Step 3: Build the Rust Library</h3>
+
+<p>Compile the Rust library to produce the static archive:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Build in release mode for optimal performance</span>
+cargo build <span class="nt">--release</span>
+</code></pre></div></div>
+
+<p>This produces <code class="language-plaintext highlighter-rouge">target/release/libslim_bindings.a</code> - a static library archive that can be linked directly into Go binaries. Static linking means:</p>
+<ul>
+  <li><strong>At build time</strong>: The Go compiler embeds the native code into your binary</li>
+  <li><strong>At runtime</strong>: No external <code class="language-plaintext highlighter-rouge">.so</code>, <code class="language-plaintext highlighter-rouge">.dylib</code>, or <code class="language-plaintext highlighter-rouge">.dll</code> files are needed</li>
+  <li><strong>For end users</strong>: Just distribute a single, self-contained executable</li>
+</ul>
+
+<h3 id="step-4-generate-go-bindings">Step 4: Generate Go Bindings</h3>
+
+<p>Use <code class="language-plaintext highlighter-rouge">uniffi-bindgen-go</code> to generate the Go code:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install uniffi-bindgen-go</span>
+cargo <span class="nb">install </span>uniffi-bindgen-go
+
+<span class="c"># Generate Go bindings</span>
+uniffi-bindgen-go <span class="se">\</span>
+  <span class="nt">--library</span> target/release/libslim_bindings.a <span class="se">\</span>
+  <span class="nt">--out-dir</span> ./bindings/go
+</code></pre></div></div>
+
+<p>UniFFI reads the macros directly from your Rust code to generate the bindings—no separate definition file required!</p>
+
+<p>This generates two files:</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">slim_bindings.go</code> - Go wrapper code</li>
+  <li><code class="language-plaintext highlighter-rouge">slim_bindings.h</code> - C header file</li>
+</ul>
+
+<h3 id="step-5-distribution-strategy">Step 5: Distribution Strategy</h3>
+
+<p>Now that you have the static library (<code class="language-plaintext highlighter-rouge">.a</code> file) and Go bindings, you need to distribute them to developers. This presents a challenge:</p>
+
+<ul>
+  <li>The static library is ~150 MB per platform</li>
+  <li>GitHub has a 100 MB file size limit (without Git LFS)</li>
+  <li><code class="language-plaintext highlighter-rouge">go get</code> doesn’t support Git LFS</li>
+  <li><code class="language-plaintext highlighter-rouge">go get</code> has a hard-coded 500 MB size limit</li>
+</ul>
+
+<p><strong>Solution:</strong> Use GitHub Releases to host the pre-compiled static libraries, and provide a setup tool that downloads the appropriate library for the developer’s platform.</p>
+
+<p>We cover this approach in detail in our blog post: <a href="/2026/01/16/distributing-c-artifacts-for-go-modules.html">Distributing C Artifacts for Go Modules</a></p>
+
+<p>Key points:</p>
+<ul>
+  <li>Host static libraries on GitHub Releases (not in the Git repository)</li>
+  <li>Provide a lightweight setup tool developers run once</li>
+  <li>Cache libraries in <code class="language-plaintext highlighter-rouge">$GOPATH/.cgo-cache/</code> for CGO to find</li>
+  <li>Configure CGO linker flags to reference the cached library</li>
+</ul>
+
+<h3 id="step-6-using-the-go-bindings">Step 6: Using the Go Bindings</h3>
+
+<p>The generated Go code provides an idiomatic Go API. Here’s a complete example showing SLIM message encryption:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">package</span> <span class="n">main</span>
+
+<span class="k">import</span> <span class="p">(</span>
+    <span class="s">"fmt"</span>
+    <span class="n">slim</span> <span class="s">"github.com/agntcy/slim-bindings-go"</span>
+<span class="p">)</span>
+
+<span class="k">func</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c">// Create two identities</span>
+    <span class="n">alice</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">slim</span><span class="o">.</span><span class="n">CreateIdentity</span><span class="p">(</span><span class="s">"Alice"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">defer</span> <span class="n">alice</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span> <span class="c">// Important: cleanup Rust resources</span>
+    
+    <span class="n">bob</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">slim</span><span class="o">.</span><span class="n">CreateIdentity</span><span class="p">(</span><span class="s">"Bob"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    <span class="k">defer</span> <span class="n">bob</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+    
+    <span class="c">// Get public keys</span>
+    <span class="n">alicePubKey</span> <span class="o">:=</span> <span class="n">alice</span><span class="o">.</span><span class="n">PublicKey</span><span class="p">()</span>
+    <span class="n">bobPubKey</span> <span class="o">:=</span> <span class="n">bob</span><span class="o">.</span><span class="n">PublicKey</span><span class="p">()</span>
+    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Alice public key: %x</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">alicePubKey</span><span class="p">)</span>
+    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Bob public key: %x</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">bobPubKey</span><span class="p">)</span>
+    
+    <span class="c">// Alice creates an encrypted message for Bob</span>
+    <span class="n">message</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">(</span><span class="s">"Secret message"</span><span class="p">)</span>
+    <span class="n">encrypted</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">alice</span><span class="o">.</span><span class="n">Encrypt</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">bobPubKey</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    
+    <span class="c">// Bob decrypts the message</span>
+    <span class="n">decrypted</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">bob</span><span class="o">.</span><span class="n">Decrypt</span><span class="p">(</span><span class="n">encrypted</span><span class="p">,</span> <span class="n">alicePubKey</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+        <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    
+    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Original:  %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Decrypted: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">decrypted</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Key Features:</strong></p>
+<ul>
+  <li><strong>Idiomatic Go error handling</strong> with the <code class="language-plaintext highlighter-rouge">error</code> interface</li>
+  <li><strong>Automatic type conversions</strong> (Rust <code class="language-plaintext highlighter-rouge">Vec&lt;u8&gt;</code> ↔ Go <code class="language-plaintext highlighter-rouge">[]byte</code>)</li>
+  <li><strong>Memory management</strong> via <code class="language-plaintext highlighter-rouge">Destroy()</code> method—call this to free Rust resources</li>
+  <li><strong>High-level API</strong> that hides all FFI complexity</li>
+</ul>
+
+<p>This high-level Go code is calling Rust crypto functions under the hood, with all the FFI complexity handled by UniFFI.</p>
+
+<h2 id="how-uniffi-works-under-the-hood">How UniFFI Works: Under the Hood</h2>
+
+<p>Let’s understand what UniFFI generates:</p>
+
+<h3 id="the-rust-side-generated-by-uniffi">The Rust Side (Generated by UniFFI)</h3>
+
+<p>UniFFI generates a C-compatible FFI layer:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Generated by UniFFI</span>
+<span class="nd">#[no_mangle]</span>
+<span class="k">pub</span> <span class="k">extern</span> <span class="s">"C"</span> <span class="k">fn</span> <span class="nf">slim_create_identity</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="n">RustBuffer</span><span class="p">,</span>
+    <span class="n">err</span><span class="p">:</span> <span class="o">&amp;</span><span class="k">mut</span> <span class="n">RustCallStatus</span><span class="p">,</span>
+<span class="p">)</span> <span class="k">-&gt;</span> <span class="o">*</span><span class="k">const</span> <span class="n">Identity</span> <span class="p">{</span>
+    <span class="c1">// Conversion logic from C types to Rust types</span>
+    <span class="c1">// Calls your actual Rust function</span>
+    <span class="c1">// Converts result back to C-compatible types</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="the-go-side-generated-by-uniffi-bindgen-go">The Go Side (Generated by uniffi-bindgen-go)</h3>
+
+<p>The Go bindings wrap the C functions:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// Generated by uniffi-bindgen-go</span>
+
+<span class="c">// #include "slim_bindings.h"</span>
+<span class="c">// #cgo LDFLAGS: -lslim_bindings</span>
+<span class="k">import</span> <span class="s">"C"</span>
+
+<span class="k">type</span> <span class="n">Identity</span> <span class="k">struct</span> <span class="p">{</span>
+    <span class="n">pointer</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span>
+<span class="p">}</span>
+
+<span class="k">func</span> <span class="n">CreateIdentity</span><span class="p">(</span><span class="n">name</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="n">Identity</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c">// Convert Go string to C string</span>
+    <span class="n">cName</span> <span class="o">:=</span> <span class="n">C</span><span class="o">.</span><span class="n">CString</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">defer</span> <span class="n">C</span><span class="o">.</span><span class="n">free</span><span class="p">(</span><span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">(</span><span class="n">cName</span><span class="p">))</span>
+    
+    <span class="c">// Call C function</span>
+    <span class="k">var</span> <span class="n">err</span> <span class="n">C</span><span class="o">.</span><span class="n">RustCallStatus</span>
+    <span class="n">ptr</span> <span class="o">:=</span> <span class="n">C</span><span class="o">.</span><span class="n">slim_create_identity</span><span class="p">(</span><span class="n">cName</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">err</span><span class="p">)</span>
+    
+    <span class="c">// Handle errors</span>
+    <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">code</span> <span class="o">!=</span> <span class="m">0</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="n">convertError</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+    <span class="p">}</span>
+    
+    <span class="k">return</span> <span class="o">&amp;</span><span class="n">Identity</span><span class="p">{</span><span class="n">pointer</span><span class="o">:</span> <span class="n">ptr</span><span class="p">},</span> <span class="no">nil</span>
+<span class="p">}</span>
+
+<span class="k">func</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span><span class="n">Identity</span><span class="p">)</span> <span class="n">Destroy</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">C</span><span class="o">.</span><span class="n">slim_identity_free</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">pointer</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="memory-management">Memory Management</h3>
+
+<p>UniFFI handles the complex memory management at the boundary:</p>
+
+<ul>
+  <li><strong>Rust → Go</strong>: Rust allocates, Go receives pointer, Go calls <code class="language-plaintext highlighter-rouge">Destroy()</code> to free</li>
+  <li><strong>Go → Rust</strong>: Go data is copied into Rust-owned memory</li>
+  <li><strong>Return values</strong>: Rust allocates, transfers ownership to Go</li>
+</ul>
+
+<p>The generated <code class="language-plaintext highlighter-rouge">Destroy()</code> method is crucial—it tells Rust to free its memory. Without it, you’d have memory leaks.</p>
+
+<h2 id="advantages-of-the-uniffi-approach">Advantages of the UniFFI Approach</h2>
+
+<ol>
+  <li><strong>Type Safety</strong>: UniFFI generates type-safe bindings automatically</li>
+  <li><strong>Error Handling</strong>: Rust <code class="language-plaintext highlighter-rouge">Result</code> types map to Go <code class="language-plaintext highlighter-rouge">error</code> naturally</li>
+  <li><strong>Multiple Languages</strong>: Same Rust code can target Go, Python, Swift, Kotlin</li>
+  <li><strong>Maintainability</strong>: Changes to Rust API automatically reflect in bindings</li>
+  <li><strong>Idiomatic APIs</strong>: Generated code feels natural in each target language</li>
+  <li><strong>Memory Safety</strong>: Automatic handling of ownership and lifetimes</li>
+</ol>
+
+<h2 id="challenges-and-limitations">Challenges and Limitations</h2>
+
+<ol>
+  <li><strong>Learning Curve</strong>: Understanding UniFFI’s macro system takes time</li>
+  <li><strong>Build Complexity</strong>: Requires cargo, uniffi-bindgen-go, and CGO toolchain</li>
+  <li><strong>Memory Management</strong>: Developers must remember to call <code class="language-plaintext highlighter-rouge">Destroy()</code></li>
+  <li><strong>Type Limitations</strong>: Not all Rust types can cross FFI boundary (e.g., traits, complex generics)</li>
+  <li><strong>Debugging</strong>: Stack traces cross language boundaries</li>
+  <li><strong>Binary Size</strong>: Static linking increases final binary size</li>
+</ol>
+
+<h2 id="special-cases">Special Cases</h2>
+
+<h3 id="native-async-functions">Native Async Functions</h3>
+
+<p>UniFFI supports exposing Rust async functions through the FFI interface. The key thing to understand is that these async functions use the <strong>binding language’s async runtime</strong>, not Rust’s:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">#[uniffi::export]</span>
+<span class="k">pub</span> <span class="k">async</span> <span class="k">fn</span> <span class="nf">fetch_data</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">String</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
+    <span class="c1">// This async function will be translated to the target language</span>
+    <span class="nf">perform_http_request</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="k">.await</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>How it translates across languages:</strong></p>
+
+<ul>
+  <li><strong>Python</strong>: Directly becomes an awaitable function that integrates with Python’s <code class="language-plaintext highlighter-rouge">asyncio</code>
+    <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">fetch_data</span><span class="p">(</span><span class="s">"https://example.com"</span><span class="p">)</span>
+</code></pre></div>    </div>
+  </li>
+  <li><strong>Go</strong>: Becomes a regular blocking function (Go doesn’t have native async/await)
+    <div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">data</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">FetchData</span><span class="p">(</span><span class="s">"https://example.com"</span><span class="p">)</span> <span class="c">// Blocks until complete</span>
+  
+<span class="c">// To make it non-blocking, wrap it in a goroutine</span>
+<span class="k">go</span> <span class="k">func</span><span class="p">()</span> <span class="p">{</span>
+    <span class="n">data</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">FetchData</span><span class="p">(</span><span class="s">"https://example.com"</span><span class="p">)</span>
+    <span class="c">// Handle result...</span>
+<span class="p">}()</span>
+</code></pre></div>    </div>
+  </li>
+</ul>
+
+<p><strong>Important Note About Futures:</strong></p>
+
+<p>Rust <code class="language-plaintext highlighter-rouge">Future</code> types don’t translate well to Go. If you need to expose a custom future, you must provide a <code class="language-plaintext highlighter-rouge">.Wait()</code> method that handles the awaiting internally:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">#[derive(uniffi::Object)]</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="n">DataFuture</span> <span class="p">{</span>
+    <span class="n">inner</span><span class="p">:</span> <span class="cm">/* your future implementation */</span>
+<span class="p">}</span>
+
+<span class="nd">#[uniffi::export]</span>
+<span class="k">impl</span> <span class="n">DataFuture</span> <span class="p">{</span>
+    <span class="c1">// Provide an async wait method that UniFFI will translate</span>
+    <span class="k">pub</span> <span class="k">async</span> <span class="k">fn</span> <span class="nf">wait</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
+        <span class="k">self</span><span class="py">.inner</span><span class="k">.await</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Then in Go:</p>
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">future</span> <span class="o">:=</span> <span class="n">CreateDataFuture</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+<span class="k">defer</span> <span class="n">future</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+<span class="n">result</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">future</span><span class="o">.</span><span class="n">Wait</span><span class="p">()</span> <span class="c">// Blocks until complete</span>
+</code></pre></div></div>
+
+<h3 id="tokio-and-external-async-runtimes">Tokio and External Async Runtimes</h3>
+
+<p>If your Rust code uses an external async runtime like <strong>Tokio</strong>, you need to handle it differently. The runtime must live on the Rust side of the boundary, and you need to explicitly spawn or block on tasks:</p>
+
+<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">use</span> <span class="nn">tokio</span><span class="p">::</span><span class="nn">runtime</span><span class="p">::</span><span class="n">Runtime</span><span class="p">;</span>
+<span class="k">use</span> <span class="nn">std</span><span class="p">::</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="p">;</span>
+
+<span class="nd">#[derive(uniffi::Object)]</span>
+<span class="k">pub</span> <span class="k">struct</span> <span class="n">AsyncClient</span> <span class="p">{</span>
+    <span class="n">runtime</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">Runtime</span><span class="o">&gt;</span><span class="p">,</span>
+    <span class="c1">// other fields...</span>
+<span class="p">}</span>
+
+<span class="nd">#[uniffi::export]</span>
+<span class="k">impl</span> <span class="n">AsyncClient</span> <span class="p">{</span>
+    <span class="nd">#[uniffi::constructor]</span>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">new</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="n">runtime</span> <span class="o">=</span> <span class="nn">Runtime</span><span class="p">::</span><span class="nf">new</span><span class="p">()</span>
+            <span class="nf">.map_err</span><span class="p">(|</span><span class="n">e</span><span class="p">|</span> <span class="nn">SlimError</span><span class="p">::</span><span class="n">RuntimeError</span> <span class="p">{</span> 
+                <span class="n">message</span><span class="p">:</span> <span class="n">e</span><span class="nf">.to_string</span><span class="p">()</span> 
+            <span class="p">})</span><span class="o">?</span><span class="p">;</span>
+        
+        <span class="nf">Ok</span><span class="p">(</span><span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="k">Self</span> <span class="p">{</span>
+            <span class="n">runtime</span><span class="p">:</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">runtime</span><span class="p">),</span>
+        <span class="p">}))</span>
+    <span class="p">}</span>
+    
+    <span class="c1">// Blocking operation that uses the Tokio runtime</span>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">fetch_data</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">String</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
+        <span class="c1">// Use block_on to await the async operation</span>
+        <span class="k">self</span><span class="py">.runtime</span><span class="nf">.block_on</span><span class="p">(</span><span class="k">async</span> <span class="p">{</span>
+            <span class="nf">perform_async_request</span><span class="p">(</span><span class="o">&amp;</span><span class="n">url</span><span class="p">)</span><span class="k">.await</span>
+        <span class="p">})</span>
+    <span class="p">}</span>
+    
+    <span class="c1">// Fire-and-forget background task</span>
+    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">start_background_task</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">interval_ms</span><span class="p">:</span> <span class="nb">u64</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="p">(),</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
+        <span class="k">let</span> <span class="n">runtime</span> <span class="o">=</span> <span class="k">self</span><span class="py">.runtime</span><span class="nf">.clone</span><span class="p">();</span>
+        
+        <span class="c1">// Spawn a task on the Tokio runtime</span>
+        <span class="n">runtime</span><span class="nf">.spawn</span><span class="p">(</span><span class="k">async</span> <span class="k">move</span> <span class="p">{</span>
+            <span class="k">loop</span> <span class="p">{</span>
+                <span class="nn">tokio</span><span class="p">::</span><span class="nn">time</span><span class="p">::</span><span class="nf">sleep</span><span class="p">(</span>
+                    <span class="nn">tokio</span><span class="p">::</span><span class="nn">time</span><span class="p">::</span><span class="nn">Duration</span><span class="p">::</span><span class="nf">from_millis</span><span class="p">(</span><span class="n">interval_ms</span><span class="p">)</span>
+                <span class="p">)</span><span class="k">.await</span><span class="p">;</span>
+                <span class="c1">// Do background work...</span>
+            <span class="p">}</span>
+        <span class="p">});</span>
+        
+        <span class="nf">Ok</span><span class="p">(())</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Key points for Tokio integration:</strong></p>
+
+<ol>
+  <li><strong>Create the runtime once</strong>: Store a reference to the Tokio runtime in your Rust object</li>
+  <li><strong>Use <code class="language-plaintext highlighter-rouge">block_on</code></strong>: For synchronous operations that need to await async code</li>
+  <li><strong>Use <code class="language-plaintext highlighter-rouge">spawn</code></strong>: For background tasks that shouldn’t block the caller</li>
+  <li><strong>Runtime lifecycle</strong>: The runtime lives as long as your Rust object exists</li>
+  <li><strong>Go integration</strong>: From Go’s perspective, these are just regular blocking functions</li>
+</ol>
+
+<p>Example usage in Go:</p>
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">client</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">NewAsyncClient</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="k">defer</span> <span class="n">client</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
+
+<span class="c">// This blocks until the async operation completes</span>
+<span class="n">data</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">client</span><span class="o">.</span><span class="n">FetchData</span><span class="p">(</span><span class="s">"https://example.com"</span><span class="p">)</span>
+
+<span class="c">// This starts a background task and returns immediately</span>
+<span class="n">err</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">StartBackgroundTask</span><span class="p">(</span><span class="m">1000</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The Tokio runtime handles all the async execution internally, while Go sees only synchronous function calls.</p>
+
+<h2 id="performance-considerations">Performance Considerations</h2>
+
+<p>Crossing the FFI boundary through CGO has overhead. While the exact performance impact depends on your use case, there are some general guidelines:</p>
+
+<p><strong>Key Considerations:</strong></p>
+<ul>
+  <li><strong>Function call overhead</strong>: Each FFI call has a cost beyond a regular function call</li>
+  <li><strong>Data copying</strong>: Data must be copied across the language boundary</li>
+  <li><strong>Avoid chatty APIs</strong>: Design your API to minimize the number of FFI calls</li>
+</ul>
+
+<p><strong>Optimization tips:</strong></p>
+<ul>
+  <li>Batch operations when possible instead of making many small calls</li>
+  <li>Keep data structures simple at the boundary</li>
+  <li>Use byte slices (<code class="language-plaintext highlighter-rouge">Vec&lt;u8&gt;</code>) for efficient data transfer</li>
+  <li>Do heavy processing on one side of the boundary, not back-and-forth</li>
+</ul>
+
+<p>For a detailed analysis of CGO performance overhead, see Shane O’Neill’s excellent post: <a href="https://shane.ai/posts/cgo-performance-in-go1.21/">CGO Performance in Go 1.21</a></p>
+
+<h2 id="build-and-distribution">Build and Distribution</h2>
+
+<p>For production use, you’ll need to:</p>
+
+<ol>
+  <li><strong>Cross-compile Rust libraries</strong> for target platforms</li>
+  <li><strong>Distribute static libraries</strong> (see our <a href="https://blog.agntcy.com/2026/01/16/distributing-c-artifacts-for-go-modules.html">previous blog post</a>)</li>
+  <li><strong>Configure CGO</strong> to link against the Rust library</li>
+  <li><strong>Handle platform-specific differences</strong></li>
+</ol>
+
+<p>We cover this in detail in our blog post about <a href="https://blog.agntcy.com/2026/01/16/distributing-c-artifacts-for-go-modules.html">distributing C artifacts for Go modules</a>.</p>
+
+<h2 id="automation-and-cicd">Automation and CI/CD</h2>
+
+<p>Our release process automates the entire workflow for building Rust libraries, generating Go bindings, and distributing them across platforms. You can see our complete CI/CD setup in the <a href="https://github.com/agntcy/slim/blob/main/.github/workflows/release-bindings.yaml">SLIM repository’s release-bindings.yaml workflow</a>.</p>
+
+<p>This workflow handles:</p>
+<ul>
+  <li>Cross-compilation for multiple platforms using Zig</li>
+  <li>UniFFI binding generation</li>
+  <li>Packaging and uploading to GitHub Releases</li>
+  <li>Version tagging and coordination between repositories</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>UniFFI provides a powerful way to integrate Rust and Go, combining Rust’s safety and performance with Go’s simplicity and deployment model. While there’s complexity in the build process and memory management, the type safety and automated binding generation make it far superior to manual FFI code.</p>
+
+<p>For the SLIM project, this approach allows us to:</p>
+<ul>
+  <li>Write cryptographic code once in Rust</li>
+  <li>Expose it to Go developers with an idiomatic API</li>
+  <li>Maintain type safety across the language boundary</li>
+  <li>Support multiple languages from the same Rust codebase</li>
+</ul>
+
+<p>If you’re building performance-critical libraries or need Rust’s safety guarantees in your Go projects, UniFFI is worth the investment.</p>
+
+<h2 id="additional-resources">Additional Resources</h2>
+
+<ul>
+  <li><a href="https://mozilla.github.io/uniffi-rs/">UniFFI Documentation</a></li>
+  <li><a href="https://github.com/NordSecurity/uniffi-bindgen-go">uniffi-bindgen-go</a></li>
+  <li><a href="https://github.com/agntcy/slim-bindings-go">SLIM Go Bindings Repository</a></li>
+  <li><a href="https://github.com/agntcy/slim">SLIM Main Repository</a></li>
+  <li><a href="https://pkg.go.dev/cmd/cgo">CGO Documentation</a></li>
+</ul>
+
+<hr />
+
+<p><em>Have questions about Rust-Go integration or UniFFI? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"><span class="post-nav-label">← Previous</span>
+        <a href="/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html">Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery</a></div>
+    <div class="post-nav-next"><span class="post-nav-label">Next →</span>
+        <a href="/drafts/docs-directory-oidc-auth/technical/2026/02/03/slim-v1.html">SLIM v1.0: Secure Low-Latency Interactive Messaging for Agentic AI</a></div>
+  </nav>
+
+  <a class="u-url" href="/drafts/docs-directory-oidc-auth/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html" hidden></a>
+</article>
+
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/drafts/docs-directory-oidc-auth/"></data>
+
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">
+        <h2 class="footer-heading">AGNTCY Blogs</h2>
+        <p class="footer-copyright">Copyright © AGNTCY a Series of LF Projects, LLC</p>
+      </div>
+
+      <div class="footer-col">
+        <ul class="social-media-list"><li>
+            <a href="https://github.com/agntcy">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#github"></use></svg>
+              <span class="username">GitHub</span>
+            </a>
+          </li><li>
+            <a href="https://www.linkedin.com/company/agntcyproject">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#linkedin"></use></svg>
+              <span class="username">LinkedIn</span>
+            </a>
+          </li><li>
+            <a href="https://www.youtube.com/@agntcy-lf">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-directory-oidc-auth/assets/minima-social-icons.svg#youtube"></use></svg>
+              <span class="username">YouTube</span>
+            </a>
+          </li><li>
+            <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">
+              <svg class="svg-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.362 10.11c0 .926-.756 1.681-1.681 1.681S0 11.036 0 10.111c0-.926.756-1.681 1.681-1.681h1.681v1.68zm.846 0c0-.926.756-1.681 1.681-1.681s1.681.756 1.681 1.681v4.21c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681v-4.21zM5.89 3.362c-.926 0-1.681-.756-1.681-1.681S4.964 0 5.89 0s1.681.756 1.681 1.681v1.681H5.89zm0 .846c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681H1.68C.756 7.57 0 6.814 0 5.889s.756-1.681 1.681-1.681h4.21zm6.749 1.681c0-.926.756-1.681 1.681-1.681S16 4.964 16 5.889s-.756 1.681-1.681 1.681h-1.681V5.89zm-.846 0c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681V1.68C8.43.756 9.186 0 10.111 0s1.681.756 1.681 1.681v4.21zm-1.681 6.749c.926 0 1.681.756 1.681 1.681S11.036 16 10.111 16s-1.681-.756-1.681-1.681v-1.681h1.681zm0-.846c-.926 0-1.681-.756-1.681-1.681s.756-1.681 1.681-1.681h4.21c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681h-4.21z"/>
+              </svg>
+              <span class="username">Slack</span>
+            </a>
+          </li></ul>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-description">Building infrastructure for the Internet of Agents</p>
+      </div>
+
+    </div>
+  </div>
+
+</footer>
+<script src="/drafts/docs-directory-oidc-auth/assets/js/theme-toggle.js"></script>
+    <script src="/drafts/docs-directory-oidc-auth/assets/js/code-copy.js"></script>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      async function renderMermaid() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Agntcy color scheme for mermaid
+        const agntcyTheme = {
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: isDark ? {
+            // Dark mode - agntcy slate theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#e3e3e3',
+            secondaryColor: '#002a4d',
+            tertiaryColor: '#03142b',
+            background: '#03142b',
+            mainBkg: '#03142b',
+            secondBkg: '#002a4d',
+            textColor: '#e3e3e3',
+            nodeBorder: '#0251af',
+            clusterBkg: '#002a4d',
+            clusterBorder: '#0251af',
+            titleColor: '#fbaf46',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#e3e3e3',
+            signalColor: '#e3e3e3',
+            signalTextColor: '#e3e3e3',
+            labelBoxBkgColor: '#002a4d',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#e3e3e3',
+            loopTextColor: '#e3e3e3',
+            noteBkgColor: '#002a4d',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#e3e3e3',
+            activationBkgColor: '#002a4d',
+            activationBorderColor: '#fbaf46',
+            sequenceNumberColor: '#03142b'
+          } : {
+            // Light mode - agntcy blue theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#1c1e21',
+            secondaryColor: '#e8eefb',
+            tertiaryColor: '#eff3fc',
+            background: '#eff3fc',
+            mainBkg: '#eff3fc',
+            secondBkg: '#e8eefb',
+            textColor: '#1c1e21',
+            nodeBorder: '#0251af',
+            clusterBkg: '#e8eefb',
+            clusterBorder: '#0251af',
+            titleColor: '#0251af',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#1c1e21',
+            signalColor: '#1c1e21',
+            signalTextColor: '#1c1e21',
+            labelBoxBkgColor: '#e8eefb',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#1c1e21',
+            loopTextColor: '#1c1e21',
+            noteBkgColor: '#e8eefb',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#1c1e21',
+            activationBkgColor: '#e8eefb',
+            activationBorderColor: '#0251af',
+            sequenceNumberColor: '#f3f6fd'
+          }
+        };
+
+        mermaid.initialize(agntcyTheme);
+        await mermaid.run();
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
+              newDiv.textContent = graphDefinition;
+
+              container.replaceWith(newDiv);
+          });
+
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      });
+    </script>
+    <style>
+    #cookie-notice {
+        padding: 2rem 2rem;
+        display: none;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #1a1a1a;
+        color: #ffffff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 9999;
+        border-top: 3px solid #4a90e2;
+    }
+    #cookie-notice span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    #cookie-notice a {
+        display: inline-block;
+        cursor: pointer;
+        padding: 0.875rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: #4a90e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    #cookie-notice a:hover {
+        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    @media (max-width: 767px) {
+        #cookie-notice {
+            padding: 1.5rem 1rem;
+        }
+        #cookie-notice span {
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        #cookie-notice a {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+<div id="cookie-notice"><span>We would like to use third party cookies and scripts to improve the functionality of this website.</span><a id="cookie-notice-accept" class="btn btn-primary">Approve</a></div>
+<script>
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
+    function loadGoogleAnalytics() {
+        
+        // Load Google Analytics V4
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-3D9938KZCN";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-3D9938KZCN');
+        
+    }
+
+    if(readCookie('cookie-notice-dismissed')=='true') {
+        loadGoogleAnalytics();
+    } else {
+        document.getElementById('cookie-notice').style.display = 'block';
+    }
+
+    document.getElementById('cookie-notice-accept').addEventListener("click",function() {
+        createCookie('cookie-notice-dismissed','true',31);
+        document.getElementById('cookie-notice').style.display = 'none';
+        location.reload();
+    });
+
+</script>
+
+  </body>
+
+</html>
+
