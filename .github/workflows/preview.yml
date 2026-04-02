@@ -1,0 +1,67 @@
+name: PR Preview
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Sanitize branch name
+        id: branch
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          SAFE=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
+          echo "url=https://blogs.agntcy.org/drafts/$SAFE/" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+          cache-version: 0
+
+      - name: Build with Jekyll
+        run: bundle exec jekyll build --baseurl "/drafts/${{ steps.branch.outputs.safe }}"
+        env:
+          JEKYLL_ENV: production
+
+      - name: Deploy preview to gh-pages branch
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          destination_dir: drafts/${{ steps.branch.outputs.safe }}
+          keep_files: true
+
+      - name: Find existing preview comment
+        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- pr-preview -->'
+
+      - name: Create or update preview comment
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: |
+            <!-- pr-preview -->
+            ## Blog preview
+
+            Preview deployed to: ${{ steps.branch.outputs.url }}
+
+            _Last updated: commit `${{ github.sha }}`_

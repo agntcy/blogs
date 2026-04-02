@@ -1,0 +1,38 @@
+name: PR Preview Cleanup
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sanitize branch name
+        id: branch
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          SAFE=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: gh-pages
+
+      - name: Remove preview directory
+        run: |
+          DIR="drafts/${{ steps.branch.outputs.safe }}"
+          if [ -d "$DIR" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git rm -rf "$DIR"
+            git commit -m "chore: remove preview for ${{ github.head_ref }}"
+            git push
+          else
+            echo "No preview directory found at $DIR, skipping."
+          fi
