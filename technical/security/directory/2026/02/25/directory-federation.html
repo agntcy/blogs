@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Directory Federation Hands-On: SPIRE and SPIFFE in a Local Kind Environment | AGNTCY Blogs</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Directory Federation Hands-On: SPIRE and SPIFFE in a Local Kind Environment" />
+<meta name="author" content="Tibor Kircsi" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Agent Directory is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange. This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the https_spiffe profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you’re ready for production, see Getting Started and Partner Federation with Prod for the https_web profile and joining the public Directory." />
+<meta property="og:description" content="Agent Directory is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange. This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the https_spiffe profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you’re ready for production, see Getting Started and Partner Federation with Prod for the https_web profile and joining the public Directory." />
+<link rel="canonical" href="https://blogs.agntcy.org/technical/security/directory/2026/02/25/directory-federation.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/technical/security/directory/2026/02/25/directory-federation.html" />
+<meta property="og:site_name" content="AGNTCY Blogs" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-02-25T09:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Directory Federation Hands-On: SPIRE and SPIFFE in a Local Kind Environment" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Tibor Kircsi"},"dateModified":"2026-02-25T09:00:00+00:00","datePublished":"2026-02-25T09:00:00+00:00","description":"Agent Directory is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange. This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the https_spiffe profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you’re ready for production, see Getting Started and Partner Federation with Prod for the https_web profile and joining the public Directory.","headline":"Directory Federation Hands-On: SPIRE and SPIFFE in a Local Kind Environment","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/technical/security/directory/2026/02/25/directory-federation.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/assets/images/logo-light.svg"},"name":"Tibor Kircsi"},"url":"https://blogs.agntcy.org/technical/security/directory/2026/02/25/directory-federation.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/feed.xml" title="AGNTCY Blogs" /><script>
+    // Set theme immediately to prevent flash of wrong theme
+    (function() {
+      const theme = localStorage.getItem('theme-preference') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><div class="site-branding">
+      <a class="site-logo-link" rel="author" href="/"><img class="site-logo logo-light" src="/assets/images/logo-light.svg" alt="AGNTCY"><img class="site-logo logo-dark" src="/assets/images/logo-dark.svg" alt="AGNTCY"></a>
+      <span class="site-title-text">Blogs</span>
+    </div><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/archive/">Archive</a><a class="page-link" href="/about/">About</a><button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </nav></div>
+</header>
+
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Directory Federation Hands-On: SPIRE and SPIFFE in a Local Kind Environment</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-02-25T09:00:00+00:00" itemprop="datePublished">
+        February 25, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/tkircsi" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Tibor Kircsi</a></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p><a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a> is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange.</p>
+
+<p>This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the <code class="language-plaintext highlighter-rouge">https_spiffe</code> profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you’re ready for production, see <a href="https://docs.agntcy.org/dir/getting-started/">Getting Started</a> and <a href="https://docs.agntcy.org/dir/partner-prod-federation/">Partner Federation with Prod</a> for the <code class="language-plaintext highlighter-rouge">https_web</code> profile and joining the public Directory.</p>
+
+<!--more-->
+
+<p><strong>TL;DR:</strong> Run two Kind clusters with SPIRE federation (<code class="language-plaintext highlighter-rouge">https_spiffe</code>) and cross-cluster Directory + dirctl in about 15–20 minutes. No cert-manager or public DNS required—everything runs locally with MetalLB.</p>
+
+<h3 id="what-youll-learn">What You’ll Learn</h3>
+
+<p>In this post, you’ll learn:</p>
+
+<ul>
+  <li>How SPIRE servers exchange trust bundles for cross-cluster authentication</li>
+  <li>The difference between <code class="language-plaintext highlighter-rouge">https_spiffe</code> (local/air-gapped) and <code class="language-plaintext highlighter-rouge">https_web</code> (production) federation profiles</li>
+  <li>How the Directory and dirctl charts create <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code> automatically</li>
+  <li>How to verify mTLS-authenticated calls between dirctl (partner cluster) and the Directory API (testbed cluster)</li>
+</ul>
+
+<h2 id="why-try-federation-locally">Why Try Federation Locally?</h2>
+
+<ul>
+  <li><strong>Understand the flow</strong> — Trust bundle exchange, workload identity across clusters</li>
+  <li><strong>No production dependencies</strong> — MetalLB provides LoadBalancer IPs; no Let’s Encrypt or DNS</li>
+  <li><strong>Reproducible</strong> — Same steps work on any machine with Docker and kind</li>
+  <li><strong>Foundation for prod</strong> — Concepts transfer directly to production; profile differs (<code class="language-plaintext highlighter-rouge">https_web</code>)</li>
+</ul>
+
+<h2 id="federation-profiles-at-a-glance">Federation Profiles at a Glance</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Profile</th>
+      <th>Certificates</th>
+      <th>Bootstrap</th>
+      <th>Best for</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>https_spiffe</strong></td>
+      <td>SPIRE SVIDs</td>
+      <td>Manual exchange</td>
+      <td>Local Kind, air-gapped</td>
+    </tr>
+    <tr>
+      <td><strong>https_web</strong></td>
+      <td>Let’s Encrypt/CA</td>
+      <td>None</td>
+      <td>Production, public cloud</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>We use <code class="language-plaintext highlighter-rouge">https_spiffe</code> here because it needs no cert-manager or public DNS. For production federation with the public Directory, use <code class="language-plaintext highlighter-rouge">https_web</code>. See <a href="https://docs.agntcy.org/dir/federation-profiles/">Federation Profiles</a>.</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<ul>
+  <li><a href="https://kind.sigs.k8s.io/">kind</a></li>
+  <li><a href="https://kubernetes.io/docs/tasks/tools/">kubectl</a></li>
+  <li><a href="https://helm.sh/">Helm</a> 3.x</li>
+  <li><a href="https://www.docker.com/">Docker</a> (with Buildx)</li>
+</ul>
+
+<h2 id="architecture-overview">Architecture Overview</h2>
+
+<pre><code class="language-mermaid">flowchart LR
+    classDef testbed fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+    classDef partner fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef feder fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+
+    subgraph Testbed["Testbed cluster"]
+        Dir[Directory API]:::testbed
+        Zot[Zot Registry]:::testbed
+        SPIRE_TB[SPIRE Server]:::testbed
+    end
+
+    subgraph Feder["Trust bundle exchange"]
+        TB[Trust bundles]:::feder
+    end
+
+    subgraph Partner["Partner cluster"]
+        Dirctl[dirctl]:::partner
+        SPIRE_PT[SPIRE Server]:::partner
+    end
+
+    SPIRE_TB --&gt; TB
+    TB --&gt; SPIRE_PT
+    SPIRE_PT --&gt; TB
+    TB --&gt; SPIRE_TB
+    Dirctl --&gt;|"mTLS (X.509-SVID)"| Dir
+</code></pre>
+
+<p><strong>Trust domains:</strong></p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">testbed.internal.local</code> — Directory cluster</li>
+  <li><code class="language-plaintext highlighter-rouge">partner.testbed.local</code> — dirctl cluster</li>
+</ul>
+
+<hr />
+
+<h2 id="step-1-create-two-kind-clusters-and-install-metallb">Step 1: Create Two Kind Clusters and Install MetalLB</h2>
+
+<p>Create two Kind clusters and install MetalLB so LoadBalancer services receive stable IPs (required for SPIRE federation and the Directory API).</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kind create cluster <span class="nt">--name</span> testbed
+kind create cluster <span class="nt">--name</span> partner
+</code></pre></div></div>
+
+<p>MetalLB provides LoadBalancer IPs in Kind. Inspect your Docker network and pick IPs from the kind subnet:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker network inspect kind <span class="nt">--format</span> <span class="s1">'{{range .IPAM.Config}}{{.Subnet}} {{end}}'</span>
+</code></pre></div></div>
+
+<p><strong>Testbed</strong> (e.g. 172.18.255.1–172.18.255.9):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-testbed
+helm repo add metallb https://metallb.github.io/metallb
+helm upgrade <span class="nt">--install</span> metallb metallb/metallb <span class="nt">-n</span> metallb-system <span class="nt">--create-namespace</span> <span class="nt">--wait</span>
+
+kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: testbed-pool
+  namespace: metallb-system
+spec:
+  addresses: ["172.18.255.1-172.18.255.9"]
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: testbed-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools: [testbed-pool]
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<p><strong>Partner</strong> (e.g. 172.18.255.11–172.18.255.19):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
+helm upgrade <span class="nt">--install</span> metallb metallb/metallb <span class="nt">-n</span> metallb-system <span class="nt">--create-namespace</span> <span class="nt">--wait</span>
+
+kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: partner-pool
+  namespace: metallb-system
+spec:
+  addresses: ["172.18.255.11-172.18.255.19"]
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: partner-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools: [partner-pool]
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<hr />
+
+<h2 id="step-2-deploy-spire-on-both-clusters-https_spiffe">Step 2: Deploy SPIRE on Both Clusters (https_spiffe)</h2>
+
+<p><strong>Testbed:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-testbed
+
+helm upgrade <span class="nt">--install</span> <span class="nt">-n</span> spire-server spire-crds spire-crds <span class="nt">--repo</span> https://spiffe.github.io/helm-charts-hardened/ <span class="nt">--create-namespace</span>
+helm upgrade <span class="nt">--install</span> <span class="nt">-n</span> spire-server spire spire <span class="nt">--repo</span> https://spiffe.github.io/helm-charts-hardened/ <span class="se">\</span>
+  <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+global:
+  spire:
+    trustDomain: testbed.internal.local
+    clusterName: testbed
+    namespaces:
+      create: false
+    ingressControllerType: other
+  installAndUpgradeHooks:
+    enabled: false
+  deleteHooks:
+    enabled: false
+
+spire-server:
+  federation:
+    enabled: true
+    tls:
+      spire:
+        enabled: true
+      certManager:
+        enabled: false
+    ingress:
+      enabled: false
+  controllerManager:
+    watchClassless: true
+    className: spire
+    identities:
+      clusterFederatedTrustDomain:
+        enabled: true
+      clusterSPIFFEIDs:
+        default:
+          federatesWith: [partner.testbed.local]
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<p>Create LoadBalancer for federation endpoint:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+apiVersion: v1
+kind: Service
+metadata:
+  name: spire-server-federation
+  namespace: spire-server
+  annotations:
+    metallb.io/address-pool: testbed-pool
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: server
+    app.kubernetes.io/instance: spire
+  ports:
+  - port: 8443
+    targetPort: 8443
+    name: federation
+</span><span class="no">EOF
+
+</span><span class="c"># Wait for SPIRE server, agent, and OIDC discovery provider (agent and OIDC are slowest)</span>
+kubectl <span class="nb">wait</span> <span class="nt">--for</span><span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready pod <span class="nt">-n</span> spire-server <span class="nt">-l</span> app.kubernetes.io/instance<span class="o">=</span>spire <span class="nt">--timeout</span><span class="o">=</span>300s
+</code></pre></div></div>
+
+<p><strong>Partner:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
+
+helm upgrade <span class="nt">--install</span> <span class="nt">-n</span> spire-server spire-crds spire-crds <span class="nt">--repo</span> https://spiffe.github.io/helm-charts-hardened/ <span class="nt">--create-namespace</span>
+helm upgrade <span class="nt">--install</span> <span class="nt">-n</span> spire-server spire spire <span class="nt">--repo</span> https://spiffe.github.io/helm-charts-hardened/ <span class="se">\</span>
+  <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
+global:
+  spire:
+    trustDomain: partner.testbed.local
+    clusterName: partner
+    namespaces:
+      create: false
+    ingressControllerType: other
+  installAndUpgradeHooks:
+    enabled: false
+  deleteHooks:
+    enabled: false
+
+spire-server:
+  federation:
+    enabled: true
+    tls:
+      spire:
+        enabled: true
+      certManager:
+        enabled: false
+    ingress:
+      enabled: false
+  controllerManager:
+    watchClassless: true
+    className: spire
+    identities:
+      clusterFederatedTrustDomain:
+        enabled: true
+      clusterSPIFFEIDs:
+        default:
+          federatesWith: [testbed.internal.local]
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+apiVersion: v1
+kind: Service
+metadata:
+  name: spire-server-federation
+  namespace: spire-server
+  annotations:
+    metallb.io/address-pool: partner-pool
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: server
+    app.kubernetes.io/instance: spire
+  ports:
+  - port: 8443
+    targetPort: 8443
+    name: federation
+</span><span class="no">EOF
+
+</span><span class="c"># Wait for SPIRE server, agent, and OIDC discovery provider (agent and OIDC are slowest)</span>
+kubectl <span class="nb">wait</span> <span class="nt">--for</span><span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready pod <span class="nt">-n</span> spire-server <span class="nt">-l</span> app.kubernetes.io/instance<span class="o">=</span>spire <span class="nt">--timeout</span><span class="o">=</span>300s
+</code></pre></div></div>
+
+<p><strong>Verify:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get svc <span class="nt">-n</span> spire-server spire-server-federation
+<span class="c"># testbed EXTERNAL-IP: 172.18.255.1, partner: 172.18.255.11</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-3-export-trust-bundles">Step 3: Export Trust Bundles</h2>
+
+<p>With <code class="language-plaintext highlighter-rouge">https_spiffe</code>, each SPIRE server needs the other’s trust bundle to bootstrap the TLS connection. The <strong>Directory</strong> and <strong>dirctl</strong> charts create <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code> automatically from their <code class="language-plaintext highlighter-rouge">spire.federation</code> config—you don’t need to apply them manually. We export the bundles now so we can embed them in the Helm values.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
+kubectl <span class="nb">exec</span> <span class="nt">-n</span> spire-server spire-server-0 <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
+  spire-server bundle show <span class="nt">-format</span> spiffe <span class="o">&gt;</span> ./partner.bundle
+
+kubectl config use-context kind-testbed
+kubectl <span class="nb">exec</span> <span class="nt">-n</span> spire-server spire-server-0 <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
+  spire-server bundle show <span class="nt">-format</span> spiffe <span class="o">&gt;</span> ./testbed.bundle
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-4-deploy-directory-on-testbed">Step 4: Deploy Directory on Testbed</h2>
+
+<p>Deploy the Agent Directory chart (API server, Zot registry, PostgreSQL) with SPIRE enabled and federation to <code class="language-plaintext highlighter-rouge">partner.testbed.local</code>. The <strong>Directory chart creates <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code></strong> from <code class="language-plaintext highlighter-rouge">apiserver.spire.federation</code>, so the testbed SPIRE server fetches the partner bundle and the API server can verify dirctl’s X.509-SVID over mTLS.</p>
+
+<p>Ensure <code class="language-plaintext highlighter-rouge">./partner.bundle</code> exists before running (from Step 3).</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-testbed
+
+helm <span class="nb">install dir </span>oci://ghcr.io/agntcy/dir/helm-charts/dir <span class="se">\</span>
+  <span class="nt">--version</span> v1.0.0 <span class="se">\</span>
+  <span class="nt">--namespace</span> <span class="nb">dir</span> <span class="se">\</span>
+  <span class="nt">--create-namespace</span> <span class="se">\</span>
+  <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+apiserver:
+  image:
+    repository: ghcr.io/agntcy/dir-apiserver
+    tag: v1.0.0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+  metrics:
+    enabled: false
+  routingService:
+    type: NodePort
+    nodePort: 30555
+  spire:
+    enabled: true
+    className: spire
+    trustDomain: testbed.internal.local
+    useCSIDriver: true
+    federation:
+      - trustDomain: partner.testbed.local
+        className: spire
+        bundleEndpointURL: https://172.18.255.11:8443
+        bundleEndpointProfile:
+          type: https_spiffe
+          endpointSPIFFEID: spiffe://partner.testbed.local/spire/server
+        trustDomainBundle: |
+</span><span class="si">$(</span><span class="nb">cat</span> ./partner.bundle | <span class="nb">sed</span> <span class="s1">'s/^/          /'</span><span class="si">)</span><span class="sh">
+  config:
+    listen_address: "0.0.0.0:8888"
+    oasf_api_validation:
+      disable: true
+    authn:
+      enabled: true
+      mode: "x509"
+      socket_path: "unix:///run/spire/agent-sockets/api.sock"
+      audiences:
+        - "spiffe://testbed.internal.local/spire/server"
+    authz:
+      enabled: true
+      enforcer_policy_file_path: "/etc/agntcy/dir/authz_policies.csv"
+    ratelimit:
+      enabled: false
+    store:
+      provider: "oci"
+      oci:
+        registry_address: "dir-zot.dir.svc.cluster.local:5000"
+        auth_config:
+          insecure: "true"
+          username: "admin"
+          password: "admin"
+    routing:
+      listen_address: "/ip4/0.0.0.0/tcp/5555"
+      datastore_dir: /etc/routing/datastore
+      directory_api_address: "dir-apiserver.dir.svc.cluster.local:8888"
+      gossipsub:
+        enabled: false
+    sync:
+      auth_config:
+        username: "user"
+        password: "user"
+    publication:
+      scheduler_interval: "1h"
+      worker_count: 1
+      worker_timeout: "30m"
+    database:
+      type: "postgres"
+      postgres:
+        host: ""
+        port: 5432
+        database: "dir"
+        ssl_mode: "disable"
+  authz_policies_csv: |
+    p,testbed.internal.local,*
+    p,partner.testbed.local,*
+    p,*,/agntcy.dir.store.v1.StoreService/Push
+    p,*,/agntcy.dir.store.v1.StoreService/Pull
+    p,*,/agntcy.dir.store.v1.StoreService/PullReferrer
+    p,*,/agntcy.dir.store.v1.StoreService/Lookup
+    p,*,/agntcy.dir.store.v1.SyncService/RequestRegistryCredentials
+  secrets:
+    ociAuth:
+      username: "admin"
+      password: "admin"
+  reconciler:
+    config:
+      regsync:
+        enabled: false
+      indexer:
+        enabled: false
+  postgresql:
+    enabled: true
+    auth:
+      username: "dir"
+      password: "dir"
+      database: "dir"
+  strategy:
+    type: Recreate
+  extraVolumeMounts:
+    - name: dir-routing-storage
+      mountPath: /etc/routing
+  extraVolumes:
+    - name: dir-routing-storage
+      emptyDir: {}
+  zot:
+    resources: {}
+    mountSecret: true
+    authHeader: "admin:admin"
+    secretFiles:
+      htpasswd: |-
+        admin:</span><span class="se">\$</span><span class="sh">2y</span><span class="se">\$</span><span class="sh">05</span><span class="se">\$</span><span class="sh">vmiurPmJvHylk78HHFWuruFFVePlit9rZWGA/FbZfTEmNRneGJtha
+        user:</span><span class="se">\$</span><span class="sh">2y</span><span class="se">\$</span><span class="sh">05</span><span class="se">\$</span><span class="sh">L86zqQDfH5y445dcMlwu6uHv.oXFgT6AiJCwpv3ehr7idc0rI3S2G
+    mountConfig: true
+    configFiles:
+      config.json: |-
+        {
+          "distSpecVersion": "1.1.1",
+          "storage": {"rootDirectory": "/var/lib/registry"},
+          "http": {
+            "address": "0.0.0.0",
+            "port": "5000",
+            "auth": {"htpasswd": {"path": "/secret/htpasswd"}},
+            "accessControl": {
+              "adminPolicy": {"users": ["admin"], "actions": ["read", "create", "update", "delete"]},
+              "repositories": {"**": {"anonymousPolicy": [], "defaultPolicy": ["read"]}}
+            }
+          },
+          "log": {"level": "info"},
+          "extensions": {"search": {"enable": true}, "trust": {"enable": true, "cosign": true, "notation": false}}
+        }
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<p>Wait for the API server:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">wait</span> <span class="nt">--for</span><span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready pod <span class="nt">-n</span> <span class="nb">dir</span> <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>apiserver <span class="nt">--timeout</span><span class="o">=</span>240s
+</code></pre></div></div>
+
+<p>Expose Directory API via LoadBalancer:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+apiVersion: v1
+kind: Service
+metadata:
+  name: dir-apiserver-external
+  namespace: dir
+  annotations:
+    metallb.io/address-pool: testbed-pool
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: apiserver
+    app.kubernetes.io/instance: dir
+  ports:
+  - port: 8888
+    targetPort: 8888
+    name: grpc
+</span><span class="no">EOF
+</span><span class="c"># EXTERNAL-IP will be 172.18.255.2</span>
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="step-5-deploy-dirctl-on-partner">Step 5: Deploy dirctl on Partner</h2>
+
+<p>Deploy the dirctl chart configured to call the testbed API at <code class="language-plaintext highlighter-rouge">172.18.255.2:8888</code>. The <strong>dirctl chart creates <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code></strong> from <code class="language-plaintext highlighter-rouge">spire.federation</code>, so the partner SPIRE server fetches the testbed bundle and dirctl can verify the API server’s certificate over mTLS. The search cronjob runs every minute to demonstrate cross-cluster connectivity.</p>
+
+<p>Ensure <code class="language-plaintext highlighter-rouge">./testbed.bundle</code> exists before running (from Step 3).</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
+
+helm <span class="nb">install </span>dirctl oci://ghcr.io/agntcy/dir/helm-charts/dirctl <span class="se">\</span>
+  <span class="nt">--version</span> v1.0.0 <span class="se">\</span>
+  <span class="nt">--namespace</span> dir-admin <span class="se">\</span>
+  <span class="nt">--create-namespace</span> <span class="se">\</span>
+  <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
+global:
+  cronjob:
+    failedJobsHistoryLimit: 10
+    successfulJobsHistoryLimit: 10
+    concurrencyPolicy: "Forbid"
+
+image:
+  repository: ghcr.io/agntcy/dir-ctl
+  tag: v1.0.0
+  pullPolicy: IfNotPresent
+
+spire:
+  enabled: true
+  trustDomain: partner.testbed.local
+  useCSIDriver: true
+  className: spire
+  federation:
+    - trustDomain: testbed.internal.local
+      className: spire
+      bundleEndpointURL: https://172.18.255.1:8443
+      bundleEndpointProfile:
+        type: https_spiffe
+        endpointSPIFFEID: spiffe://testbed.internal.local/spire/server
+      trustDomainBundle: |
+</span><span class="si">$(</span><span class="nb">cat</span> ./testbed.bundle | <span class="nb">sed</span> <span class="s1">'s/^/        /'</span><span class="si">)</span><span class="sh">
+
+env:
+  - name: DIRECTORY_CLIENT_SERVER_ADDRESS
+    value: "172.18.255.2:8888"
+  - name: DIRECTORY_CLIENT_AUTH_MODE
+    value: "x509"
+  - name: DIRECTORY_CLIENT_TLS_SKIP_VERIFY
+    value: "true"
+
+cronjobs:
+  search:
+    enabled: true
+    schedule: "* * * * *"
+    args: ["search"]
+</span><span class="no">EOF
+</span></code></pre></div></div>
+
+<blockquote>
+  <p><strong>Note:</strong> <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_TLS_SKIP_VERIFY: "true"</code> is used because the API server is reached via MetalLB IP (no matching cert SAN). For production, use a proper DNS name and valid certificate.</p>
+</blockquote>
+
+<hr />
+
+<h2 id="step-6-verify">Step 6: Verify</h2>
+
+<p><strong>Optional: verify SPIRE federation first.</strong> Confirm each cluster has the other’s trust bundle—helps debug auth failures before running dirctl:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># On testbed – partner's bundle should appear</span>
+kubectl config use-context kind-testbed
+kubectl <span class="nb">exec</span> <span class="nt">-n</span> spire-server spire-server-0 <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
+  spire-server bundle list <span class="nt">-id</span> spiffe://partner.testbed.local <span class="nt">-format</span> spiffe
+
+<span class="c"># On partner – testbed's bundle should appear</span>
+kubectl config use-context kind-partner
+kubectl <span class="nb">exec</span> <span class="nt">-n</span> spire-server spire-server-0 <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
+  spire-server bundle list <span class="nt">-id</span> spiffe://testbed.internal.local <span class="nt">-format</span> spiffe
+</code></pre></div></div>
+
+<p><strong>Verify dirctl can call the Directory API:</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
+kubectl create job <span class="nt">-n</span> dir-admin dirctl-verify <span class="nt">--from</span><span class="o">=</span>cronjob/dirctl-search <span class="nt">--dry-run</span><span class="o">=</span>client <span class="nt">-o</span> yaml | kubectl apply <span class="nt">-f</span> -
+kubectl <span class="nb">wait</span> <span class="nt">--for</span><span class="o">=</span><span class="nv">condition</span><span class="o">=</span><span class="nb">complete </span>job/dirctl-verify <span class="nt">-n</span> dir-admin <span class="nt">--timeout</span><span class="o">=</span>120s
+kubectl logs <span class="nt">-n</span> dir-admin job/dirctl-verify
+</code></pre></div></div>
+
+<p>Expected: successful <code class="language-plaintext highlighter-rouge">search</code> output (list of records or empty). If you see <code class="language-plaintext highlighter-rouge">remote error: tls: bad certificate</code>, ensure the Directory API server has <code class="language-plaintext highlighter-rouge">apiserver.spire.federation</code> for <code class="language-plaintext highlighter-rouge">partner.testbed.local</code> and <code class="language-plaintext highlighter-rouge">authz_policies_csv</code> includes <code class="language-plaintext highlighter-rouge">p,partner.testbed.local,*</code>.</p>
+
+<hr />
+
+<h2 id="cleanup">Cleanup</h2>
+
+<p>When finished, tear down both clusters:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Testbed</span>
+kubectl config use-context kind-testbed
+helm uninstall <span class="nb">dir</span> <span class="nt">-n</span> <span class="nb">dir
+</span>helm uninstall spire <span class="nt">-n</span> spire-server
+helm uninstall spire-crds <span class="nt">-n</span> spire-server
+
+<span class="c"># Partner</span>
+kubectl config use-context kind-partner
+helm uninstall dirctl <span class="nt">-n</span> dir-admin
+helm uninstall spire <span class="nt">-n</span> spire-server
+helm uninstall spire-crds <span class="nt">-n</span> spire-server
+
+<span class="c"># Delete clusters</span>
+kind delete cluster <span class="nt">--name</span> testbed
+kind delete cluster <span class="nt">--name</span> partner
+</code></pre></div></div>
+
+<hr />
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<p>For federation-specific issues (trust bundles, certificates, SSL passthrough), see <a href="https://docs.agntcy.org/dir/federation-troubleshooting/">Federation Troubleshooting</a> in the docs.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Issue</th>
+      <th>Check</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>dirctl auth failure</td>
+      <td><code class="language-plaintext highlighter-rouge">authz_policies_csv</code> has <code class="language-plaintext highlighter-rouge">p,partner.testbed.local,*</code>; dirctl pods get SVIDs</td>
+    </tr>
+    <tr>
+      <td>“no X.509 bundle for trust domain”</td>
+      <td>dirctl needs testbed bundle via <code class="language-plaintext highlighter-rouge">spire.federation</code>; reinstall and retry</td>
+    </tr>
+    <tr>
+      <td>“remote error: tls: bad certificate”</td>
+      <td>Directory needs <code class="language-plaintext highlighter-rouge">apiserver.spire.federation</code> for partner; restart apiserver</td>
+    </tr>
+    <tr>
+      <td>Connection refused</td>
+      <td>MetalLB pools; LoadBalancer selector; Docker network</td>
+    </tr>
+    <tr>
+      <td>Zot 401 / hash errors</td>
+      <td>Use <code class="language-plaintext highlighter-rouge">\$</code> in bcrypt hashes in heredocs to prevent shell expansion</td>
+    </tr>
+    <tr>
+      <td>Reconciler 503</td>
+      <td>Wait for PostgreSQL and Zot to be ready; reconciler needs both for readiness</td>
+    </tr>
+    <tr>
+      <td>SPIFFE CSI driver missing</td>
+      <td>SPIRE chart should provide it; if pods fail, check <code class="language-plaintext highlighter-rouge">spire.useCSIDriver</code> and agent</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr />
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>This hands-on setup demonstrates that <strong>SPIFFE federation doesn’t require production infrastructure</strong>. With two Kind clusters, MetalLB, and the <code class="language-plaintext highlighter-rouge">https_spiffe</code> profile, you can run cross-cluster mTLS in under 20 minutes. The Agent Directory and dirctl charts handle trust bundle configuration automatically—no manual <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code> applies needed. The concepts (trust bundles, workload identity, federation profiles) transfer directly to production; only the profile (<code class="language-plaintext highlighter-rouge">https_web</code>) and infrastructure (Ingress, cert-manager, DNS) change.</p>
+
+<h2 id="next-steps-production-and-public-directory">Next Steps: Production and Public Directory</h2>
+
+<p>For <strong>production</strong> and joining the <strong>public Directory network</strong> at <code class="language-plaintext highlighter-rouge">prod.api.ads.outshift.io</code>:</p>
+
+<ol>
+  <li><strong><a href="https://docs.agntcy.org/dir/prod-deployment/">Production Deployment</a></strong> — EKS, NGINX Ingress, SSL passthrough, persistent storage, credential management.</li>
+  <li><strong><a href="https://docs.agntcy.org/dir/partner-prod-federation/">Partner Federation with Prod</a></strong> — Step-by-step guide using the <code class="language-plaintext highlighter-rouge">https_web</code> profile (Let’s Encrypt), public endpoints, and contributing your federation file to the Directory staging repository.</li>
+</ol>
+
+<h2 id="references">References</h2>
+
+<ul>
+  <li><a href="https://github.com/agntcy/dir">Directory GitHub Repository</a></li>
+  <li><a href="https://docs.agntcy.org/dir/getting-started/">Getting Started</a> — local Kind deployment</li>
+  <li><a href="https://docs.agntcy.org/dir/prod-deployment/">Production Deployment</a> — EKS, NGINX Ingress</li>
+  <li><a href="https://docs.agntcy.org/dir/partner-prod-federation/">Partner Federation with Prod</a> — join the public Directory</li>
+  <li><a href="https://docs.agntcy.org/dir/federation-profiles/">Federation Profiles</a> — https_web vs https_spiffe</li>
+  <li><a href="https://docs.agntcy.org/dir/federation-troubleshooting/">Federation Troubleshooting</a> — best practices and common errors</li>
+  <li><a href="https://spiffe.io">SPIFFE / SPIRE</a></li>
+  <li><a href="https://kind.sigs.k8s.io/">Kind</a></li>
+  <li><a href="https://metallb.org/">MetalLB</a></li>
+</ul>
+
+<hr />
+
+<p><em>Have questions about Agent Directory federation or SPIFFE? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"><span class="post-nav-label">← Previous</span>
+        <a href="/technical/2026/02/19/directory-mcp-server.html">Directory MCP Server: Bringing AI Agent Discovery to Your IDE</a></div>
+    <div class="post-nav-next"><span class="post-nav-label">Next →</span>
+        <a href="/technical/2026/03/13/rust-uniffi-multilanguage-strategy.html">Write Once, Run Everywhere: Why Rust + UniFFI is the Future of Multi-Language Libraries</a></div>
+  </nav>
+
+  <a class="u-url" href="/technical/security/directory/2026/02/25/directory-federation.html" hidden></a>
+</article>
+
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">
+        <h2 class="footer-heading">AGNTCY Blogs</h2>
+        <p class="footer-copyright">Copyright © AGNTCY a Series of LF Projects, LLC</p>
+      </div>
+
+      <div class="footer-col">
+        <ul class="social-media-list"><li>
+            <a href="https://github.com/agntcy">
+              <svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg>
+              <span class="username">GitHub</span>
+            </a>
+          </li><li>
+            <a href="https://www.linkedin.com/company/agntcyproject">
+              <svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#linkedin"></use></svg>
+              <span class="username">LinkedIn</span>
+            </a>
+          </li><li>
+            <a href="https://www.youtube.com/@agntcy-lf">
+              <svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#youtube"></use></svg>
+              <span class="username">YouTube</span>
+            </a>
+          </li><li>
+            <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">
+              <svg class="svg-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.362 10.11c0 .926-.756 1.681-1.681 1.681S0 11.036 0 10.111c0-.926.756-1.681 1.681-1.681h1.681v1.68zm.846 0c0-.926.756-1.681 1.681-1.681s1.681.756 1.681 1.681v4.21c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681v-4.21zM5.89 3.362c-.926 0-1.681-.756-1.681-1.681S4.964 0 5.89 0s1.681.756 1.681 1.681v1.681H5.89zm0 .846c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681H1.68C.756 7.57 0 6.814 0 5.889s.756-1.681 1.681-1.681h4.21zm6.749 1.681c0-.926.756-1.681 1.681-1.681S16 4.964 16 5.889s-.756 1.681-1.681 1.681h-1.681V5.89zm-.846 0c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681V1.68C8.43.756 9.186 0 10.111 0s1.681.756 1.681 1.681v4.21zm-1.681 6.749c.926 0 1.681.756 1.681 1.681S11.036 16 10.111 16s-1.681-.756-1.681-1.681v-1.681h1.681zm0-.846c-.926 0-1.681-.756-1.681-1.681s.756-1.681 1.681-1.681h4.21c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681h-4.21z"/>
+              </svg>
+              <span class="username">Slack</span>
+            </a>
+          </li></ul>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-description">Building infrastructure for the Internet of Agents</p>
+      </div>
+
+    </div>
+  </div>
+
+</footer>
+<script src="/assets/js/theme-toggle.js"></script>
+    <script src="/assets/js/code-copy.js"></script>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      async function renderMermaid() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Agntcy color scheme for mermaid
+        const agntcyTheme = {
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: isDark ? {
+            // Dark mode - agntcy slate theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#e3e3e3',
+            secondaryColor: '#002a4d',
+            tertiaryColor: '#03142b',
+            background: '#03142b',
+            mainBkg: '#03142b',
+            secondBkg: '#002a4d',
+            textColor: '#e3e3e3',
+            nodeBorder: '#0251af',
+            clusterBkg: '#002a4d',
+            clusterBorder: '#0251af',
+            titleColor: '#fbaf46',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#e3e3e3',
+            signalColor: '#e3e3e3',
+            signalTextColor: '#e3e3e3',
+            labelBoxBkgColor: '#002a4d',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#e3e3e3',
+            loopTextColor: '#e3e3e3',
+            noteBkgColor: '#002a4d',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#e3e3e3',
+            activationBkgColor: '#002a4d',
+            activationBorderColor: '#fbaf46',
+            sequenceNumberColor: '#03142b'
+          } : {
+            // Light mode - agntcy blue theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#1c1e21',
+            secondaryColor: '#e8eefb',
+            tertiaryColor: '#eff3fc',
+            background: '#eff3fc',
+            mainBkg: '#eff3fc',
+            secondBkg: '#e8eefb',
+            textColor: '#1c1e21',
+            nodeBorder: '#0251af',
+            clusterBkg: '#e8eefb',
+            clusterBorder: '#0251af',
+            titleColor: '#0251af',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#1c1e21',
+            signalColor: '#1c1e21',
+            signalTextColor: '#1c1e21',
+            labelBoxBkgColor: '#e8eefb',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#1c1e21',
+            loopTextColor: '#1c1e21',
+            noteBkgColor: '#e8eefb',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#1c1e21',
+            activationBkgColor: '#e8eefb',
+            activationBorderColor: '#0251af',
+            sequenceNumberColor: '#f3f6fd'
+          }
+        };
+
+        mermaid.initialize(agntcyTheme);
+        await mermaid.run();
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
+              newDiv.textContent = graphDefinition;
+
+              container.replaceWith(newDiv);
+          });
+
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      });
+    </script>
+    <style>
+    #cookie-notice {
+        padding: 2rem 2rem;
+        display: none;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #1a1a1a;
+        color: #ffffff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 9999;
+        border-top: 3px solid #4a90e2;
+    }
+    #cookie-notice span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    #cookie-notice a {
+        display: inline-block;
+        cursor: pointer;
+        padding: 0.875rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: #4a90e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    #cookie-notice a:hover {
+        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    @media (max-width: 767px) {
+        #cookie-notice {
+            padding: 1.5rem 1rem;
+        }
+        #cookie-notice span {
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        #cookie-notice a {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+<div id="cookie-notice"><span>We would like to use third party cookies and scripts to improve the functionality of this website.</span><a id="cookie-notice-accept" class="btn btn-primary">Approve</a></div>
+<script>
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
+    function loadGoogleAnalytics() {
+        
+        // Load Google Analytics V4
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-3D9938KZCN";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-3D9938KZCN');
+        
+    }
+
+    if(readCookie('cookie-notice-dismissed')=='true') {
+        loadGoogleAnalytics();
+    } else {
+        document.getElementById('cookie-notice').style.display = 'block';
+    }
+
+    document.getElementById('cookie-notice-accept').addEventListener("click",function() {
+        createCookie('cookie-notice-dismissed','true',31);
+        document.getElementById('cookie-notice').style.display = 'none';
+        location.reload();
+    });
+
+</script>
+
+  </body>
+
+</html>
+

@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery | AGNTCY Blogs</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery" />
+<meta name="author" content="Tibor Kircsi" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="The Agent Directory is more than just a service registry—it’s a trusted gateway for discovering and verifying AI agents. With the release of v1.0, we’re introducing a robust dual-mode authentication system that combines the convenience of GitHub OAuth for human operators with the security of SPIFFE workload identity for automated services. This post explores the architecture, implementation, and practical usage of Directory’s new authentication system, designed for both interactive CLI users and automated workloads." />
+<meta property="og:description" content="The Agent Directory is more than just a service registry—it’s a trusted gateway for discovering and verifying AI agents. With the release of v1.0, we’re introducing a robust dual-mode authentication system that combines the convenience of GitHub OAuth for human operators with the security of SPIFFE workload identity for automated services. This post explores the architecture, implementation, and practical usage of Directory’s new authentication system, designed for both interactive CLI users and automated workloads." />
+<link rel="canonical" href="https://blogs.agntcy.org/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html" />
+<meta property="og:site_name" content="AGNTCY Blogs" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-01-22T09:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Tibor Kircsi"},"dateModified":"2026-01-22T09:00:00+00:00","datePublished":"2026-01-22T09:00:00+00:00","description":"The Agent Directory is more than just a service registry—it’s a trusted gateway for discovering and verifying AI agents. With the release of v1.0, we’re introducing a robust dual-mode authentication system that combines the convenience of GitHub OAuth for human operators with the security of SPIFFE workload identity for automated services. This post explores the architecture, implementation, and practical usage of Directory’s new authentication system, designed for both interactive CLI users and automated workloads.","headline":"Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/assets/images/logo-light.svg"},"name":"Tibor Kircsi"},"url":"https://blogs.agntcy.org/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/feed.xml" title="AGNTCY Blogs" /><script>
+    // Set theme immediately to prevent flash of wrong theme
+    (function() {
+      const theme = localStorage.getItem('theme-preference') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><div class="site-branding">
+      <a class="site-logo-link" rel="author" href="/"><img class="site-logo logo-light" src="/assets/images/logo-light.svg" alt="AGNTCY"><img class="site-logo logo-dark" src="/assets/images/logo-dark.svg" alt="AGNTCY"></a>
+      <span class="site-title-text">Blogs</span>
+    </div><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/archive/">Archive</a><a class="page-link" href="/about/">About</a><button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </nav></div>
+</header>
+
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-01-22T09:00:00+00:00" itemprop="datePublished">
+        January 22, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/tkircsi" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Tibor Kircsi</a></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>The <strong>Agent Directory</strong> is more than just a service registry—it’s a <strong>trusted gateway</strong> for discovering and verifying AI agents. With the release of <strong>v1.0</strong>, we’re introducing a robust dual-mode authentication system that combines the convenience of <strong>GitHub OAuth</strong> for human operators with the security of <strong>SPIFFE workload identity</strong> for automated services.</p>
+
+<p>This post explores the architecture, implementation, and practical usage of Directory’s new authentication system, designed for both interactive CLI users and automated workloads.</p>
+
+<!--more-->
+
+<h2 id="the-challenge-two-types-of-users">The Challenge: Two Types of Users</h2>
+
+<p>When building the Agent Directory, we encountered a fundamental question: Who should be allowed to access the system?</p>
+
+<p>The answer wasn’t simple. We had two distinct user personas with very different needs:</p>
+
+<ul>
+  <li><strong>Human Operators</strong> (developers, administrators) need interactive authentication via CLI tools with familiar OAuth flows</li>
+  <li><strong>Automated Workloads</strong> (services, agents, applications) need machine-to-machine authentication with automatic certificate rotation in Kubernetes</li>
+</ul>
+
+<p>Traditional authentication systems force you to choose one approach. We built a system that supports both.</p>
+
+<h2 id="the-solution-dual-mode-authentication">The Solution: Dual-Mode Authentication</h2>
+
+<p>Directory v1.0 introduces a <strong>dual-mode authentication architecture</strong> that seamlessly handles both human and workload authentication:</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    classDef workload fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+    classDef human fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef gateway fill:#0251af,stroke:#f3f6fd,stroke-width:3px,color:#f3f6fd;
+    classDef api fill:#03142b,stroke:#0251af,stroke-width:3px,color:#f3f6fd;
+
+    subgraph Col1["🤖 Workload Authentication"]
+        direction TB
+        W[Agent/Service&lt;br/&gt;Kubernetes Pod]:::workload
+        SPIRE[SPIRE Agent&lt;br/&gt;Workload Identity]:::workload
+        W --&gt;|Request&lt;br/&gt;Certificate| SPIRE
+    end
+
+    subgraph Col2["🏢 Directory Service"]
+        direction TB
+        API[Directory API&lt;br/&gt;SPIFFE-only Auth]:::api
+    end
+
+    subgraph Col3["👤 Human Authentication"]
+        direction TB
+        H[Developer&lt;br/&gt;dirctl CLI]:::human
+        GH[GitHub OAuth&lt;br/&gt;Device Flow]:::human
+        Envoy[Envoy Gateway&lt;br/&gt;ext_authz + RBAC]:::gateway
+        H --&gt;|OAuth&lt;br/&gt;Token| GH
+        GH --&gt;|Validated| Envoy
+    end
+
+    SPIRE ==&gt;|mTLS +&lt;br/&gt;SPIFFE ID| API
+    Envoy ==&gt;|Authorized via&lt;br/&gt;Envoy's SPIFFE ID| API
+</code></pre>
+
+<p><strong>Key Insight:</strong> The Directory API itself has zero authentication code. It only validates SPIFFE IDs, trusting that callers have already been authenticated upstream.</p>
+
+<hr />
+
+<h1 id="part-1-authentication-for-human-operators">Part 1: Authentication for Human Operators</h1>
+
+<p>The most common way to interact with Directory is through the <code class="language-plaintext highlighter-rouge">dirctl</code> CLI. This section covers everything you need to know about authenticating as a human user using GitHub OAuth.</p>
+
+<h2 id="why-github-oauth">Why GitHub OAuth?</h2>
+
+<p>Human operators need:</p>
+<ul>
+  <li>✅ <strong>Interactive authentication</strong> - Simple browser-based login flow</li>
+  <li>✅ <strong>No cluster access required</strong> - Works from any laptop or CI/CD runner</li>
+  <li>✅ <strong>Familiar experience</strong> - Uses your existing GitHub account</li>
+  <li>✅ <strong>Organization-based access</strong> - Leverage GitHub org memberships for authorization</li>
+</ul>
+
+<p>This makes GitHub OAuth perfect for developers, administrators, and CI/CD pipelines.</p>
+
+<h2 id="how-it-works-architecture--flow">How It Works: Architecture &amp; Flow</h2>
+
+<p>For human operators using the <code class="language-plaintext highlighter-rouge">dirctl</code> CLI, we use <strong>GitHub OAuth 2.0 Device Flow</strong>. This provides a familiar authentication experience without requiring a local web server.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant User as Developer
+    participant CLI as dirctl CLI
+    participant GitHub as GitHub OAuth
+    participant Envoy as Envoy Gateway
+    participant API as Directory API
+
+    Note over User,GitHub: Authentication Phase
+    User-&gt;&gt;CLI: dirctl auth login
+    CLI-&gt;&gt;GitHub: Request Device Code
+    GitHub-&gt;&gt;CLI: Device Code + URL
+    CLI-&gt;&gt;User: Display: Visit URL&lt;br/&gt;Enter Code: ABC-123
+
+    User-&gt;&gt;GitHub: Opens Browser&lt;br/&gt;Enters Device Code
+    GitHub-&gt;&gt;User: Authorize dirctl?
+    User-&gt;&gt;GitHub: Yes, Authorize
+
+    CLI-&gt;&gt;GitHub: Poll for Token
+    GitHub-&gt;&gt;CLI: Access Token
+
+    Note over User,API: API Call Phase
+    User-&gt;&gt;CLI: dirctl routing list
+    CLI-&gt;&gt;Envoy: gRPC Call + Bearer Token
+    Envoy-&gt;&gt;Envoy: Validate Token&lt;br/&gt;Check RBAC Rules
+    Envoy-&gt;&gt;API: Forward Request&lt;br/&gt;(as Envoy's SPIFFE ID)
+    API-&gt;&gt;Envoy: Response
+    Envoy-&gt;&gt;CLI: Response
+    CLI-&gt;&gt;User: Display Results
+</code></pre>
+
+<p><strong>How it works:</strong></p>
+
+<ol>
+  <li><strong>Device Flow Initiation</strong>: CLI requests a device code from GitHub</li>
+  <li><strong>User Authorization</strong>: User visits GitHub and authorizes the application</li>
+  <li><strong>Token Issuance</strong>: CLI receives an OAuth access token</li>
+  <li><strong>Envoy Gateway</strong>: Token is sent to Envoy, which validates it and enforces RBAC</li>
+  <li><strong>SPIFFE Impersonation</strong>: Envoy calls the API using its own SPIFFE ID</li>
+</ol>
+
+<p><strong>Key Advantage:</strong> The Directory API never sees user tokens - it only sees Envoy’s trusted SPIFFE ID.</p>
+
+<h2 id="the-envoy-gateway-policy-enforcement-point">The Envoy Gateway: Policy Enforcement Point</h2>
+
+<p>The Envoy gateway is the linchpin of the human authentication flow. It handles:</p>
+
+<ol>
+  <li><strong>Token Validation</strong> - Verifies GitHub OAuth tokens</li>
+  <li><strong>Authorization</strong> - Enforces role-based access control (RBAC)</li>
+  <li><strong>Protocol Translation</strong> - Converts OAuth → SPIFFE</li>
+</ol>
+
+<pre><code class="language-mermaid">flowchart LR
+    classDef input fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+    classDef process fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef output fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+
+    User[User Request&lt;br/&gt;Bearer: gho_xxx]:::input
+    
+    subgraph Envoy["Envoy Gateway"]
+        ExtAuthz[ext_authz Filter&lt;br/&gt;Validate Token]:::process
+        RBAC[RBAC Filter&lt;br/&gt;Check Permissions]:::process
+        Router[Router&lt;br/&gt;Forward Request]:::process
+    end
+    
+    API[Directory API&lt;br/&gt;Accepts: SPIFFE ID]:::output
+    
+    User --&gt; ExtAuthz
+    ExtAuthz --&gt;|Valid User| RBAC
+    RBAC --&gt;|Authorized| Router
+    Router --&gt;|mTLS + Envoy SPIFFE ID| API
+    
+    ExtAuthz -.-&gt;|Invalid Token| Reject[401 Unauthorized]
+    RBAC -.-&gt;|Forbidden| Reject2[403 Forbidden]
+</code></pre>
+
+<p><strong>Envoy Configuration Highlights:</strong></p>
+
+<ul>
+  <li><strong>Custom <code class="language-plaintext highlighter-rouge">ext_authz</code> Service</strong>: Validates GitHub tokens and extracts user identity</li>
+  <li><strong>Casbin-Based RBAC</strong>: Policy-driven authorization with role assignments for users and organizations</li>
+  <li><strong>Fine-Grained Permissions</strong>: Control access per API method (e.g., allow read but deny write operations)</li>
+  <li><strong>SPIFFE Integration</strong>: Uses its own workload identity to call the Directory API</li>
+</ul>
+
+<h2 id="hands-on-github-authentication">Hands-On: GitHub Authentication</h2>
+
+<p>Now that we understand the architecture, let’s walk through GitHub authentication with practical examples using the Agntcy-hosted testbed environment.</p>
+
+<h3 id="prerequisites">Prerequisites</h3>
+
+<ol>
+  <li><strong>CLI Tool</strong>: <code class="language-plaintext highlighter-rouge">dirctl</code> installed (<a href="https://github.com/agntcy/dir#installation">Installation Guide</a>)</li>
+  <li>
+    <p><strong>Authorization</strong>: Your GitHub username or organization must be in the production environment’s allowed list. In case you are not:</p>
+
+    <ul>
+      <li>Contact your Directory administrator if you don’t have access</li>
+      <li>See the <a href="#authorization-who-can-access-what">Authorization section</a> for details on allow lists</li>
+    </ul>
+  </li>
+</ol>
+
+<h3 id="testbed-environment">Testbed Environment</h3>
+
+<p>Agntcy hosts a <strong>public testbed environment</strong> where you can experiment with Directory authentication without needing your own infrastructure. This environment is ideal for learning, testing, and prototyping.</p>
+
+<p><strong>Testbed Endpoints:</strong></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Service</th>
+      <th>URL</th>
+      <th>Purpose</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>GitHub OAuth Gateway</strong></td>
+      <td><code class="language-plaintext highlighter-rouge">https://prod.gateway.ads.outshift.io:443</code></td>
+      <td>Human authentication via GitHub OAuth (public access)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Authentication Support:</strong></p>
+<ul>
+  <li>✅ <strong>GitHub OAuth</strong>: Authenticate interactively using your GitHub account - <strong>Available for all testbed users</strong></li>
+  <li>✅ <strong>Public Access</strong>: No VPN required - accessible from anywhere</li>
+  <li>⚠️ <strong>Authorization Required</strong>: Your GitHub username or organization must be in the allowed list</li>
+  <li>❌ <strong>SPIFFE mTLS</strong>: Not available for public testbed users (requires your own SPIRE infrastructure)</li>
+</ul>
+
+<p><strong>Use Cases:</strong></p>
+<ul>
+  <li><strong>Testing</strong>: Validate your integration before deploying to your own environment</li>
+  <li><strong>Learning</strong>: Understand how Directory authentication works in practice</li>
+  <li><strong>Development</strong>: Build and test applications that use Directory APIs</li>
+  <li><strong>Demos</strong>: Showcase Directory capabilities to stakeholders</li>
+</ul>
+
+<h3 id="step-by-step-guide">Step-by-Step Guide</h3>
+
+<p>Perfect for developers who want quick, interactive access without cluster credentials.</p>
+
+<p><strong>Step 1: Configure Environment</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="o">=</span><span class="s2">"prod.gateway.ads.outshift.io:443"</span>
+<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_AUTH_MODE</span><span class="o">=</span><span class="s2">"github"</span>
+</code></pre></div></div>
+
+<p><strong>Step 2: Authenticate with GitHub</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl auth login
+</code></pre></div></div>
+
+<p>You’ll see:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>╔════════════════════════════════════════════════════════════╗
+║          GitHub OAuth Authentication (Device Flow)         ║
+╚════════════════════════════════════════════════════════════╝
+
+🔐 To authenticate, please follow these steps:
+
+  1. Visit: https://github.com/login/device
+  2. Enter code: AEC4-D40B
+
+💡 You can complete this on any device (phone, laptop, etc.)
+⏱️  Code expires in 15 minutes
+
+Waiting for authorization...
+</code></pre></div></div>
+
+<p>Open your browser, visit the URL, and enter the code. After authorizing, you’ll see:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>✓ Authorization complete!
+
+Fetching user information...
+✓ Authenticated as: yourusername (Your Name)
+Fetching organization memberships...
+✓ Organizations: your-org, another-org
+✓ Token cached for future use
+  Cache location: ~/.config/dirctl/auth-token.json
+
+╔════════════════════════════════════════════════════════════╗
+║              Authentication Complete! ✓                    ║
+╚════════════════════════════════════════════════════════════╝
+
+You can now use 'dirctl' commands with --auth-mode=github
+</code></pre></div></div>
+
+<p><strong>Step 3: Use the CLI</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Get info about a record</span>
+dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
+
+<span class="c"># Pull a specific record</span>
+dirctl pull baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq <span class="nt">-o</span> json
+
+<span class="c"># Check authentication status</span>
+dirctl auth status
+</code></pre></div></div>
+
+<p><strong>Token Caching:</strong> Your OAuth token is securely cached at <code class="language-plaintext highlighter-rouge">~/.config/dirctl/auth-token.json</code>. Subsequent commands automatically use the cached token until it expires (default: 8 hours).</p>
+
+<p><strong>Step 4: Check Authorization Logs (Self-Hosted Only)</strong></p>
+
+<p>If you’re running your own Directory deployment and have cluster access, you can verify that requests are being authorized:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Replace with your namespace and label selectors</span>
+kubectl logs <span class="nt">-n</span> &lt;your-namespace&gt; <span class="nt">-l</span> <span class="nv">app</span><span class="o">=</span>envoy-authz-authz <span class="nt">--tail</span><span class="o">=</span>50 | <span class="nb">grep </span>yourusername
+</code></pre></div></div>
+
+<p><strong>Note:</strong> This step is not available for public testbed users as it requires Kubernetes cluster access.</p>
+
+<h2 id="authorization-role-based-access-control-rbac">Authorization: Role-Based Access Control (RBAC)</h2>
+
+<p>Now that you’ve successfully authenticated, the next critical question is: what can you actually do? Authentication proves <strong>who you are</strong>, but authorization determines <strong>what you can access</strong>.</p>
+
+<p>The Envoy gateway enforces authorization using a role-based access control (RBAC) system powered by <a href="https://casbin.org">Casbin</a>, configured in the Helm chart:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Helm values for Envoy gateway</span>
+<span class="na">authServer</span><span class="pi">:</span>
+  <span class="na">authorization</span><span class="pi">:</span>
+    <span class="c1"># Default role for any authenticated user (empty = deny by default)</span>
+    <span class="na">defaultRole</span><span class="pi">:</span> <span class="s2">"</span><span class="s">reader"</span>
+    
+    <span class="c1"># Explicitly deny specific users (highest priority)</span>
+    <span class="na">userDenyList</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="s2">"</span><span class="s">github:malicious-user"</span>
+    
+    <span class="c1"># Role definitions</span>
+    <span class="na">roles</span><span class="pi">:</span>
+      <span class="c1"># Admin role - full access to all API methods</span>
+      <span class="na">admin</span><span class="pi">:</span>
+        <span class="na">allowedMethods</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">*"</span>  <span class="c1"># Wildcard = all Directory API methods</span>
+        <span class="na">users</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">github:alexdemo2026"</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">github:saradev2026"</span>
+        <span class="na">orgs</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">agntcy"</span>  <span class="c1"># All members of "agntcy" org get admin access</span>
+      
+      <span class="c1"># Reader role - read-only access</span>
+      <span class="na">reader</span><span class="pi">:</span>
+        <span class="na">allowedMethods</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.store.v1.StoreService/Pull"</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.store.v1.StoreService/Lookup"</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.routing.v1.RoutingService/Search"</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.routing.v1.RoutingService/List"</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.search.v1.SearchService/SearchCIDs"</span>
+          <span class="c1"># ... more read-only methods</span>
+        <span class="na">users</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">github:mikeprod2026"</span>
+        <span class="na">orgs</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">contributors"</span>
+</code></pre></div></div>
+
+<p><strong>Authorization Logic (Precedence Order):</strong></p>
+<ol>
+  <li><strong>Deny List</strong> (highest priority) - Blocks access even if user has a role</li>
+  <li><strong>User Role</strong> - Direct user-to-role assignment (e.g., specific users in <code class="language-plaintext highlighter-rouge">admin.users</code>)</li>
+  <li><strong>Organization Role</strong> - Org-to-role assignment (e.g., all members of <code class="language-plaintext highlighter-rouge">agntcy</code> org)</li>
+  <li><strong>Default Role</strong> - Fallback for any authenticated user not explicitly assigned</li>
+  <li><strong>Deny by Default</strong> - If no role matches and no default role is set</li>
+</ol>
+
+<p><strong>Key Features:</strong></p>
+<ul>
+  <li><strong>Policy-Driven</strong>: Authorization rules defined in YAML, no code changes needed</li>
+  <li><strong>Fine-Grained</strong>: Control access per API method (e.g., allow <code class="language-plaintext highlighter-rouge">Pull</code> but deny <code class="language-plaintext highlighter-rouge">Push</code>)</li>
+  <li><strong>Flexible Wildcards</strong>: Use <code class="language-plaintext highlighter-rouge">"*"</code> for full access or specify individual methods</li>
+  <li><strong>Org-Based Assignment</strong>: Leverage GitHub organization membership for role assignment</li>
+</ul>
+
+<h2 id="security--best-practices">Security &amp; Best Practices</h2>
+
+<p>Understanding how to use authentication is important, but implementing it securely is critical. Let’s examine key security practices for managing GitHub tokens and integrating with CI/CD pipelines.</p>
+
+<h3 id="token-security">Token Security</h3>
+
+<p><strong>GitHub OAuth Tokens:</strong></p>
+<ul>
+  <li>Tokens are stored with <strong>0600 permissions</strong> (owner read/write only)</li>
+  <li>Tokens expire after <strong>8 hours</strong> (configurable)</li>
+  <li>Token cache location: <code class="language-plaintext highlighter-rouge">~/.config/dirctl/auth-token.json</code></li>
+  <li><strong>Never commit tokens to version control</strong></li>
+  <li>Use environment variables or secrets management for automation</li>
+</ul>
+
+<h3 id="cicd-integration">CI/CD Integration</h3>
+
+<p>For CI/CD pipelines, you’ll need to provide authentication credentials programmatically. Personal Access Tokens (PATs) are the recommended approach for automated workflows.</p>
+
+<h4 id="personal-access-token-setup">Personal Access Token Setup</h4>
+
+<p>Create and configure a PAT for CI/CD authentication:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># GitHub Actions example using PAT</span>
+<span class="na">name</span><span class="pi">:</span> <span class="s">Deploy Agent</span>
+<span class="na">on</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">push</span><span class="pi">]</span>
+
+<span class="na">jobs</span><span class="pi">:</span>
+  <span class="na">deploy</span><span class="pi">:</span>
+    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
+    <span class="na">steps</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Checkout code</span>
+        <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v3</span>
+      
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Authenticate with Directory</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="pi">:</span> <span class="s2">"</span><span class="s">prod.gateway.ads.outshift.io:443"</span>
+          <span class="na">DIRECTORY_CLIENT_AUTH_MODE</span><span class="pi">:</span> <span class="s2">"</span><span class="s">github"</span>
+          <span class="na">DIRECTORY_CLIENT_GITHUB_TOKEN</span><span class="pi">:</span> <span class="s">$</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">dirctl auth login</span>
+          <span class="s">dirctl auth status</span>
+      
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Push agent card</span>
+        <span class="na">env</span><span class="pi">:</span>
+          <span class="na">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="pi">:</span> <span class="s2">"</span><span class="s">prod.gateway.ads.outshift.io:443"</span>
+          <span class="na">DIRECTORY_CLIENT_AUTH_MODE</span><span class="pi">:</span> <span class="s2">"</span><span class="s">github"</span>
+        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+          <span class="s">dirctl push ./agent-card.json</span>
+</code></pre></div></div>
+
+<p><strong>Setup Steps:</strong></p>
+
+<ol>
+  <li><strong>Create a GitHub Personal Access Token:</strong>
+    <ul>
+      <li>Go to: https://github.com/settings/tokens/new</li>
+      <li>Select scopes: <code class="language-plaintext highlighter-rouge">user:email</code> and <code class="language-plaintext highlighter-rouge">read:org</code></li>
+      <li>Generate token and copy it immediately</li>
+    </ul>
+  </li>
+  <li><strong>Store as repository secret:</strong>
+    <ul>
+      <li>Go to your repository settings: <code class="language-plaintext highlighter-rouge">https://github.com/&lt;org&gt;/&lt;repo&gt;/settings/secrets/actions</code></li>
+      <li>Click “New repository secret”</li>
+      <li>Name: <code class="language-plaintext highlighter-rouge">DIRECTORY_GITHUB_PAT</code></li>
+      <li>Value: Paste your token</li>
+    </ul>
+  </li>
+  <li><strong>Configure RBAC authorization:</strong>
+    <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">authServer</span><span class="pi">:</span>
+  <span class="na">authorization</span><span class="pi">:</span>
+    <span class="na">roles</span><span class="pi">:</span>
+      <span class="na">writer</span><span class="pi">:</span>  <span class="c1"># Or any role with required permissions</span>
+        <span class="na">allowedMethods</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.store.v1.StoreService/Push"</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.store.v1.StoreService/Pull"</span>
+        <span class="na">users</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">github:your-username"</span>  <span class="c1"># Add your GitHub username</span>
+        <span class="na">orgs</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="s2">"</span><span class="s">your-org"</span>  <span class="c1"># Or authorize entire organization</span>
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<p><strong>Best Practices:</strong></p>
+<ul>
+  <li>✅ Store PATs in repository secrets (never commit to code)</li>
+  <li>✅ Use dedicated service accounts for automation</li>
+  <li>✅ Rotate PATs regularly (e.g., quarterly)</li>
+  <li>✅ Scope tokens to minimum required permissions</li>
+  <li>✅ Ensure your user/org is assigned to an appropriate RBAC role</li>
+</ul>
+
+<p><strong>Security Notes:</strong></p>
+<ul>
+  <li>PATs should be treated as sensitive credentials and never committed to version control</li>
+  <li>Use GitHub’s repository secrets or organization secrets for secure storage</li>
+  <li>Consider using different PATs for different environments (dev, staging, prod)</li>
+  <li>Audit PAT usage regularly through GitHub’s security logs</li>
+</ul>
+
+<hr />
+
+<h1 id="part-2-authentication-for-automated-workloads">Part 2: Authentication for Automated Workloads</h1>
+
+<p>While GitHub OAuth is perfect for humans, automated services and agents running in Kubernetes need a different approach. This section covers SPIFFE-based workload identity for machine-to-machine authentication.</p>
+
+<h2 id="why-spiffe">Why SPIFFE?</h2>
+
+<p>Automated workloads need:</p>
+<ul>
+  <li>✅ <strong>No human intervention</strong> - Fully automated certificate lifecycle</li>
+  <li>✅ <strong>Strong cryptographic identity</strong> - Workload-to-workload mTLS</li>
+  <li>✅ <strong>Automatic rotation</strong> - Certificates renew without restarts</li>
+  <li>✅ <strong>Kubernetes-native</strong> - Identity tied to pods, namespaces, and service accounts</li>
+</ul>
+
+<p>This makes SPIFFE perfect for production services, agents, and microservices running in Kubernetes clusters.</p>
+
+<h2 id="how-it-works-architecture--flow-1">How It Works: Architecture &amp; Flow</h2>
+
+<p><strong>SPIFFE</strong> (Secure Production Identity Framework For Everyone) provides workload identity through <strong>mTLS certificates</strong>. This is ideal for service-to-service communication within Kubernetes.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant Service as Agent/Service
+    participant Agent as SPIRE Agent
+    participant API as Directory API
+
+    Note over Service,Agent: Startup Phase
+    Service-&gt;&gt;Agent: Request SPIFFE Certificate
+    Agent-&gt;&gt;Agent: Verify Pod Identity&lt;br/&gt;(ServiceAccount, Labels, etc.)
+    Agent-&gt;&gt;Service: Issue X.509-SVID Certificate&lt;br/&gt;(spiffe://prod.ads.outshift.io/my-agent)
+
+    Note over Service,API: API Call Phase
+    Service-&gt;&gt;API: gRPC Call + mTLS Certificate
+    API-&gt;&gt;API: Validate SPIFFE ID
+    alt Authorized Workload
+        API-&gt;&gt;Service: 200 OK + Data
+    else Unauthorized
+        API-&gt;&gt;Service: 403 Forbidden
+    end
+</code></pre>
+
+<p><strong>How it works:</strong></p>
+
+<ol>
+  <li><strong>Workload Registration</strong>: Services are registered in SPIRE with their intended SPIFFE ID</li>
+  <li><strong>Certificate Issuance</strong>: SPIRE Agent validates the workload and issues a short-lived X.509 certificate</li>
+  <li><strong>mTLS Communication</strong>: The service uses this certificate for mutual TLS with the Directory API</li>
+  <li><strong>Automatic Rotation</strong>: Certificates rotate automatically (typically every 1 hour)</li>
+</ol>
+
+<p><strong>Security Benefits:</strong></p>
+<ul>
+  <li>✅ <strong>No secrets to manage</strong> - No passwords, API keys, or tokens</li>
+  <li>✅ <strong>Automatic expiration</strong> - Certificates rotate without human intervention</li>
+  <li>✅ <strong>Strong identity binding</strong> - Identity tied to Kubernetes resources</li>
+  <li>✅ <strong>Zero-trust security</strong> - Every call is cryptographically authenticated</li>
+</ul>
+
+<h2 id="hands-on-spiffe-authentication">Hands-On: SPIFFE Authentication</h2>
+
+<p><strong>Note:</strong> SPIFFE authentication is not available for the public testbed environment. This option is for organizations running their own Directory deployment with SPIRE infrastructure.</p>
+
+<p>Ideal for services running within your own Kubernetes cluster that need programmatic access. This method works best in environments where the <strong>SPIRE Agent</strong> is deployed as a DaemonSet, allowing workloads to automatically obtain their identity certificates via the Workload API.</p>
+
+<h3 id="two-approaches">Two Approaches</h3>
+
+<ol>
+  <li><strong>Production Workloads (Recommended)</strong>: Use SPIRE Agent + Workload API for fully automated certificate management</li>
+  <li><strong>Local Development/Testing</strong>: Manually export certificates from SPIRE Server for experimentation on your laptop</li>
+</ol>
+
+<p>The manual export approach is only for demonstration and experimenting in your local environment. It allows you to test SPIFFE authentication without needing the full SPIRE infrastructure on your machine. Production workloads should always use the SPIRE Agent for automatic, zero-touch certificate management.</p>
+
+<h3 id="manual-certificate-export-local-testing-only">Manual Certificate Export (Local Testing Only)</h3>
+
+<p>When you want to test Directory authentication from your laptop without SPIRE Agent, you can manually mint a certificate from your own SPIRE server (requires cluster access and administrative permissions):</p>
+
+<p><strong>Step 1: Mint SPIFFE Certificate</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Replace with your own SPIRE server pod name and namespace</span>
+kubectl <span class="nb">exec</span> <span class="nt">-n</span> &lt;your-spire-namespace&gt; &lt;your-spire-server-pod&gt; <span class="se">\</span>
+  <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
+  /opt/spire/bin/spire-server x509 mint <span class="se">\</span>
+  <span class="nt">-dns</span> &lt;your-directory-api-address&gt; <span class="se">\</span>
+  <span class="nt">-spiffeID</span> spiffe://&lt;your-trust-domain&gt;/demo-client <span class="se">\</span>
+  <span class="nt">-ttl</span> 1h <span class="se">\</span>
+  <span class="nt">-output</span> json <span class="o">&gt;</span> spiffe-local.json
+</code></pre></div></div>
+
+<p><strong>Example for your own deployment:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">exec</span> <span class="nt">-n</span> my-spire spire-server-0 <span class="se">\</span>
+  <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
+  /opt/spire/bin/spire-server x509 mint <span class="se">\</span>
+  <span class="nt">-dns</span> directory.mycompany.com <span class="se">\</span>
+  <span class="nt">-spiffeID</span> spiffe://mycompany.com/demo-client <span class="se">\</span>
+  <span class="nt">-ttl</span> 1h <span class="se">\</span>
+  <span class="nt">-output</span> json <span class="o">&gt;</span> spiffe-local.json
+</code></pre></div></div>
+
+<p><strong>Step 2: Configure Environment</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Use your own Directory deployment endpoints</span>
+<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="o">=</span><span class="s2">"&lt;your-directory-api&gt;:443"</span>
+<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_AUTH_MODE</span><span class="o">=</span><span class="s2">"token"</span>
+<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SPIFFE_TOKEN</span><span class="o">=</span><span class="s2">"spiffe-local.json"</span>
+</code></pre></div></div>
+
+<p><strong>Step 3: Use the CLI</strong></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl info &lt;cid&gt;
+dirctl pull &lt;cid&gt; <span class="nt">-o</span> json
+</code></pre></div></div>
+
+<h3 id="production-deployment-recommended">Production Deployment (Recommended)</h3>
+
+<p>The manual certificate export approach above is useful for testing and debugging, but production workloads should use the SPIRE Workload API to automatically obtain and rotate certificates. This requires the SPIRE Agent to be running on the same node as your workload (typically deployed as a Kubernetes DaemonSet).</p>
+
+<p><strong>Key Benefits of SPIRE Agent Integration:</strong></p>
+<ul>
+  <li>✅ <strong>Zero manual steps</strong> - Certificates are obtained automatically via the Workload API</li>
+  <li>✅ <strong>Automatic rotation</strong> - Certificates renew before expiration without restarts</li>
+  <li>✅ <strong>No exported files</strong> - No need to manage <code class="language-plaintext highlighter-rouge">spiffe-local.json</code> files</li>
+  <li>✅ <strong>Production-ready</strong> - The recommended approach for all Kubernetes workloads</li>
+  <li>✅ <strong>Just works</strong> - Your service discovers the SPIRE Agent via the standard Unix domain socket</li>
+</ul>
+
+<p><strong>When to Use Manual Certificate Export:</strong></p>
+<ul>
+  <li>Testing/debugging from your laptop (outside the cluster)</li>
+  <li>CI/CD runners without SPIRE Agent deployed</li>
+  <li>One-time administrative tasks</li>
+  <li>Development environments without full SPIRE infrastructure</li>
+</ul>
+
+<p>For implementation details, see the <a href="https://github.com/agntcy/dir/tree/main/client">Directory Go client documentation</a> and <a href="https://spiffe.io/docs/latest/spire-about/spire-concepts/#workload-api">SPIRE Workload API guide</a>.</p>
+
+<h2 id="authorization-workload-identity-allow-lists">Authorization: Workload Identity Allow Lists</h2>
+
+<p>The Directory API maintains an allow list of trusted SPIFFE IDs:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// Directory API configuration (in your self-hosted deployment)</span>
+<span class="n">authorizedIDs</span> <span class="o">:=</span> <span class="p">[]</span><span class="n">spiffeid</span><span class="o">.</span><span class="n">ID</span><span class="p">{</span>
+    <span class="n">spiffeid</span><span class="o">.</span><span class="n">RequireFromString</span><span class="p">(</span><span class="s">"spiffe://mycompany.com/envoy"</span><span class="p">),</span>
+    <span class="n">spiffeid</span><span class="o">.</span><span class="n">RequireFromString</span><span class="p">(</span><span class="s">"spiffe://mycompany.com/agent-service"</span><span class="p">),</span>
+    <span class="n">spiffeid</span><span class="o">.</span><span class="n">RequireFromString</span><span class="p">(</span><span class="s">"spiffe://mycompany.com/indexer"</span><span class="p">),</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>Authorization Logic:</strong></p>
+<ol>
+  <li>Extract SPIFFE ID from client certificate</li>
+  <li>Check against authorized ID list</li>
+  <li>Deny by default if not found</li>
+</ol>
+
+<p><strong>Why This Matters:</strong></p>
+<ul>
+  <li>✅ <strong>Least Privilege</strong> - Only explicitly authorized workloads can access the API</li>
+  <li>✅ <strong>Defense in Depth</strong> - Even if an attacker compromises a pod, they can’t access the Directory without the correct SPIFFE ID</li>
+  <li>✅ <strong>Audit Trail</strong> - Every request is logged with the authenticated SPIFFE ID</li>
+</ul>
+
+<h2 id="security--best-practices-1">Security &amp; Best Practices</h2>
+
+<p><strong>SPIFFE Certificate Security:</strong></p>
+<ul>
+  <li>Certificates are short-lived, typically one hour</li>
+  <li>Certificates auto-rotate before expiration</li>
+  <li>Certificates are cryptographically bound to workload identity</li>
+  <li>No manual rotation required</li>
+  <li><strong>No secrets stored</strong> - All key material is ephemeral</li>
+</ul>
+
+<p><strong>Production Best Practices:</strong></p>
+<ul>
+  <li>Deploy SPIRE Agent as a DaemonSet in all nodes</li>
+  <li>Use pod selectors for fine-grained workload registration</li>
+  <li>Monitor certificate expiry and rotation</li>
+  <li>Implement proper SPIRE Server high availability</li>
+  <li>Use SPIRE’s federation features for multi-cluster scenarios</li>
+</ul>
+
+<hr />
+
+<h1 id="part-3-choosing-the-right-method">Part 3: Choosing the Right Method</h1>
+
+<h2 id="comparison-when-to-use-each-method">Comparison: When to Use Each Method</h2>
+
+<p>With both authentication methods available, you might wonder which one to choose. The answer depends on your use case, environment, and operational requirements. Here’s a comprehensive comparison to help you decide:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Criteria</th>
+      <th>GitHub OAuth</th>
+      <th>SPIFFE (mTLS)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Use Case</strong></td>
+      <td>Human operators</td>
+      <td>Automated workloads</td>
+    </tr>
+    <tr>
+      <td><strong>Testbed Support</strong></td>
+      <td>✅ Available</td>
+      <td>❌ Not available</td>
+    </tr>
+    <tr>
+      <td><strong>Self-Hosted Support</strong></td>
+      <td>✅ Available</td>
+      <td>✅ Available</td>
+    </tr>
+    <tr>
+      <td><strong>Environment</strong></td>
+      <td>CLI, laptops, CI/CD</td>
+      <td>Kubernetes clusters with SPIRE</td>
+    </tr>
+    <tr>
+      <td><strong>Setup Complexity</strong></td>
+      <td>Low (just GitHub account)</td>
+      <td>Medium (requires SPIRE infrastructure)</td>
+    </tr>
+    <tr>
+      <td><strong>Security Model</strong></td>
+      <td>User identity</td>
+      <td>Workload identity</td>
+    </tr>
+    <tr>
+      <td><strong>Token Lifetime</strong></td>
+      <td>Medium (8 hours)</td>
+      <td>Short (1 hour)</td>
+    </tr>
+    <tr>
+      <td><strong>Rotation</strong></td>
+      <td>Manual (re-login)</td>
+      <td>Automatic (with SPIRE Agent)</td>
+    </tr>
+    <tr>
+      <td><strong>Production Workflow</strong></td>
+      <td>Login once per 8 hours</td>
+      <td>Fully automated via Workload API</td>
+    </tr>
+    <tr>
+      <td><strong>Local Testing</strong></td>
+      <td>Same as production</td>
+      <td>Manual cert export (demo/experimentation)</td>
+    </tr>
+    <tr>
+      <td><strong>Cluster Access</strong></td>
+      <td>Not required</td>
+      <td>Required for setup</td>
+    </tr>
+    <tr>
+      <td><strong>Best For</strong></td>
+      <td>Development, testing, demos</td>
+      <td>Production services in self-hosted</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Rule of Thumb:</strong></p>
+<ul>
+  <li><strong>For Agntcy Testbed</strong>: Use GitHub OAuth (only authentication method available for public testbed)</li>
+  <li><strong>For Human Users (any environment)</strong>: Use GitHub OAuth for CLI interactions, development, and CI/CD</li>
+  <li><strong>For Self-Hosted Production Workloads</strong>: Use <strong>SPIFFE with SPIRE Agent</strong> for Kubernetes services (fully automated, zero manual steps)</li>
+  <li><strong>For Local Development/Testing</strong>: Use <strong>SPIFFE manual cert export</strong> for experimentation with your own infrastructure (demo purposes only)</li>
+</ul>
+
+<h2 id="whats-next">What’s Next?</h2>
+
+<p>Directory v1.0 provides a solid foundation for secure agent discovery with <strong>fine-grained RBAC</strong> already implemented. The authentication story continues to evolve with these planned enhancements:</p>
+
+<ul>
+  <li><strong>OIDC Provider Support</strong>: Integration with enterprise identity providers (Okta, Azure AD, Zitadel)</li>
+  <li><strong>Enhanced RBAC</strong>: Per-resource permissions (e.g., read/write access to specific CIDs or namespaces)</li>
+  <li><strong>Audit Logging</strong>: Comprehensive access logs for compliance and security monitoring</li>
+  <li><strong>Multi-Tenancy</strong>: Namespace-based isolation for multi-organization deployments</li>
+  <li><strong>Dynamic Policy Updates</strong>: Hot-reload RBAC policies without service restarts</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Directory v1.0’s dual-mode authentication architecture demonstrates that <strong>security doesn’t have to compromise usability</strong>. By combining GitHub OAuth, SPIFFE workload identity, and Casbin-based RBAC, we’ve created a system that’s:</p>
+
+<ul>
+  <li>✅ <strong>Developer-friendly</strong> - Familiar OAuth flows, cached tokens, simple CLI</li>
+  <li>✅ <strong>Secure by default</strong> - Zero-trust, mutual TLS, automatic rotation, fine-grained permissions</li>
+  <li>✅ <strong>Production-ready</strong> - Battle-tested in real-world environments with policy-driven authorization</li>
+  <li>✅ <strong>Flexible</strong> - Supports both human operators and automated workloads with customizable roles</li>
+</ul>
+
+<p>Whether you’re building AI agents, deploying microservices, or managing a service mesh, the Agent Directory provides the trusted foundation for secure service discovery with enterprise-grade access control.</p>
+
+<h2 id="-references">📚 References</h2>
+
+<ul>
+  <li><a href="https://github.com/agntcy/dir">Directory GitHub Repository</a></li>
+  <li><a href="https://spiffe.io">SPIFFE/SPIRE Documentation</a></li>
+  <li><a href="https://datatracker.ietf.org/doc/html/rfc8628">OAuth 2.0 Device Flow (RFC 8628)</a></li>
+  <li><a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter">Envoy External Authorization</a></li>
+  <li><a href="https://docs.github.com/en/developers/apps/building-oauth-apps">GitHub OAuth Apps</a></li>
+  <li><a href="https://casbin.org">Casbin - Authorization Library</a></li>
+</ul>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"><span class="post-nav-label">← Previous</span>
+        <a href="/technical/2026/01/20/distributing-c-artifacts-for-go-modules.html">Distributing C Artifacts for Go Modules: A Practical Approach</a></div>
+    <div class="post-nav-next"><span class="post-nav-label">Next →</span>
+        <a href="/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html">Integrating Rust and Go with UniFFI: A Complete Guide</a></div>
+  </nav>
+
+  <a class="u-url" href="/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html" hidden></a>
+</article>
+
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">
+        <h2 class="footer-heading">AGNTCY Blogs</h2>
+        <p class="footer-copyright">Copyright © AGNTCY a Series of LF Projects, LLC</p>
+      </div>
+
+      <div class="footer-col">
+        <ul class="social-media-list"><li>
+            <a href="https://github.com/agntcy">
+              <svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg>
+              <span class="username">GitHub</span>
+            </a>
+          </li><li>
+            <a href="https://www.linkedin.com/company/agntcyproject">
+              <svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#linkedin"></use></svg>
+              <span class="username">LinkedIn</span>
+            </a>
+          </li><li>
+            <a href="https://www.youtube.com/@agntcy-lf">
+              <svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#youtube"></use></svg>
+              <span class="username">YouTube</span>
+            </a>
+          </li><li>
+            <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">
+              <svg class="svg-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.362 10.11c0 .926-.756 1.681-1.681 1.681S0 11.036 0 10.111c0-.926.756-1.681 1.681-1.681h1.681v1.68zm.846 0c0-.926.756-1.681 1.681-1.681s1.681.756 1.681 1.681v4.21c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681v-4.21zM5.89 3.362c-.926 0-1.681-.756-1.681-1.681S4.964 0 5.89 0s1.681.756 1.681 1.681v1.681H5.89zm0 .846c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681H1.68C.756 7.57 0 6.814 0 5.889s.756-1.681 1.681-1.681h4.21zm6.749 1.681c0-.926.756-1.681 1.681-1.681S16 4.964 16 5.889s-.756 1.681-1.681 1.681h-1.681V5.89zm-.846 0c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681V1.68C8.43.756 9.186 0 10.111 0s1.681.756 1.681 1.681v4.21zm-1.681 6.749c.926 0 1.681.756 1.681 1.681S11.036 16 10.111 16s-1.681-.756-1.681-1.681v-1.681h1.681zm0-.846c-.926 0-1.681-.756-1.681-1.681s.756-1.681 1.681-1.681h4.21c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681h-4.21z"/>
+              </svg>
+              <span class="username">Slack</span>
+            </a>
+          </li></ul>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-description">Building infrastructure for the Internet of Agents</p>
+      </div>
+
+    </div>
+  </div>
+
+</footer>
+<script src="/assets/js/theme-toggle.js"></script>
+    <script src="/assets/js/code-copy.js"></script>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      async function renderMermaid() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Agntcy color scheme for mermaid
+        const agntcyTheme = {
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: isDark ? {
+            // Dark mode - agntcy slate theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#e3e3e3',
+            secondaryColor: '#002a4d',
+            tertiaryColor: '#03142b',
+            background: '#03142b',
+            mainBkg: '#03142b',
+            secondBkg: '#002a4d',
+            textColor: '#e3e3e3',
+            nodeBorder: '#0251af',
+            clusterBkg: '#002a4d',
+            clusterBorder: '#0251af',
+            titleColor: '#fbaf46',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#e3e3e3',
+            signalColor: '#e3e3e3',
+            signalTextColor: '#e3e3e3',
+            labelBoxBkgColor: '#002a4d',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#e3e3e3',
+            loopTextColor: '#e3e3e3',
+            noteBkgColor: '#002a4d',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#e3e3e3',
+            activationBkgColor: '#002a4d',
+            activationBorderColor: '#fbaf46',
+            sequenceNumberColor: '#03142b'
+          } : {
+            // Light mode - agntcy blue theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#1c1e21',
+            secondaryColor: '#e8eefb',
+            tertiaryColor: '#eff3fc',
+            background: '#eff3fc',
+            mainBkg: '#eff3fc',
+            secondBkg: '#e8eefb',
+            textColor: '#1c1e21',
+            nodeBorder: '#0251af',
+            clusterBkg: '#e8eefb',
+            clusterBorder: '#0251af',
+            titleColor: '#0251af',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#1c1e21',
+            signalColor: '#1c1e21',
+            signalTextColor: '#1c1e21',
+            labelBoxBkgColor: '#e8eefb',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#1c1e21',
+            loopTextColor: '#1c1e21',
+            noteBkgColor: '#e8eefb',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#1c1e21',
+            activationBkgColor: '#e8eefb',
+            activationBorderColor: '#0251af',
+            sequenceNumberColor: '#f3f6fd'
+          }
+        };
+
+        mermaid.initialize(agntcyTheme);
+        await mermaid.run();
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
+              newDiv.textContent = graphDefinition;
+
+              container.replaceWith(newDiv);
+          });
+
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      });
+    </script>
+    <style>
+    #cookie-notice {
+        padding: 2rem 2rem;
+        display: none;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #1a1a1a;
+        color: #ffffff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 9999;
+        border-top: 3px solid #4a90e2;
+    }
+    #cookie-notice span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    #cookie-notice a {
+        display: inline-block;
+        cursor: pointer;
+        padding: 0.875rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: #4a90e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    #cookie-notice a:hover {
+        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    @media (max-width: 767px) {
+        #cookie-notice {
+            padding: 1.5rem 1rem;
+        }
+        #cookie-notice span {
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        #cookie-notice a {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+<div id="cookie-notice"><span>We would like to use third party cookies and scripts to improve the functionality of this website.</span><a id="cookie-notice-accept" class="btn btn-primary">Approve</a></div>
+<script>
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
+    function loadGoogleAnalytics() {
+        
+        // Load Google Analytics V4
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-3D9938KZCN";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-3D9938KZCN');
+        
+    }
+
+    if(readCookie('cookie-notice-dismissed')=='true') {
+        loadGoogleAnalytics();
+    } else {
+        document.getElementById('cookie-notice').style.display = 'block';
+    }
+
+    document.getElementById('cookie-notice-accept').addEventListener("click",function() {
+        createCookie('cookie-notice-dismissed','true',31);
+        document.getElementById('cookie-notice').style.display = 'none';
+        location.reload();
+    });
+
+</script>
+
+  </body>
+
+</html>
+
