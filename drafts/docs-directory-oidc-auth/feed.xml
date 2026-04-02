@@ -1,0 +1,465 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/" rel="alternate" type="text/html" /><updated>2026-04-02T16:29:00+00:00</updated><id>https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Directory v1.x: Unified OIDC Authentication for Humans, Machines, and CI</title><link href="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/03/16/directory-oidc-authentication-unified-access.html" rel="alternate" type="text/html" title="Directory v1.x: Unified OIDC Authentication for Humans, Machines, and CI" /><published>2026-03-16T09:00:00+00:00</published><updated>2026-03-16T09:00:00+00:00</updated><id>https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/03/16/directory-oidc-authentication-unified-access</id><content type="html" xml:base="https://blogs.agntcy.org/drafts/docs-directory-oidc-auth/security/authentication/directory/2026/03/16/directory-oidc-authentication-unified-access.html"><![CDATA[<p>Authentication in Directory has evolved significantly. We moved from a mixed model centered on GitHub OAuth for user access to a <strong>unified OIDC-first model</strong> that supports three real-world access patterns with one consistent trust and authorization pipeline:</p>
+
+<ol>
+  <li>Human interactive login</li>
+  <li>Service user (machine-to-machine) login</li>
+  <li>GitHub Actions workload identity</li>
+</ol>
+
+<p>This post explains the architecture, security model, migration path, and practical usage patterns for the new OIDC-based setup.</p>
+
+<!--more-->
+
+<h2 id="why-we-changed">Why We Changed</h2>
+
+<p>The previous model solved an important problem, but it became limiting as usage expanded:</p>
+
+<ul>
+  <li>Human operators needed browser-based login and cached session behavior</li>
+  <li>Service users needed one-step non-interactive auth without manual token curl flows</li>
+  <li>CI pipelines needed short-lived workload identity without long-lived PAT secrets</li>
+</ul>
+
+<p>A single OIDC model gives us:</p>
+
+<ul>
+  <li>✅ One identity protocol across humans, machines, and workflows</li>
+  <li>✅ Short-lived bearer tokens instead of long-lived static credentials</li>
+  <li>✅ Cleaner RBAC principal mapping in <code class="language-plaintext highlighter-rouge">envoy-authz</code></li>
+  <li>✅ Better security posture for automation and public gateway usage</li>
+</ul>
+
+<h2 id="the-new-model-at-a-glance">The New Model at a Glance</h2>
+
+<p>Directory now uses <strong>OIDC for caller identity</strong>, while preserving <strong>SPIFFE-based service trust</strong> inside the platform.</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    classDef actor fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
+    classDef idp fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
+    classDef gateway fill:#0251af,stroke:#f3f6fd,stroke-width:3px,color:#f3f6fd;
+    classDef api fill:#03142b,stroke:#0251af,stroke-width:3px,color:#f3f6fd;
+
+    H[Human Operator&lt;br/&gt;dirctl auth login]:::actor
+    SU[Service User&lt;br/&gt;pre-issued token]:::actor
+    GHA[GitHub Actions&lt;br/&gt;OIDC token]:::actor
+
+    Dex[Dex OIDC&lt;br/&gt;Token Broker]:::idp
+    GitHubOIDC[GitHub OIDC&lt;br/&gt;token.actions.githubusercontent.com]:::idp
+
+    Envoy[Envoy Gateway&lt;br/&gt;jwt_authn + ext_authz]:::gateway
+    API[Directory API&lt;br/&gt;SPIFFE-trusted backend]:::api
+
+    H --&gt;|OIDC token| Envoy
+    SU --&gt;|OIDC token| Envoy
+    GHA --&gt;|OIDC token| Envoy
+
+    Envoy --&gt;|JWKS verify| Dex
+    Envoy --&gt;|JWKS verify| GitHubOIDC
+
+    Envoy --&gt;|Authorized request| API
+</code></pre>
+
+<p>Key idea: <strong>identity is OIDC at the edge, authorization is policy-driven in ext-authz, backend trust remains SPIFFE-aware.</strong></p>
+
+<hr />
+
+<h1 id="part-1-human-interactive-oidc">Part 1: Human Interactive OIDC</h1>
+
+<p>Human users authenticate with OIDC PKCE via <code class="language-plaintext highlighter-rouge">dirctl auth login</code>.</p>
+
+<p>In practice this is the “developer laptop” path: interactive browser login once, then cached token reuse for normal CLI operations.</p>
+
+<h2 id="flow">Flow</h2>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant User as Developer
+    participant CLI as dirctl
+    participant IdP as Dex OIDC
+    participant Envoy as Envoy Gateway
+    participant Authz as ext-authz
+    participant API as Directory API
+
+    User-&gt;&gt;CLI: dirctl auth login
+    CLI-&gt;&gt;IdP: PKCE auth code flow
+    IdP-&gt;&gt;CLI: access token
+    CLI-&gt;&gt;CLI: cache token (~/.config/dirctl/auth-token.json)
+
+    User-&gt;&gt;CLI: dirctl search --auth-mode=oidc
+    CLI-&gt;&gt;Envoy: gRPC + Bearer token
+    Envoy-&gt;&gt;Envoy: jwt_authn validates issuer/signature
+    Envoy-&gt;&gt;Authz: principal + method check
+    Authz-&gt;&gt;Envoy: allow/deny
+    Envoy-&gt;&gt;API: forward authorized call
+    API-&gt;&gt;Envoy: response
+    Envoy-&gt;&gt;CLI: response
+</code></pre>
+
+<h2 id="request-and-dataflow-human-path">Request and dataflow (human path)</h2>
+
+<ol>
+  <li><code class="language-plaintext highlighter-rouge">dirctl</code> gets an access token from Dex (PKCE) and caches it locally.</li>
+  <li>CLI sends gRPC request with <code class="language-plaintext highlighter-rouge">Authorization: Bearer &lt;token&gt;</code> to Envoy.</li>
+  <li>Envoy <code class="language-plaintext highlighter-rouge">jwt_authn</code> validates issuer/signature and routes only verified JWTs forward.</li>
+  <li><code class="language-plaintext highlighter-rouge">ext_authz</code> extracts canonical principal (typically <code class="language-plaintext highlighter-rouge">user:{iss}:{email}</code>) and checks method permission in Casbin.</li>
+  <li>On allow, request is forwarded and backend sees the authorized identity context.</li>
+</ol>
+
+<p>This keeps authn/authz logic centralized at the edge while keeping backend behavior consistent.</p>
+
+<h2 id="example">Example</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_OIDC_ISSUER</span><span class="o">=</span><span class="s2">"https://prod.idp.ads.outshift.io"</span>
+<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_OIDC_CLIENT_ID</span><span class="o">=</span><span class="s2">"dirctl"</span>
+
+<span class="c"># Interactive login (opens browser)</span>
+dirctl auth login
+
+<span class="c"># Or device flow (no browser needed)</span>
+dirctl auth login <span class="nt">--device</span>
+
+dirctl auth status
+
+dirctl search <span class="nt">--version</span> <span class="s2">"v1.*"</span> <span class="se">\</span>
+  <span class="nt">--server-addr</span> <span class="s2">"prod.gateway.ads.outshift.io:443"</span> <span class="se">\</span>
+  <span class="nt">--auth-mode</span><span class="o">=</span>oidc <span class="se">\</span>
+  <span class="nt">--output</span> json
+</code></pre></div></div>
+
+<hr />
+
+<h1 id="part-2-service-user--machine-authentication">Part 2: Service User / Machine Authentication</h1>
+
+<p>Service users (bots, automation, MCP agents) authenticate using pre-issued tokens passed via <code class="language-plaintext highlighter-rouge">--auth-token</code> or the <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_AUTH_TOKEN</code> environment variable.</p>
+
+<p>This is the preferred path for non-interactive automation outside GitHub Actions (for example bots, scheduled jobs, and service integrations).</p>
+
+<h2 id="pre-issued-token-usage">Pre-issued token usage</h2>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_AUTH_TOKEN</span><span class="o">=</span><span class="s2">"&lt;service-user-jwt&gt;"</span>
+<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="o">=</span><span class="s2">"prod.gateway.ads.outshift.io:443"</span>
+
+dirctl search <span class="nt">--version</span> <span class="s2">"v1.*"</span> <span class="se">\</span>
+  <span class="nt">--auth-mode</span><span class="o">=</span>oidc <span class="se">\</span>
+  <span class="nt">--output</span> json
+</code></pre></div></div>
+
+<h2 id="request-and-dataflow-service-user-path">Request and dataflow (service user path)</h2>
+
+<ol>
+  <li>The pre-issued JWT is passed directly to Envoy via <code class="language-plaintext highlighter-rouge">Authorization: Bearer</code> header.</li>
+  <li>Runtime requests go through the same edge chain: <code class="language-plaintext highlighter-rouge">jwt_authn</code> -&gt; <code class="language-plaintext highlighter-rouge">ext_authz</code> -&gt; backend.</li>
+  <li>Principal is resolved as <code class="language-plaintext highlighter-rouge">client:{iss}:{email}</code> based on the token’s claims and issuer configuration.</li>
+</ol>
+
+<p>This keeps service user auth consistent with human OIDC transport and policy enforcement, while supporting long-lived tokens for automation that cannot use interactive login.</p>
+
+<hr />
+
+<h1 id="part-3-github-actions-oidc-no-pat">Part 3: GitHub Actions OIDC (No PAT)</h1>
+
+<p>CI now uses workload identity tokens from GitHub OIDC instead of <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_GITHUB_TOKEN</code> PAT flows.</p>
+
+<p>This gives per-run, short-lived identity and avoids storing long-lived credentials for Directory access in CI.</p>
+
+<h2 id="reusable-workflow-actions">Reusable workflow actions</h2>
+
+<p>We introduced reusable workflow actions to simplify secure CI usage:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">./.github/actions/build-dirctl</code></li>
+  <li><code class="language-plaintext highlighter-rouge">./.github/actions/fetch-oidc-token</code></li>
+</ul>
+
+<h2 id="minimal-pattern">Minimal pattern</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">permissions</span><span class="pi">:</span>
+  <span class="na">id-token</span><span class="pi">:</span> <span class="s">write</span>
+  <span class="na">contents</span><span class="pi">:</span> <span class="s">read</span>
+
+<span class="na">steps</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v4</span>
+
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Build dirctl from branch source</span>
+    <span class="na">id</span><span class="pi">:</span> <span class="s">build-dirctl</span>
+    <span class="na">uses</span><span class="pi">:</span> <span class="s">./.github/actions/build-dirctl</span>
+    <span class="na">with</span><span class="pi">:</span>
+      <span class="na">go_version</span><span class="pi">:</span> <span class="s2">"</span><span class="s">1.26.1"</span>
+
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Fetch OIDC token</span>
+    <span class="na">id</span><span class="pi">:</span> <span class="s">oidc</span>
+    <span class="na">uses</span><span class="pi">:</span> <span class="s">./.github/actions/fetch-oidc-token</span>
+    <span class="na">with</span><span class="pi">:</span>
+      <span class="na">audience</span><span class="pi">:</span> <span class="s">dir</span>
+
+  <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Run search</span>
+    <span class="na">env</span><span class="pi">:</span>
+      <span class="na">DIRECTORY_CLIENT_AUTH_TOKEN</span><span class="pi">:</span> <span class="s">$</span>
+      <span class="na">DIRCTL_PATH</span><span class="pi">:</span> <span class="s">$</span>
+    <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
+      <span class="s">"${DIRCTL_PATH}" search --name "*" \</span>
+        <span class="s">--server-addr "prod.gateway.ads.outshift.io:443" \</span>
+        <span class="s">--auth-mode=oidc \</span>
+        <span class="s">--output json</span>
+</code></pre></div></div>
+
+<p>This removes long-lived PAT dependence for workflow access to Directory.</p>
+
+<h2 id="request-and-dataflow-github-actions-path">Request and dataflow (GitHub Actions path)</h2>
+
+<ol>
+  <li>Workflow requests OIDC token from GitHub (<code class="language-plaintext highlighter-rouge">id-token: write</code> permission).</li>
+  <li>Token is passed to <code class="language-plaintext highlighter-rouge">dirctl</code> via <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_AUTH_TOKEN</code>.</li>
+  <li>Envoy validates GitHub issuer/JWKS and expected audience.</li>
+  <li><code class="language-plaintext highlighter-rouge">ext_authz</code> maps trusted workflow claims to canonical workflow principal (<code class="language-plaintext highlighter-rouge">ghwf:...</code>) and applies Casbin role checks.</li>
+  <li>Request is allowed only if workflow identity and method permissions match policy.</li>
+</ol>
+
+<p>This is why CI identity is treated as workload identity, not human federation identity.</p>
+
+<hr />
+
+<h1 id="part-4-why-this-ci-model-decision-record">Part 4: Why This CI Model (Decision Record)</h1>
+
+<p>Before landing on the current setup, we evaluated multiple GitHub Actions integration patterns.</p>
+
+<h2 id="options-we-considered">Options we considered</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Option</th>
+      <th>Security</th>
+      <th>Effort</th>
+      <th>Operational Complexity</th>
+      <th>Final decision</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Trust GitHub Actions OIDC directly at edge</td>
+      <td>High (short-lived, workflow identity)</td>
+      <td>Medium</td>
+      <td>Medium</td>
+      <td>✅ Chosen</td>
+    </tr>
+    <tr>
+      <td>GitHub OIDC -&gt; broker/token exchange -&gt; internal token</td>
+      <td>Very high</td>
+      <td>High</td>
+      <td>High</td>
+      <td>Later candidate</td>
+    </tr>
+    <tr>
+      <td>Pre-issued service tokens from dedicated IdP</td>
+      <td>Medium (long-lived token)</td>
+      <td>Low</td>
+      <td>Low/Medium</td>
+      <td>Useful fallback</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="why-direct-github-oidc-trust-won-for-now">Why direct GitHub OIDC trust won for now</h2>
+
+<ul>
+  <li>It removes long-lived PAT/static-secret dependency in CI</li>
+  <li>It maps naturally to workflow-level identity claims</li>
+  <li>It fits our current Envoy + <code class="language-plaintext highlighter-rouge">jwt_authn</code> + <code class="language-plaintext highlighter-rouge">ext_authz</code> architecture</li>
+  <li>It delivered strong security quickly without introducing a new broker service</li>
+</ul>
+
+<h2 id="important-distinction">Important distinction</h2>
+
+<p>GitHub appears in two very different roles:</p>
+
+<ul>
+  <li><strong>GitHub federation for humans</strong> (browser login UX)</li>
+  <li><strong>GitHub Actions OIDC for workloads</strong> (ephemeral workflow identity)</li>
+</ul>
+
+<p>Treating workflow identity as machine/workload auth (not human federation) was a key design choice.</p>
+
+<hr />
+
+<h1 id="part-5-authorization-model-ext-authz--casbin">Part 5: Authorization Model (ext-authz + Casbin)</h1>
+
+<p>Identity and authorization are intentionally separated:</p>
+
+<ol>
+  <li>Envoy <code class="language-plaintext highlighter-rouge">jwt_authn</code> validates token issuer/signature/audience</li>
+  <li><code class="language-plaintext highlighter-rouge">envoy-authz</code> extracts canonical principal</li>
+  <li>Casbin enforces method-level role permissions</li>
+</ol>
+
+<h2 id="request-pipeline-details">Request pipeline details</h2>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Client (Bearer JWT)
+  -&gt; Envoy jwt_authn
+      - validates token (iss, signature, aud)
+      - forwards verified payload
+  -&gt; ext_authz
+      - computes canonical principal
+      - enforces Casbin role/method policy
+      - sets authorization identity headers
+  -&gt; backend
+      - receives request already authorized with canonical identity
+</code></pre></div></div>
+
+<h2 id="canonical-identity-consistency">Canonical identity consistency</h2>
+
+<p>A subtle but important behavior: the backend should see the <strong>same principal</strong> that authorization evaluated.</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">jwt_authn</code> can expose identity from standard claims (e.g. <code class="language-plaintext highlighter-rouge">sub</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">ext_authz</code> computes canonical principal (<code class="language-plaintext highlighter-rouge">user:...</code>, <code class="language-plaintext highlighter-rouge">client:...</code>, <code class="language-plaintext highlighter-rouge">ghwf:...</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">ext_authz</code> returns headers so the backend gets that canonical identity, avoiding “authorized one identity, logged another” drift</li>
+</ul>
+
+<p>This improves auditability and reduces policy confusion.</p>
+
+<h2 id="forwarded-x--headers-for-backend-features">Forwarded <code class="language-plaintext highlighter-rouge">x-</code> headers for backend features</h2>
+
+<p>These identity headers are forwarded downstream after authorization and can be used by backend services for rate limits, audit logs, and feature controls:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">x-authorized-principal</code>: canonical identity used by Casbin (for example <code class="language-plaintext highlighter-rouge">user:...</code>, <code class="language-plaintext highlighter-rouge">client:...</code>, <code class="language-plaintext highlighter-rouge">ghwf:...</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">x-user-id</code>: set to the same canonical principal value for consistent identity handling</li>
+  <li><code class="language-plaintext highlighter-rouge">x-principal-type</code>: principal class (for example <code class="language-plaintext highlighter-rouge">user</code>, <code class="language-plaintext highlighter-rouge">service</code>, <code class="language-plaintext highlighter-rouge">github</code>, <code class="language-plaintext highlighter-rouge">public</code>)</li>
+  <li><code class="language-plaintext highlighter-rouge">x-user-issuer</code>: issuer claim projected by <code class="language-plaintext highlighter-rouge">jwt_authn</code> (<code class="language-plaintext highlighter-rouge">iss</code>)</li>
+</ul>
+
+<p>The verified JWT payload header (<code class="language-plaintext highlighter-rouge">x-jwt-payload</code>) is used by <code class="language-plaintext highlighter-rouge">ext_authz</code> for extraction/evaluation; client-supplied values are stripped at the edge before JWT validation.</p>
+
+<h2 id="principal-types">Principal types</h2>
+
+<ul>
+  <li>Human users: <code class="language-plaintext highlighter-rouge">user:{iss}:{email}</code></li>
+  <li>Machine clients: <code class="language-plaintext highlighter-rouge">client:{iss}:{email}</code></li>
+  <li>GitHub workflows: <code class="language-plaintext highlighter-rouge">ghwf:repo:{repo}:workflow:{file}:ref:{ref}[:env:{env}]</code></li>
+</ul>
+
+<h2 id="github-workflow-wildcard-support">GitHub workflow wildcard support</h2>
+
+<p>To avoid per-branch role churn, workflow principals support constrained wildcard matching:</p>
+
+<ul>
+  <li>Allowed: one trailing <code class="language-plaintext highlighter-rouge">*</code> in branch suffix under <code class="language-plaintext highlighter-rouge">:ref:refs/heads/</code></li>
+  <li>Example: <code class="language-plaintext highlighter-rouge">ghwf:repo:agntcy/dir:workflow:oidc-test.yml:ref:refs/heads/*</code></li>
+  <li>Not allowed: multiple wildcards, internal wildcards, wildcard outside branch segment</li>
+</ul>
+
+<p>This keeps matching practical while avoiding regex complexity and policy ambiguity.</p>
+
+<hr />
+
+<h1 id="part-6-claim-validation-and-policy-boundaries">Part 6: Claim Validation and Policy Boundaries</h1>
+
+<p>For GitHub workflow identity, trust is not just “issuer is GitHub.” We also bind authorization to stable workflow context claims.</p>
+
+<p>Typical checks include:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">iss == https://token.actions.githubusercontent.com</code></li>
+  <li><code class="language-plaintext highlighter-rouge">aud == &lt;expected audience&gt;</code></li>
+  <li><code class="language-plaintext highlighter-rouge">repository</code> and <code class="language-plaintext highlighter-rouge">repository_owner</code></li>
+  <li><code class="language-plaintext highlighter-rouge">ref</code> (branch/tag)</li>
+  <li><code class="language-plaintext highlighter-rouge">job_workflow_ref</code> (workflow file + ref)</li>
+  <li>optional <code class="language-plaintext highlighter-rouge">environment</code></li>
+</ul>
+
+<p>Design boundary we keep strict:</p>
+
+<ul>
+  <li><strong>Authentication claims</strong> prove identity context</li>
+  <li><strong>Roles and permissions</strong> come from deployment config/Casbin policy</li>
+  <li>We do not treat JWT role claims as authorization truth</li>
+</ul>
+
+<hr />
+
+<h1 id="part-7-security-hardening-improvements">Part 7: Security Hardening Improvements</h1>
+
+<p>The OIDC rollout included additional hardening:</p>
+
+<ul>
+  <li>Removed <code class="language-plaintext highlighter-rouge">grpc.reflection</code> from public auth server paths</li>
+  <li>Added ingress rate limits for publicly exposed gateway endpoints</li>
+</ul>
+
+<p>Combined with short-lived OIDC tokens and explicit RBAC roles, this improves default security for both human and CI traffic.</p>
+
+<hr />
+
+<h1 id="part-8-migration-notes">Part 8: Migration Notes</h1>
+
+<p>If you still have legacy GitHub auth config/docs, this is the practical migration path:</p>
+
+<ol>
+  <li>Switch CLI and workflows to <code class="language-plaintext highlighter-rouge">--auth-mode=oidc</code></li>
+  <li>Replace <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_GITHUB_TOKEN</code> with <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_AUTH_TOKEN</code> in CI</li>
+  <li>Configure OIDC issuer/JWKS trust in Envoy</li>
+  <li>Migrate RBAC principals from <code class="language-plaintext highlighter-rouge">github:&lt;user&gt;</code> to OIDC principal forms (<code class="language-plaintext highlighter-rouge">user:{iss}:{email}</code>, <code class="language-plaintext highlighter-rouge">ghwf:...</code>)</li>
+  <li>Add dedicated least-privilege roles for CI workflows</li>
+</ol>
+
+<hr />
+
+<h2 id="what-this-unlocks-next">What This Unlocks Next</h2>
+
+<p>Unified OIDC gives us a cleaner base for:</p>
+
+<ul>
+  <li>Consistent policy semantics across user and workload identities</li>
+  <li>Better auditability of authenticated principals</li>
+  <li>Easier enterprise IdP federation and rollout</li>
+  <li>Safer CI automation through ephemeral identities</li>
+  <li>Optional IdP role-claim mapping for user/service tokens to reduce per-principal config churn</li>
+</ul>
+
+<h3 id="future-direction-optional-role-claim-mapping">Future direction: optional role-claim mapping</h3>
+
+<p>A practical next step is to support an opt-in mode where trusted IdP role claims (for human or service-user tokens) can map directly to ext-authz roles.</p>
+
+<p>Potential benefits:</p>
+
+<ul>
+  <li>Faster onboarding for new users or service accounts</li>
+  <li>Fewer manual role principal entries in static config</li>
+  <li>Better alignment with enterprise IAM role management</li>
+</ul>
+
+<p>Guardrails we would keep:</p>
+
+<ul>
+  <li>Disabled by default (explicit opt-in)</li>
+  <li>Issuer-scoped trust policy (only configured issuers/claims accepted)</li>
+  <li>Strict allowlist mapping (<code class="language-plaintext highlighter-rouge">token-role</code> -&gt; <code class="language-plaintext highlighter-rouge">ext-authz role</code>) instead of free-form trust</li>
+  <li>Existing deny-list and method-level Casbin checks remain authoritative</li>
+  <li>Auditable logs showing claim-derived role resolution decisions</li>
+</ul>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>Directory’s authentication model is now simpler and stronger:</p>
+
+<ul>
+  <li>✅ One OIDC-first model for humans, machines, and CI</li>
+  <li>✅ Explicit role-based authorization with method-level control</li>
+  <li>✅ Reduced secret sprawl by removing PAT dependence in CI</li>
+  <li>✅ Preserved service-to-service trust boundaries in backend infrastructure</li>
+</ul>
+
+<p>This is a meaningful step toward secure-by-default Directory operations at scale.</p>
+
+<h2 id="-references">📚 References</h2>
+
+<ul>
+  <li><a href="https://github.com/agntcy/dir">Directory GitHub Repository</a></li>
+  <li><a href="https://dexidp.io/docs/">Dex OIDC Provider</a></li>
+  <li><a href="https://openid.net/specs/openid-connect-core-1_0.html">OpenID Connect Core</a></li>
+  <li><a href="https://datatracker.ietf.org/doc/html/rfc6749">OAuth 2.0 Authorization Framework (RFC 6749)</a></li>
+  <li><a href="https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/about-security-hardening-with-openid-connect">GitHub Actions OIDC Documentation</a></li>
+  <li><a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter">Envoy JWT Authentication Filter</a></li>
+  <li><a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter">Envoy External Authorization Filter</a></li>
+  <li><a href="https://spiffe.io">SPIFFE/SPIRE Documentation</a></li>
+</ul>]]></content><author><name>Tibor Kircsi</name></author><category term="security" /><category term="authentication" /><category term="directory" /><category term="oidc" /><category term="dex" /><category term="github-actions" /><category term="envoy" /><category term="rbac" /><category term="spiffe" /><category term="zero-trust" /><summary type="html"><![CDATA[Authentication in Directory has evolved significantly. We moved from a mixed model centered on GitHub OAuth for user access to a unified OIDC-first model that supports three real-world access patterns with one consistent trust and authorization pipeline: Human interactive login Service user (machine-to-machine) login GitHub Actions workload identity This post explains the architecture, security model, migration path, and practical usage patterns for the new OIDC-based setup.]]></summary></entry></feed>
