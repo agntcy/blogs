@@ -24,15 +24,50 @@ jobs:
         with:
           ref: gh-pages
 
-      - name: Remove preview directory
+      - name: Remove preview directory and update index
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           DIR="drafts/${{ steps.branch.outputs.safe }}"
           if [ -d "$DIR" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
             git rm -rf "$DIR"
-            git commit -m "chore: remove preview for ${{ github.head_ref }}"
-            git push
           else
-            echo "No preview directory found at $DIR, skipping."
+            echo "No preview directory found at $DIR, skipping removal."
           fi
+
+          # Regenerate drafts/index.html from remaining subdirectories
+          cat > drafts/index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <title>AGNTCY Blogs – PR Previews</title>
+            <style>
+              body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+              h1 { font-size: 1.5rem; }
+              ul { line-height: 2; }
+              a { color: #0070f3; }
+            </style>
+          </head>
+          <body>
+            <h1>PR Previews</h1>
+            <p>One entry per open pull request. Each link shows only the post(s) added in that PR.</p>
+            <ul>
+          HTMLEOF
+
+          for dir in drafts/*/; do
+            [ -d "$dir" ] || continue
+            NAME=$(basename "$dir")
+            echo "    <li><a href=\"/drafts/$NAME/\">$NAME</a></li>" >> drafts/index.html
+          done
+
+          cat >> drafts/index.html << 'HTMLEOF'
+            </ul>
+            <p><a href="/">← Back to blog</a></p>
+          </body>
+          </html>
+          HTMLEOF
+
+          git add drafts/index.html
+          git diff --cached --quiet || git commit -m "chore: remove preview and update index for ${{ github.head_ref }}"
+          git push origin gh-pages
