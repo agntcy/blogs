@@ -25,9 +25,10 @@ jobs:
           echo "url=https://blogs.agntcy.org/drafts/$SAFE/" >> "$GITHUB_OUTPUT"
 
       - name: Keep only PR-changed posts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
-          CHANGED=$(git diff --name-only --diff-filter=AM origin/${{ github.base_ref }}...HEAD -- '_posts/')
+          CHANGED=$(gh pr diff ${{ github.event.pull_request.number }} --name-only | grep '^_posts/' || true)
           if [ -z "$CHANGED" ]; then
             echo "No _posts changes in this PR."
           else
