@@ -1,4 +1,13 @@
-# SLIM MVP: Enterprise AI Agent Fleet — Multicluster Secure Communications
+---
+layout: post
+title: "SLIM MVP: Enterprise AI Agent Fleet — Multicluster Secure Communications"
+date: 2026-04-04 07:00:00 +0000
+author: Michele Papalini
+author_url: https://github.com/muscariello
+categories: technical
+tags: [slim, multi-agent, agents]
+---
+
 
 > **Related issue:** [#1372 — Epic: SLIM multicluster autoconfig installation for server fleets](https://github.com/agntcy/slim/issues/1372)
 
