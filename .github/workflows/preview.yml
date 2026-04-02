@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: ["main"]
     types: [opened, synchronize, reopened]
+    paths:
+      - "_posts/**"
 
 permissions:
   contents: write
