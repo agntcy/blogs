@@ -1,11 +1,11 @@
 ---
 layout: post
 title: "SLIM MVP: Enterprise AI Agent Fleet — Multicluster Secure Communications"
-date: 2026-04-04 07:00:00 +0000
-author: Michele Papalini
+date: 2026-04-02 07:00:00 +0000
+author: Luca Muscariello
 author_url: https://github.com/muscariello
 categories: technical
-tags: [slim, multi-agent, agents]
+tags: [slim, multi-agent, agents, multicluster]
 ---
 
 
