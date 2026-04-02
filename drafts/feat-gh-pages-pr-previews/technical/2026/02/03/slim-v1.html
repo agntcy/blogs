@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>SLIM v1.0: Secure Low-Latency Interactive Messaging for Agentic AI | AGNTCY Blogs</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="SLIM v1.0: Secure Low-Latency Interactive Messaging for Agentic AI" />
+<meta name="author" content="Mauro Sardara" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="The AI landscape is rapidly evolving from isolated models to interconnected networks of intelligent agents. As AI systems become more sophisticated, they need to communicate, collaborate, and coordinate in real-time. Protocols like A2A (Agent-to-Agent) define what agents say to each other: standardized messages, task delegation, and coordination semantics. But A2A needs a robust transport layer that defines how agents securely exchange these messages across network boundaries. Existing messaging frameworks weren’t designed for the unique demands of agentic AI. They either sacrifice security for performance, lack proper group communication primitives, or can’t scale to support distributed multi-agent systems. Others rely on centralized brokers that can’t be safely exposed across network boundaries, limiting agents to run only where the broker is deployed. Enter SLIM (Secure Low-Latency Interactive Messaging), a next-generation communication framework that provides the secure, scalable transport layer for agentic AI protocols like A2A. SLIM handles the “piping”: secure connections, message routing, group communication, and end-to-end encryption, so protocol implementations can focus on agent semantics, not infrastructure. The Problem: Agent Protocols Need Secure Transport Modern AI applications are increasingly agentic. They don’t just respond to prompts, they take action, use tools, coordinate with other agents, and make autonomous decisions. The A2A protocol has emerged as a standard for defining how agents communicate: specifying message formats, task delegation patterns, and coordination semantics. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go) that implement these agent-level semantics. However, A2A and similar agent protocols need a robust transport layer beneath them. Whether you’re building: Multi-agent AI systems where specialized agents collaborate to solve complex problems. AI-powered workflows that orchestrate between LLMs, tools, and data sources. Real-time agent collaboration where agents need to share context and coordinate actions. Distributed AI services that span data centers, edge devices, and browsers. You need a messaging infrastructure that can handle: Real-time, low-latency communication — AI agents can’t wait seconds for responses. End-to-end security — Agent communications must remain confidential even through untrusted infrastructure. Flexible communication patterns — From point-to-point tool calls to group coordination. Scale — Supporting thousands of concurrent agents across distributed environments. Protocol flexibility — Supporting A2A, MCP, and custom agent protocols Simplicity — Developers shouldn’t need to be cryptography or distributed systems experts. Flexible deployment — Agents should be reachable without requiring direct server exposure. Traditional messaging systems fall short. MQTT and AMQP weren’t designed for interactive AI workflows. gRPC provides excellent RPC semantics but lacks group capabilities and end-to-end encryption. Message queues add latency and complexity. Rolling your own solution means reinventing security, scaling, and reliability. A critical networking challenge also emerges: when A2A runs on direct HTTP/gRPC connections, servers must be continuously exposed and directly reachable. However, A2A can instead use SLIM as its transport layer. SLIM’s registration-based model allows agents to register with the SLIM network and become reachable by peers without exposing server ports. While SLIM routing nodes themselves need to be exposed, agent endpoints can run behind NATs and firewalls while remaining fully accessible, significantly simplifying deployment. SLIM was built to solve exactly these challenges. It provides the secure, scalable “piping” that agent protocols like A2A need to operate across network boundaries. What is SLIM? SLIM is a secure, scalable, and developer-friendly messaging framework that provides the transport layer for agent communication protocols like A2A. While A2A defines what agents say (message formats, task semantics, coordination patterns), SLIM defines how these messages are securely delivered across distributed networks. At its core, SLIM combines: gRPC’s performance and reliability — Built on HTTP/2 for efficient, multiplexed transport. Messaging capabilities — Native support for channels and group communication. End-to-end encryption — Using Message Layer Security (MLS) protocol. Native RPC support — SRPC (SLIM RPC) for request-response patterns alongside messaging. Distributed architecture — Separate control and data planes for scalability and management. Protocol flexibility — Transport layer for A2A, MCP, and custom agent protocols. SLIM enables AI agents to communicate securely whether they’re running in a data center, in a browser, on mobile devices, or across organizational boundaries, all while maintaining sub-second latencies and strong security guarantees. Key Strengths and Capabilities The strengths and capabilities of SLIM are: Scalable Distributed Architecture End-to-End Security by Design Two Powerful Session Types Intelligent Routing and Naming Low Latency Architecture Developer-Friendly APIs Native RPC Support with SRPC Scalable Distributed Architecture SLIM is architected with three main components that cleanly separate concerns: The Data Plane The data plane’s sole purpose is to route messages across SLIM nodes. It handles: Efficient message forwarding based on hierarchical names. Connection management between SLIM nodes. Network topology and routing table maintenance. Transport optimization without needing to inspect message contents. The data plane operates purely on message metadata, forwarding packets without understanding application-level sessions or encryption. The Session Layer The session layer sits on top of the data plane and handles the complex requirements of secure agent communication: Reliable delivery: automatic retries, acknowledgments, and ordering guarantees. Encryption: end-to-end encryption using the Message Layer Security (MLS) protocol. Session management: group creation, invites, membership changes, and state synchronization. While the session layer is required for applications to achieve secure, reliable communication, it is not used by SLIM nodes themselves—they only need the data plane. The Control Plane The control plane manages the distributed network of SLIM nodes: Configuration management for routing nodes. Monitoring and telemetry collection (planned for future releases). Network orchestration and service discovery. Administrative operations across the SLIM infrastructure. Architecture Diagram The following diagram illustrates how these components are distributed across applications and intermediate routing nodes: graph TB subgraph &quot;Application Node (Agent A)&quot; A1[Session Layer 1] A2[Session Layer 2] A3[Data Plane Client] A1 -.-&gt;|encrypted messages| A3 A2 -.-&gt;|encrypted messages| A3 end subgraph &quot;Intermediate SLIM Node 1&quot; I1[Data Plane] end subgraph &quot;Intermediate SLIM Node 2&quot; I2[Data Plane] end subgraph &quot;Application Node (Agent B)&quot; B1[Session Layer 1] B2[Session Layer 2] B3[Data Plane Client] B1 -.-&gt;|encrypted messages| B3 B2 -.-&gt;|encrypted messages| B3 end subgraph &quot;Control Plane&quot; CP[Configuration &amp; Monitoring] end A3 -.-&gt;|encrypted messages| I1 I1 -.-&gt;|route| I2 I2 -.-&gt;|encrypted messages| B3 CP -.-&gt;|manages| I1 CP -.-&gt;|manages| I2 style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style CP fill:#7f8c8d,stroke:#5a6970,stroke-width:2px,color:#fff Distributed Artifacts This architecture dictates how SLIM is distributed: Pure Data Plane We distribute the slim binary and Docker images as pure data-plane artifacts. Since SLIM routing nodes only forward messages and don’t participate in application sessions, they don’t need the session layer. This keeps the infrastructure lightweight, fast, and simple to deploy. Language Bindings We distribute libraries (Python, Go, etc.) that include both the data plane client and the session layer on top. Applications use these bindings to get the full stack: secure, reliable, encrypted communication with automatic session management. This separation means you can run a global network of SLIM routing nodes without any application logic, while your agents use the rich, full-featured language bindings for their communication needs. The control plane manages the routing infrastructure independently, ensuring the network operates efficiently. End-to-End Security by Design SLIM leverages the Message Layer Security (MLS) protocol (RFC 9420) to provide end-to-end encryption for all agent communications. Unlike TLS, which only secures point-to-point connections, MLS ensures that messages remain encrypted even when passing through intermediate nodes or experiencing TLS termination along the path. This means: Messages are confidential. Only authorized group members can decrypt content. Authentication is built-in. Cryptographic identities verify agent authenticity. Zero-trust architecture. You don’t need to trust intermediate infrastructure Group security. Add or remove agents from secure groups without rekeying everything. For AI applications, this is crucial. Your agent conversations, tool outputs, and coordination messages stay private even when traversing cloud infrastructure you don’t control. Two Powerful Session Types SLIM provides two session abstractions that map perfectly to agentic AI patterns: point-to-point and group sessions. Point-to-Point Sessions Perfect for tool invocations and direct agent-to-agent communication: # Discover and connect to a specific service instance session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.POINT_TO_POINT, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create session and wait for establishment session_context = await app.create_session_async(session_config, remote_name) await session_context.completion.wait_async() session = session_context.session # Send a request await session.publish_async( b&quot;execute_tool: search(query=&#39;AI agents&#39;)&quot;, None, None ) # Get the response received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) result = received_msg.payload The session automatically: Discovers an available service instance. Establishes a secure MLS group (if enabled). Binds all subsequent communication to that instance. Provides reliable delivery with automatic retries. Group Sessions Ideal for multi-agent coordination, broadcast updates, and collaborative workflows: # Create a coordination channel session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.GROUP, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create group session and wait for establishment session_context = await app.create_session_async(session_config, channel_name) await session_context.completion.wait_async() session = session_context.session # Invite other agents to join handle = await session.invite_async(agent_name) await handle.wait_async() # Broadcast to all participants await session.publish_async( b&quot;task_update: analysis complete&quot;, None, None ) Group sessions support: Many-to-many communication: all messages delivered to all participants. Dynamic membership: add or remove agents on the fly. Moderation: channel creators control membership. Secure group state: MLS ensures all members share cryptographic context. Intelligent Routing and Naming SLIM uses a hierarchical naming system based on Decentralized Identifiers (DIDs) that enables both human-readable names and secure, globally unique identifiers: organization/namespace/service/instance For example: agntcy/production/search-agent/a3f9k2 This structure supports: Anycast routing: send to org/ns/service and reach any available instance. Unicast routing: target a specific instance with the full four-part name. Service discovery: find agents by their organizational and service identifiers. Scalable forwarding: hierarchical names aggregate efficiently in routing tables. No more hardcoded endpoints or complex service registries. SLIM’s naming system just works. Low Latency Architecture SLIM is optimized for interactive AI workloads where every millisecond counts: Multiplexed streams: multiple logical streams over single connections. Efficient message routing: intelligent forwarding tables minimize hops. Zero-copy operations: where possible, avoid unnecessary data copying. Async-first design: non-blocking I/O throughout the stack. HTTP/2 transport: proven, efficient binary protocol. Real-world deployments show sub-second end-to-end latencies even with MLS encryption enabled. Developer-Friendly APIs SLIM provides high-quality bindings for multiple languages that abstract complexity. Here’s an example in Python: import slim_bindings import datetime # Initialize the global service service = slim_bindings.get_global_service() # Create a SLIM instance with shared secret auth local_name = slim_bindings.Name(&quot;org&quot;, &quot;namespace&quot;, &quot;my-agent&quot;) app = service.create_app_with_secret( local_name, &quot;my-shared-secret&quot; ) # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( &quot;http://127.0.0.1:46357&quot; ) conn_id = await service.connect_async(client_config) # Subscribe to receive messages await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Receive and reply to messages received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload await session.publish_async(b&quot;response&quot;, None, None) No need to manage MLS groups manually, handle connection pooling, or worry about encryption keys — SLIM’s session layer handles it all. Native RPC Support with SRPC Many agent-facing protocols (like A2A and MCP) are RPC-oriented. SLIM includes SRPC (SLIM RPC), which provides gRPC-like streaming RPC semantics directly over the SLIM transport. SRPC supports all four gRPC patterns: Unary → Unary — Simple request-response Unary → Stream — Server streaming responses Stream → Unary — Client streaming requests Stream → Stream — Bidirectional streaming Define services with Protocol Buffers: service AgentService { rpc ExecuteTool(ToolRequest) returns (ToolResponse); rpc StreamResults(Query) returns (stream Result); rpc CollectInputs(stream Input) returns (Summary); rpc Coordinate(stream Message) returns (stream Message); } The SLIM RPC compiler generates language-specific stubs that work seamlessly with SLIM’s secure messaging layer. You get familiar RPC semantics with SLIM’s security and group communication benefits. We are also studying how to extend these RPC interaction patterns to support group communication scenarios, enabling multi-agent RPC workflows. Single Implementation, Multiple Languages SLIM is implemented in Rust, providing a high-performance, memory-safe core that powers all language bindings. This approach ensures: Consistent behavior: all language bindings use the same battle-tested implementation. Performance: Rust’s zero-cost abstractions deliver native speed across all platforms. Security: Memory safety guarantees prevent entire classes of vulnerabilities. Maintainability: Bug fixes and improvements benefit all language ecosystems simultaneously. Currently Available: Python. Full-featured bindings with async/await support Go. Native Go bindings for seamless integration (see our technical blog posts on integrating Rust and Go with UniFFI and distributing C artifacts for Go modules) Coming Soon: C#. For .NET and Unity applications. JavaScript/TypeScript. Browser and Node.js support. Kotlin. Android and JVM applications. This multi-language strategy means you can build heterogeneous agent systems where different components use their most appropriate language, all communicating seamlessly through SLIM’s unified protocol. One of the key reasons SLIM provides multiple language bindings is to support agent communication protocols like A2A across different programming ecosystems. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go), and SLIM’s language bindings enable these A2A SDKs to communicate securely. An A2A Python agent can securely communicate with an A2A Java agent, with SLIM handling the underlying transport transparently. Real-World Use Cases SLIM + A2A: Agent-to-Agent Communication SLIM and A2A are designed to work together: A2A SDKs (Python, JavaScript, Java, C#, Go) implement agent-level semantics — task delegation, message formats, coordination patterns. SLIM bindings provide the secure transport, handling connection management, routing, encryption, and delivery guarantees. Currently, A2A sits on top of SLIM RPC (SRPC), enabling secure point-to-point agent interactions. We provide slim-a2a-python, a Python A2A SDK implementation built on SLIMRPC that enables developers to build A2A-compliant agents with SLIM as the transport layer. We are actively working to add A2A SDK support for the remaining SLIM language bindings (Go, C#, JavaScript/TypeScript, Kotlin). Looking ahead, A2A is evolving to support bidirectional streaming for real-time, interactive agent conversations and group communication for multi-agent coordination and collaboration. SLIM naturally provides both capabilities at the transport level through SRPC and MLS-based end-to-end encryption for groups, which many pub-sub systems lack. This positions SLIM as an ideal transport foundation for A2A’s continued evolution toward richer, more secure agent communication patterns. The following diagram illustrates how A2A and SLIM capabilities combine: graph LR subgraph Protocol[&quot;Protocol Layer (Application Semantics)&quot;] direction TB A1[&quot;A2A Go SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] B1[&quot;A2A C# SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] C1[&quot;A2A Python SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] end subgraph Transport[&quot;Transport Layer (SLIM)&quot;] direction TB subgraph Endpoints[&quot;Agent Endpoints&quot;] A2[&quot;SLIM Go Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] B2[&quot;SLIM C# Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] C2[&quot;SLIM Python Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] end subgraph Network[&quot;SLIM Network Infrastructure&quot;] SN1[SLIM Node 1&lt;br/&gt;Data Plane] SN2[SLIM Node 2&lt;br/&gt;Data Plane] end end A1 --&gt;|uses| A2 B1 --&gt;|uses| B2 C1 --&gt;|uses| C2 A2 -.-&gt;|&quot;SRPC (P2P)&lt;br/&gt;encrypted via MLS&quot;| SN1 B2 -.-&gt;|&quot;SRPC (P2P)&lt;br/&gt;encrypted via MLS&quot;| SN1 C2 -.-&gt;|&quot;SRPC (Groups)&lt;br/&gt;encrypted via MLS&quot;| SN2 SN1 -.-&gt;|routes| SN2 SN2 -.-&gt;|routes| SN1 style Protocol fill:#e8f4f8,stroke:#2980b9,stroke-width:3px style Transport fill:#fef5e7,stroke:#f39c12,stroke-width:3px style Endpoints fill:#fff,stroke:#95a5a6,stroke-width:2px style Network fill:#fff,stroke:#95a5a6,stroke-width:2px style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style C1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style B2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style C2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style SN1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style SN2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff Architecture Overview: Protocol Layer (blue, left): A2A SDKs implement agent-level semantics — defining what agents say through standardized task delegation, message formats, and coordination patterns. Transport Layer (green/orange, right): SLIM provides the secure infrastructure for how messages are delivered: SLIM Bindings (green): Include SRPC for RPC semantics, Session Layer for reliability and encryption, and Data Plane client for connectivity. SLIM Network (orange): Pure data plane nodes route encrypted messages without understanding agent semantics. Communication Patterns: Current: A2A uses SRPC for point-to-point (P2P) agent interactions with MLS encryption. Future: SLIM naturally provides SRPC group capabilities and MLS-based group encryption, ready to support A2A’s evolution toward groups and bidirectional streaming. SLIM also provides the transport layer for other agent communication protocols: MCP (Model Context Protocol) for context sharing between agents and tools. Custom protocols for domain-specific agent interactions. For more information about A2A, see the official A2A documentation. Getting Started Installation Install the SLIM node: # Docker docker pull ghcr.io/agntcy/slim:v1.0.0 # Cargo cargo install agntcy-slim # Helm (Kubernetes) helm pull oci://ghcr.io/agntcy/slim/helm/slim --version v1.0.0 Install Python bindings: pip install slim-bindings Quick Example Create your first SLIM agent in minutes: import asyncio import slim_bindings import datetime async def main(): # Initialize the global service service = slim_bindings.get_global_service() # Create app with shared secret authentication local_name = slim_bindings.Name(&quot;org&quot;, &quot;namespace&quot;, &quot;agent&quot;) app = service.create_app_with_secret(local_name, &quot;my-shared-secret&quot;) # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( &quot;http://127.0.0.1:46357&quot; ) conn_id = await service.connect_async(client_config) # Subscribe to local name await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Handle messages while True: received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload print(f&quot;Received: {payload.decode()}&quot;) await session.publish_async(b&quot;Acknowledged: &quot; + payload, None, None) asyncio.run(main()) The Road Ahead SLIM is being actively developed as an open-source project under the Apache 2.0 license. The protocol specification has been submitted as an Internet-Draft to the IETF, reflecting its ambition to become a standard for agentic AI communication. Current capabilities include: Rust core with multi-language bindings (Python, Go, and more coming) MLS-based end-to-end encryption Point-to-point and group sessions SRPC for RPC patterns Control plane for management Kubernetes deployment support The community is working on: Additional language bindings (C#, JavaScript/TypeScript, Kotlin) Enhanced monitoring and observability Integration with popular AI frameworks Extended A2A support for groups and bidirectional streaming Reference implementations of MCP over SLIM Performance optimizations Why SLIM Matters As AI systems evolve from monolithic models to distributed networks of specialized agents, the communication infrastructure becomes critical. SLIM provides a foundation that: Ensures security: end-to-end encryption without complexity. Scales with demand: from prototype to production. Simplifies development: intuitive APIs for complex capabilities. Future-proofs architecture: standards-based, extensible design. Whether you’re building a multi-agent AI system, an agentic workflow platform, or the next generation of AI applications, SLIM provides the messaging infrastructure you need. Get Involved SLIM is open source and welcomes contributions: GitHub Documentation Specification You can find comprehensive Python and Go examples in the GitHub repository. Join the community building the communication layer for agentic AI. Try SLIM in your next project with our language binding examples, contribute to the codebase, or share your use cases. The future of AI is collaborative, distributed, and secure. SLIM makes it possible. SLIM is developed by AGNTCY Contributors and released under the Apache 2.0 License." />
+<meta property="og:description" content="The AI landscape is rapidly evolving from isolated models to interconnected networks of intelligent agents. As AI systems become more sophisticated, they need to communicate, collaborate, and coordinate in real-time. Protocols like A2A (Agent-to-Agent) define what agents say to each other: standardized messages, task delegation, and coordination semantics. But A2A needs a robust transport layer that defines how agents securely exchange these messages across network boundaries. Existing messaging frameworks weren’t designed for the unique demands of agentic AI. They either sacrifice security for performance, lack proper group communication primitives, or can’t scale to support distributed multi-agent systems. Others rely on centralized brokers that can’t be safely exposed across network boundaries, limiting agents to run only where the broker is deployed. Enter SLIM (Secure Low-Latency Interactive Messaging), a next-generation communication framework that provides the secure, scalable transport layer for agentic AI protocols like A2A. SLIM handles the “piping”: secure connections, message routing, group communication, and end-to-end encryption, so protocol implementations can focus on agent semantics, not infrastructure. The Problem: Agent Protocols Need Secure Transport Modern AI applications are increasingly agentic. They don’t just respond to prompts, they take action, use tools, coordinate with other agents, and make autonomous decisions. The A2A protocol has emerged as a standard for defining how agents communicate: specifying message formats, task delegation patterns, and coordination semantics. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go) that implement these agent-level semantics. However, A2A and similar agent protocols need a robust transport layer beneath them. Whether you’re building: Multi-agent AI systems where specialized agents collaborate to solve complex problems. AI-powered workflows that orchestrate between LLMs, tools, and data sources. Real-time agent collaboration where agents need to share context and coordinate actions. Distributed AI services that span data centers, edge devices, and browsers. You need a messaging infrastructure that can handle: Real-time, low-latency communication — AI agents can’t wait seconds for responses. End-to-end security — Agent communications must remain confidential even through untrusted infrastructure. Flexible communication patterns — From point-to-point tool calls to group coordination. Scale — Supporting thousands of concurrent agents across distributed environments. Protocol flexibility — Supporting A2A, MCP, and custom agent protocols Simplicity — Developers shouldn’t need to be cryptography or distributed systems experts. Flexible deployment — Agents should be reachable without requiring direct server exposure. Traditional messaging systems fall short. MQTT and AMQP weren’t designed for interactive AI workflows. gRPC provides excellent RPC semantics but lacks group capabilities and end-to-end encryption. Message queues add latency and complexity. Rolling your own solution means reinventing security, scaling, and reliability. A critical networking challenge also emerges: when A2A runs on direct HTTP/gRPC connections, servers must be continuously exposed and directly reachable. However, A2A can instead use SLIM as its transport layer. SLIM’s registration-based model allows agents to register with the SLIM network and become reachable by peers without exposing server ports. While SLIM routing nodes themselves need to be exposed, agent endpoints can run behind NATs and firewalls while remaining fully accessible, significantly simplifying deployment. SLIM was built to solve exactly these challenges. It provides the secure, scalable “piping” that agent protocols like A2A need to operate across network boundaries. What is SLIM? SLIM is a secure, scalable, and developer-friendly messaging framework that provides the transport layer for agent communication protocols like A2A. While A2A defines what agents say (message formats, task semantics, coordination patterns), SLIM defines how these messages are securely delivered across distributed networks. At its core, SLIM combines: gRPC’s performance and reliability — Built on HTTP/2 for efficient, multiplexed transport. Messaging capabilities — Native support for channels and group communication. End-to-end encryption — Using Message Layer Security (MLS) protocol. Native RPC support — SRPC (SLIM RPC) for request-response patterns alongside messaging. Distributed architecture — Separate control and data planes for scalability and management. Protocol flexibility — Transport layer for A2A, MCP, and custom agent protocols. SLIM enables AI agents to communicate securely whether they’re running in a data center, in a browser, on mobile devices, or across organizational boundaries, all while maintaining sub-second latencies and strong security guarantees. Key Strengths and Capabilities The strengths and capabilities of SLIM are: Scalable Distributed Architecture End-to-End Security by Design Two Powerful Session Types Intelligent Routing and Naming Low Latency Architecture Developer-Friendly APIs Native RPC Support with SRPC Scalable Distributed Architecture SLIM is architected with three main components that cleanly separate concerns: The Data Plane The data plane’s sole purpose is to route messages across SLIM nodes. It handles: Efficient message forwarding based on hierarchical names. Connection management between SLIM nodes. Network topology and routing table maintenance. Transport optimization without needing to inspect message contents. The data plane operates purely on message metadata, forwarding packets without understanding application-level sessions or encryption. The Session Layer The session layer sits on top of the data plane and handles the complex requirements of secure agent communication: Reliable delivery: automatic retries, acknowledgments, and ordering guarantees. Encryption: end-to-end encryption using the Message Layer Security (MLS) protocol. Session management: group creation, invites, membership changes, and state synchronization. While the session layer is required for applications to achieve secure, reliable communication, it is not used by SLIM nodes themselves—they only need the data plane. The Control Plane The control plane manages the distributed network of SLIM nodes: Configuration management for routing nodes. Monitoring and telemetry collection (planned for future releases). Network orchestration and service discovery. Administrative operations across the SLIM infrastructure. Architecture Diagram The following diagram illustrates how these components are distributed across applications and intermediate routing nodes: graph TB subgraph &quot;Application Node (Agent A)&quot; A1[Session Layer 1] A2[Session Layer 2] A3[Data Plane Client] A1 -.-&gt;|encrypted messages| A3 A2 -.-&gt;|encrypted messages| A3 end subgraph &quot;Intermediate SLIM Node 1&quot; I1[Data Plane] end subgraph &quot;Intermediate SLIM Node 2&quot; I2[Data Plane] end subgraph &quot;Application Node (Agent B)&quot; B1[Session Layer 1] B2[Session Layer 2] B3[Data Plane Client] B1 -.-&gt;|encrypted messages| B3 B2 -.-&gt;|encrypted messages| B3 end subgraph &quot;Control Plane&quot; CP[Configuration &amp; Monitoring] end A3 -.-&gt;|encrypted messages| I1 I1 -.-&gt;|route| I2 I2 -.-&gt;|encrypted messages| B3 CP -.-&gt;|manages| I1 CP -.-&gt;|manages| I2 style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style CP fill:#7f8c8d,stroke:#5a6970,stroke-width:2px,color:#fff Distributed Artifacts This architecture dictates how SLIM is distributed: Pure Data Plane We distribute the slim binary and Docker images as pure data-plane artifacts. Since SLIM routing nodes only forward messages and don’t participate in application sessions, they don’t need the session layer. This keeps the infrastructure lightweight, fast, and simple to deploy. Language Bindings We distribute libraries (Python, Go, etc.) that include both the data plane client and the session layer on top. Applications use these bindings to get the full stack: secure, reliable, encrypted communication with automatic session management. This separation means you can run a global network of SLIM routing nodes without any application logic, while your agents use the rich, full-featured language bindings for their communication needs. The control plane manages the routing infrastructure independently, ensuring the network operates efficiently. End-to-End Security by Design SLIM leverages the Message Layer Security (MLS) protocol (RFC 9420) to provide end-to-end encryption for all agent communications. Unlike TLS, which only secures point-to-point connections, MLS ensures that messages remain encrypted even when passing through intermediate nodes or experiencing TLS termination along the path. This means: Messages are confidential. Only authorized group members can decrypt content. Authentication is built-in. Cryptographic identities verify agent authenticity. Zero-trust architecture. You don’t need to trust intermediate infrastructure Group security. Add or remove agents from secure groups without rekeying everything. For AI applications, this is crucial. Your agent conversations, tool outputs, and coordination messages stay private even when traversing cloud infrastructure you don’t control. Two Powerful Session Types SLIM provides two session abstractions that map perfectly to agentic AI patterns: point-to-point and group sessions. Point-to-Point Sessions Perfect for tool invocations and direct agent-to-agent communication: # Discover and connect to a specific service instance session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.POINT_TO_POINT, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create session and wait for establishment session_context = await app.create_session_async(session_config, remote_name) await session_context.completion.wait_async() session = session_context.session # Send a request await session.publish_async( b&quot;execute_tool: search(query=&#39;AI agents&#39;)&quot;, None, None ) # Get the response received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) result = received_msg.payload The session automatically: Discovers an available service instance. Establishes a secure MLS group (if enabled). Binds all subsequent communication to that instance. Provides reliable delivery with automatic retries. Group Sessions Ideal for multi-agent coordination, broadcast updates, and collaborative workflows: # Create a coordination channel session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.GROUP, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create group session and wait for establishment session_context = await app.create_session_async(session_config, channel_name) await session_context.completion.wait_async() session = session_context.session # Invite other agents to join handle = await session.invite_async(agent_name) await handle.wait_async() # Broadcast to all participants await session.publish_async( b&quot;task_update: analysis complete&quot;, None, None ) Group sessions support: Many-to-many communication: all messages delivered to all participants. Dynamic membership: add or remove agents on the fly. Moderation: channel creators control membership. Secure group state: MLS ensures all members share cryptographic context. Intelligent Routing and Naming SLIM uses a hierarchical naming system based on Decentralized Identifiers (DIDs) that enables both human-readable names and secure, globally unique identifiers: organization/namespace/service/instance For example: agntcy/production/search-agent/a3f9k2 This structure supports: Anycast routing: send to org/ns/service and reach any available instance. Unicast routing: target a specific instance with the full four-part name. Service discovery: find agents by their organizational and service identifiers. Scalable forwarding: hierarchical names aggregate efficiently in routing tables. No more hardcoded endpoints or complex service registries. SLIM’s naming system just works. Low Latency Architecture SLIM is optimized for interactive AI workloads where every millisecond counts: Multiplexed streams: multiple logical streams over single connections. Efficient message routing: intelligent forwarding tables minimize hops. Zero-copy operations: where possible, avoid unnecessary data copying. Async-first design: non-blocking I/O throughout the stack. HTTP/2 transport: proven, efficient binary protocol. Real-world deployments show sub-second end-to-end latencies even with MLS encryption enabled. Developer-Friendly APIs SLIM provides high-quality bindings for multiple languages that abstract complexity. Here’s an example in Python: import slim_bindings import datetime # Initialize the global service service = slim_bindings.get_global_service() # Create a SLIM instance with shared secret auth local_name = slim_bindings.Name(&quot;org&quot;, &quot;namespace&quot;, &quot;my-agent&quot;) app = service.create_app_with_secret( local_name, &quot;my-shared-secret&quot; ) # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( &quot;http://127.0.0.1:46357&quot; ) conn_id = await service.connect_async(client_config) # Subscribe to receive messages await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Receive and reply to messages received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload await session.publish_async(b&quot;response&quot;, None, None) No need to manage MLS groups manually, handle connection pooling, or worry about encryption keys — SLIM’s session layer handles it all. Native RPC Support with SRPC Many agent-facing protocols (like A2A and MCP) are RPC-oriented. SLIM includes SRPC (SLIM RPC), which provides gRPC-like streaming RPC semantics directly over the SLIM transport. SRPC supports all four gRPC patterns: Unary → Unary — Simple request-response Unary → Stream — Server streaming responses Stream → Unary — Client streaming requests Stream → Stream — Bidirectional streaming Define services with Protocol Buffers: service AgentService { rpc ExecuteTool(ToolRequest) returns (ToolResponse); rpc StreamResults(Query) returns (stream Result); rpc CollectInputs(stream Input) returns (Summary); rpc Coordinate(stream Message) returns (stream Message); } The SLIM RPC compiler generates language-specific stubs that work seamlessly with SLIM’s secure messaging layer. You get familiar RPC semantics with SLIM’s security and group communication benefits. We are also studying how to extend these RPC interaction patterns to support group communication scenarios, enabling multi-agent RPC workflows. Single Implementation, Multiple Languages SLIM is implemented in Rust, providing a high-performance, memory-safe core that powers all language bindings. This approach ensures: Consistent behavior: all language bindings use the same battle-tested implementation. Performance: Rust’s zero-cost abstractions deliver native speed across all platforms. Security: Memory safety guarantees prevent entire classes of vulnerabilities. Maintainability: Bug fixes and improvements benefit all language ecosystems simultaneously. Currently Available: Python. Full-featured bindings with async/await support Go. Native Go bindings for seamless integration (see our technical blog posts on integrating Rust and Go with UniFFI and distributing C artifacts for Go modules) Coming Soon: C#. For .NET and Unity applications. JavaScript/TypeScript. Browser and Node.js support. Kotlin. Android and JVM applications. This multi-language strategy means you can build heterogeneous agent systems where different components use their most appropriate language, all communicating seamlessly through SLIM’s unified protocol. One of the key reasons SLIM provides multiple language bindings is to support agent communication protocols like A2A across different programming ecosystems. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go), and SLIM’s language bindings enable these A2A SDKs to communicate securely. An A2A Python agent can securely communicate with an A2A Java agent, with SLIM handling the underlying transport transparently. Real-World Use Cases SLIM + A2A: Agent-to-Agent Communication SLIM and A2A are designed to work together: A2A SDKs (Python, JavaScript, Java, C#, Go) implement agent-level semantics — task delegation, message formats, coordination patterns. SLIM bindings provide the secure transport, handling connection management, routing, encryption, and delivery guarantees. Currently, A2A sits on top of SLIM RPC (SRPC), enabling secure point-to-point agent interactions. We provide slim-a2a-python, a Python A2A SDK implementation built on SLIMRPC that enables developers to build A2A-compliant agents with SLIM as the transport layer. We are actively working to add A2A SDK support for the remaining SLIM language bindings (Go, C#, JavaScript/TypeScript, Kotlin). Looking ahead, A2A is evolving to support bidirectional streaming for real-time, interactive agent conversations and group communication for multi-agent coordination and collaboration. SLIM naturally provides both capabilities at the transport level through SRPC and MLS-based end-to-end encryption for groups, which many pub-sub systems lack. This positions SLIM as an ideal transport foundation for A2A’s continued evolution toward richer, more secure agent communication patterns. The following diagram illustrates how A2A and SLIM capabilities combine: graph LR subgraph Protocol[&quot;Protocol Layer (Application Semantics)&quot;] direction TB A1[&quot;A2A Go SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] B1[&quot;A2A C# SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] C1[&quot;A2A Python SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] end subgraph Transport[&quot;Transport Layer (SLIM)&quot;] direction TB subgraph Endpoints[&quot;Agent Endpoints&quot;] A2[&quot;SLIM Go Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] B2[&quot;SLIM C# Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] C2[&quot;SLIM Python Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] end subgraph Network[&quot;SLIM Network Infrastructure&quot;] SN1[SLIM Node 1&lt;br/&gt;Data Plane] SN2[SLIM Node 2&lt;br/&gt;Data Plane] end end A1 --&gt;|uses| A2 B1 --&gt;|uses| B2 C1 --&gt;|uses| C2 A2 -.-&gt;|&quot;SRPC (P2P)&lt;br/&gt;encrypted via MLS&quot;| SN1 B2 -.-&gt;|&quot;SRPC (P2P)&lt;br/&gt;encrypted via MLS&quot;| SN1 C2 -.-&gt;|&quot;SRPC (Groups)&lt;br/&gt;encrypted via MLS&quot;| SN2 SN1 -.-&gt;|routes| SN2 SN2 -.-&gt;|routes| SN1 style Protocol fill:#e8f4f8,stroke:#2980b9,stroke-width:3px style Transport fill:#fef5e7,stroke:#f39c12,stroke-width:3px style Endpoints fill:#fff,stroke:#95a5a6,stroke-width:2px style Network fill:#fff,stroke:#95a5a6,stroke-width:2px style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style C1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style B2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style C2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style SN1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style SN2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff Architecture Overview: Protocol Layer (blue, left): A2A SDKs implement agent-level semantics — defining what agents say through standardized task delegation, message formats, and coordination patterns. Transport Layer (green/orange, right): SLIM provides the secure infrastructure for how messages are delivered: SLIM Bindings (green): Include SRPC for RPC semantics, Session Layer for reliability and encryption, and Data Plane client for connectivity. SLIM Network (orange): Pure data plane nodes route encrypted messages without understanding agent semantics. Communication Patterns: Current: A2A uses SRPC for point-to-point (P2P) agent interactions with MLS encryption. Future: SLIM naturally provides SRPC group capabilities and MLS-based group encryption, ready to support A2A’s evolution toward groups and bidirectional streaming. SLIM also provides the transport layer for other agent communication protocols: MCP (Model Context Protocol) for context sharing between agents and tools. Custom protocols for domain-specific agent interactions. For more information about A2A, see the official A2A documentation. Getting Started Installation Install the SLIM node: # Docker docker pull ghcr.io/agntcy/slim:v1.0.0 # Cargo cargo install agntcy-slim # Helm (Kubernetes) helm pull oci://ghcr.io/agntcy/slim/helm/slim --version v1.0.0 Install Python bindings: pip install slim-bindings Quick Example Create your first SLIM agent in minutes: import asyncio import slim_bindings import datetime async def main(): # Initialize the global service service = slim_bindings.get_global_service() # Create app with shared secret authentication local_name = slim_bindings.Name(&quot;org&quot;, &quot;namespace&quot;, &quot;agent&quot;) app = service.create_app_with_secret(local_name, &quot;my-shared-secret&quot;) # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( &quot;http://127.0.0.1:46357&quot; ) conn_id = await service.connect_async(client_config) # Subscribe to local name await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Handle messages while True: received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload print(f&quot;Received: {payload.decode()}&quot;) await session.publish_async(b&quot;Acknowledged: &quot; + payload, None, None) asyncio.run(main()) The Road Ahead SLIM is being actively developed as an open-source project under the Apache 2.0 license. The protocol specification has been submitted as an Internet-Draft to the IETF, reflecting its ambition to become a standard for agentic AI communication. Current capabilities include: Rust core with multi-language bindings (Python, Go, and more coming) MLS-based end-to-end encryption Point-to-point and group sessions SRPC for RPC patterns Control plane for management Kubernetes deployment support The community is working on: Additional language bindings (C#, JavaScript/TypeScript, Kotlin) Enhanced monitoring and observability Integration with popular AI frameworks Extended A2A support for groups and bidirectional streaming Reference implementations of MCP over SLIM Performance optimizations Why SLIM Matters As AI systems evolve from monolithic models to distributed networks of specialized agents, the communication infrastructure becomes critical. SLIM provides a foundation that: Ensures security: end-to-end encryption without complexity. Scales with demand: from prototype to production. Simplifies development: intuitive APIs for complex capabilities. Future-proofs architecture: standards-based, extensible design. Whether you’re building a multi-agent AI system, an agentic workflow platform, or the next generation of AI applications, SLIM provides the messaging infrastructure you need. Get Involved SLIM is open source and welcomes contributions: GitHub Documentation Specification You can find comprehensive Python and Go examples in the GitHub repository. Join the community building the communication layer for agentic AI. Try SLIM in your next project with our language binding examples, contribute to the codebase, or share your use cases. The future of AI is collaborative, distributed, and secure. SLIM makes it possible. SLIM is developed by AGNTCY Contributors and released under the Apache 2.0 License." />
+<link rel="canonical" href="https://blogs.agntcy.org/drafts/feat-gh-pages-pr-previews/technical/2026/02/03/slim-v1.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/drafts/feat-gh-pages-pr-previews/technical/2026/02/03/slim-v1.html" />
+<meta property="og:site_name" content="AGNTCY Blogs" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-02-03T07:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="SLIM v1.0: Secure Low-Latency Interactive Messaging for Agentic AI" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Mauro Sardara"},"dateModified":"2026-02-03T07:00:00+00:00","datePublished":"2026-02-03T07:00:00+00:00","description":"The AI landscape is rapidly evolving from isolated models to interconnected networks of intelligent agents. As AI systems become more sophisticated, they need to communicate, collaborate, and coordinate in real-time. Protocols like A2A (Agent-to-Agent) define what agents say to each other: standardized messages, task delegation, and coordination semantics. But A2A needs a robust transport layer that defines how agents securely exchange these messages across network boundaries. Existing messaging frameworks weren’t designed for the unique demands of agentic AI. They either sacrifice security for performance, lack proper group communication primitives, or can’t scale to support distributed multi-agent systems. Others rely on centralized brokers that can’t be safely exposed across network boundaries, limiting agents to run only where the broker is deployed. Enter SLIM (Secure Low-Latency Interactive Messaging), a next-generation communication framework that provides the secure, scalable transport layer for agentic AI protocols like A2A. SLIM handles the “piping”: secure connections, message routing, group communication, and end-to-end encryption, so protocol implementations can focus on agent semantics, not infrastructure. The Problem: Agent Protocols Need Secure Transport Modern AI applications are increasingly agentic. They don’t just respond to prompts, they take action, use tools, coordinate with other agents, and make autonomous decisions. The A2A protocol has emerged as a standard for defining how agents communicate: specifying message formats, task delegation patterns, and coordination semantics. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go) that implement these agent-level semantics. However, A2A and similar agent protocols need a robust transport layer beneath them. Whether you’re building: Multi-agent AI systems where specialized agents collaborate to solve complex problems. AI-powered workflows that orchestrate between LLMs, tools, and data sources. Real-time agent collaboration where agents need to share context and coordinate actions. Distributed AI services that span data centers, edge devices, and browsers. You need a messaging infrastructure that can handle: Real-time, low-latency communication — AI agents can’t wait seconds for responses. End-to-end security — Agent communications must remain confidential even through untrusted infrastructure. Flexible communication patterns — From point-to-point tool calls to group coordination. Scale — Supporting thousands of concurrent agents across distributed environments. Protocol flexibility — Supporting A2A, MCP, and custom agent protocols Simplicity — Developers shouldn’t need to be cryptography or distributed systems experts. Flexible deployment — Agents should be reachable without requiring direct server exposure. Traditional messaging systems fall short. MQTT and AMQP weren’t designed for interactive AI workflows. gRPC provides excellent RPC semantics but lacks group capabilities and end-to-end encryption. Message queues add latency and complexity. Rolling your own solution means reinventing security, scaling, and reliability. A critical networking challenge also emerges: when A2A runs on direct HTTP/gRPC connections, servers must be continuously exposed and directly reachable. However, A2A can instead use SLIM as its transport layer. SLIM’s registration-based model allows agents to register with the SLIM network and become reachable by peers without exposing server ports. While SLIM routing nodes themselves need to be exposed, agent endpoints can run behind NATs and firewalls while remaining fully accessible, significantly simplifying deployment. SLIM was built to solve exactly these challenges. It provides the secure, scalable “piping” that agent protocols like A2A need to operate across network boundaries. What is SLIM? SLIM is a secure, scalable, and developer-friendly messaging framework that provides the transport layer for agent communication protocols like A2A. While A2A defines what agents say (message formats, task semantics, coordination patterns), SLIM defines how these messages are securely delivered across distributed networks. At its core, SLIM combines: gRPC’s performance and reliability — Built on HTTP/2 for efficient, multiplexed transport. Messaging capabilities — Native support for channels and group communication. End-to-end encryption — Using Message Layer Security (MLS) protocol. Native RPC support — SRPC (SLIM RPC) for request-response patterns alongside messaging. Distributed architecture — Separate control and data planes for scalability and management. Protocol flexibility — Transport layer for A2A, MCP, and custom agent protocols. SLIM enables AI agents to communicate securely whether they’re running in a data center, in a browser, on mobile devices, or across organizational boundaries, all while maintaining sub-second latencies and strong security guarantees. Key Strengths and Capabilities The strengths and capabilities of SLIM are: Scalable Distributed Architecture End-to-End Security by Design Two Powerful Session Types Intelligent Routing and Naming Low Latency Architecture Developer-Friendly APIs Native RPC Support with SRPC Scalable Distributed Architecture SLIM is architected with three main components that cleanly separate concerns: The Data Plane The data plane’s sole purpose is to route messages across SLIM nodes. It handles: Efficient message forwarding based on hierarchical names. Connection management between SLIM nodes. Network topology and routing table maintenance. Transport optimization without needing to inspect message contents. The data plane operates purely on message metadata, forwarding packets without understanding application-level sessions or encryption. The Session Layer The session layer sits on top of the data plane and handles the complex requirements of secure agent communication: Reliable delivery: automatic retries, acknowledgments, and ordering guarantees. Encryption: end-to-end encryption using the Message Layer Security (MLS) protocol. Session management: group creation, invites, membership changes, and state synchronization. While the session layer is required for applications to achieve secure, reliable communication, it is not used by SLIM nodes themselves—they only need the data plane. The Control Plane The control plane manages the distributed network of SLIM nodes: Configuration management for routing nodes. Monitoring and telemetry collection (planned for future releases). Network orchestration and service discovery. Administrative operations across the SLIM infrastructure. Architecture Diagram The following diagram illustrates how these components are distributed across applications and intermediate routing nodes: graph TB subgraph &quot;Application Node (Agent A)&quot; A1[Session Layer 1] A2[Session Layer 2] A3[Data Plane Client] A1 -.-&gt;|encrypted messages| A3 A2 -.-&gt;|encrypted messages| A3 end subgraph &quot;Intermediate SLIM Node 1&quot; I1[Data Plane] end subgraph &quot;Intermediate SLIM Node 2&quot; I2[Data Plane] end subgraph &quot;Application Node (Agent B)&quot; B1[Session Layer 1] B2[Session Layer 2] B3[Data Plane Client] B1 -.-&gt;|encrypted messages| B3 B2 -.-&gt;|encrypted messages| B3 end subgraph &quot;Control Plane&quot; CP[Configuration &amp; Monitoring] end A3 -.-&gt;|encrypted messages| I1 I1 -.-&gt;|route| I2 I2 -.-&gt;|encrypted messages| B3 CP -.-&gt;|manages| I1 CP -.-&gt;|manages| I2 style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style CP fill:#7f8c8d,stroke:#5a6970,stroke-width:2px,color:#fff Distributed Artifacts This architecture dictates how SLIM is distributed: Pure Data Plane We distribute the slim binary and Docker images as pure data-plane artifacts. Since SLIM routing nodes only forward messages and don’t participate in application sessions, they don’t need the session layer. This keeps the infrastructure lightweight, fast, and simple to deploy. Language Bindings We distribute libraries (Python, Go, etc.) that include both the data plane client and the session layer on top. Applications use these bindings to get the full stack: secure, reliable, encrypted communication with automatic session management. This separation means you can run a global network of SLIM routing nodes without any application logic, while your agents use the rich, full-featured language bindings for their communication needs. The control plane manages the routing infrastructure independently, ensuring the network operates efficiently. End-to-End Security by Design SLIM leverages the Message Layer Security (MLS) protocol (RFC 9420) to provide end-to-end encryption for all agent communications. Unlike TLS, which only secures point-to-point connections, MLS ensures that messages remain encrypted even when passing through intermediate nodes or experiencing TLS termination along the path. This means: Messages are confidential. Only authorized group members can decrypt content. Authentication is built-in. Cryptographic identities verify agent authenticity. Zero-trust architecture. You don’t need to trust intermediate infrastructure Group security. Add or remove agents from secure groups without rekeying everything. For AI applications, this is crucial. Your agent conversations, tool outputs, and coordination messages stay private even when traversing cloud infrastructure you don’t control. Two Powerful Session Types SLIM provides two session abstractions that map perfectly to agentic AI patterns: point-to-point and group sessions. Point-to-Point Sessions Perfect for tool invocations and direct agent-to-agent communication: # Discover and connect to a specific service instance session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.POINT_TO_POINT, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create session and wait for establishment session_context = await app.create_session_async(session_config, remote_name) await session_context.completion.wait_async() session = session_context.session # Send a request await session.publish_async( b&quot;execute_tool: search(query=&#39;AI agents&#39;)&quot;, None, None ) # Get the response received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) result = received_msg.payload The session automatically: Discovers an available service instance. Establishes a secure MLS group (if enabled). Binds all subsequent communication to that instance. Provides reliable delivery with automatic retries. Group Sessions Ideal for multi-agent coordination, broadcast updates, and collaborative workflows: # Create a coordination channel session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.GROUP, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create group session and wait for establishment session_context = await app.create_session_async(session_config, channel_name) await session_context.completion.wait_async() session = session_context.session # Invite other agents to join handle = await session.invite_async(agent_name) await handle.wait_async() # Broadcast to all participants await session.publish_async( b&quot;task_update: analysis complete&quot;, None, None ) Group sessions support: Many-to-many communication: all messages delivered to all participants. Dynamic membership: add or remove agents on the fly. Moderation: channel creators control membership. Secure group state: MLS ensures all members share cryptographic context. Intelligent Routing and Naming SLIM uses a hierarchical naming system based on Decentralized Identifiers (DIDs) that enables both human-readable names and secure, globally unique identifiers: organization/namespace/service/instance For example: agntcy/production/search-agent/a3f9k2 This structure supports: Anycast routing: send to org/ns/service and reach any available instance. Unicast routing: target a specific instance with the full four-part name. Service discovery: find agents by their organizational and service identifiers. Scalable forwarding: hierarchical names aggregate efficiently in routing tables. No more hardcoded endpoints or complex service registries. SLIM’s naming system just works. Low Latency Architecture SLIM is optimized for interactive AI workloads where every millisecond counts: Multiplexed streams: multiple logical streams over single connections. Efficient message routing: intelligent forwarding tables minimize hops. Zero-copy operations: where possible, avoid unnecessary data copying. Async-first design: non-blocking I/O throughout the stack. HTTP/2 transport: proven, efficient binary protocol. Real-world deployments show sub-second end-to-end latencies even with MLS encryption enabled. Developer-Friendly APIs SLIM provides high-quality bindings for multiple languages that abstract complexity. Here’s an example in Python: import slim_bindings import datetime # Initialize the global service service = slim_bindings.get_global_service() # Create a SLIM instance with shared secret auth local_name = slim_bindings.Name(&quot;org&quot;, &quot;namespace&quot;, &quot;my-agent&quot;) app = service.create_app_with_secret( local_name, &quot;my-shared-secret&quot; ) # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( &quot;http://127.0.0.1:46357&quot; ) conn_id = await service.connect_async(client_config) # Subscribe to receive messages await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Receive and reply to messages received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload await session.publish_async(b&quot;response&quot;, None, None) No need to manage MLS groups manually, handle connection pooling, or worry about encryption keys — SLIM’s session layer handles it all. Native RPC Support with SRPC Many agent-facing protocols (like A2A and MCP) are RPC-oriented. SLIM includes SRPC (SLIM RPC), which provides gRPC-like streaming RPC semantics directly over the SLIM transport. SRPC supports all four gRPC patterns: Unary → Unary — Simple request-response Unary → Stream — Server streaming responses Stream → Unary — Client streaming requests Stream → Stream — Bidirectional streaming Define services with Protocol Buffers: service AgentService { rpc ExecuteTool(ToolRequest) returns (ToolResponse); rpc StreamResults(Query) returns (stream Result); rpc CollectInputs(stream Input) returns (Summary); rpc Coordinate(stream Message) returns (stream Message); } The SLIM RPC compiler generates language-specific stubs that work seamlessly with SLIM’s secure messaging layer. You get familiar RPC semantics with SLIM’s security and group communication benefits. We are also studying how to extend these RPC interaction patterns to support group communication scenarios, enabling multi-agent RPC workflows. Single Implementation, Multiple Languages SLIM is implemented in Rust, providing a high-performance, memory-safe core that powers all language bindings. This approach ensures: Consistent behavior: all language bindings use the same battle-tested implementation. Performance: Rust’s zero-cost abstractions deliver native speed across all platforms. Security: Memory safety guarantees prevent entire classes of vulnerabilities. Maintainability: Bug fixes and improvements benefit all language ecosystems simultaneously. Currently Available: Python. Full-featured bindings with async/await support Go. Native Go bindings for seamless integration (see our technical blog posts on integrating Rust and Go with UniFFI and distributing C artifacts for Go modules) Coming Soon: C#. For .NET and Unity applications. JavaScript/TypeScript. Browser and Node.js support. Kotlin. Android and JVM applications. This multi-language strategy means you can build heterogeneous agent systems where different components use their most appropriate language, all communicating seamlessly through SLIM’s unified protocol. One of the key reasons SLIM provides multiple language bindings is to support agent communication protocols like A2A across different programming ecosystems. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go), and SLIM’s language bindings enable these A2A SDKs to communicate securely. An A2A Python agent can securely communicate with an A2A Java agent, with SLIM handling the underlying transport transparently. Real-World Use Cases SLIM + A2A: Agent-to-Agent Communication SLIM and A2A are designed to work together: A2A SDKs (Python, JavaScript, Java, C#, Go) implement agent-level semantics — task delegation, message formats, coordination patterns. SLIM bindings provide the secure transport, handling connection management, routing, encryption, and delivery guarantees. Currently, A2A sits on top of SLIM RPC (SRPC), enabling secure point-to-point agent interactions. We provide slim-a2a-python, a Python A2A SDK implementation built on SLIMRPC that enables developers to build A2A-compliant agents with SLIM as the transport layer. We are actively working to add A2A SDK support for the remaining SLIM language bindings (Go, C#, JavaScript/TypeScript, Kotlin). Looking ahead, A2A is evolving to support bidirectional streaming for real-time, interactive agent conversations and group communication for multi-agent coordination and collaboration. SLIM naturally provides both capabilities at the transport level through SRPC and MLS-based end-to-end encryption for groups, which many pub-sub systems lack. This positions SLIM as an ideal transport foundation for A2A’s continued evolution toward richer, more secure agent communication patterns. The following diagram illustrates how A2A and SLIM capabilities combine: graph LR subgraph Protocol[&quot;Protocol Layer (Application Semantics)&quot;] direction TB A1[&quot;A2A Go SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] B1[&quot;A2A C# SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] C1[&quot;A2A Python SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination&quot;] end subgraph Transport[&quot;Transport Layer (SLIM)&quot;] direction TB subgraph Endpoints[&quot;Agent Endpoints&quot;] A2[&quot;SLIM Go Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] B2[&quot;SLIM C# Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] C2[&quot;SLIM Python Bindings&lt;br/&gt;SRPC + Session + Data Plane&quot;] end subgraph Network[&quot;SLIM Network Infrastructure&quot;] SN1[SLIM Node 1&lt;br/&gt;Data Plane] SN2[SLIM Node 2&lt;br/&gt;Data Plane] end end A1 --&gt;|uses| A2 B1 --&gt;|uses| B2 C1 --&gt;|uses| C2 A2 -.-&gt;|&quot;SRPC (P2P)&lt;br/&gt;encrypted via MLS&quot;| SN1 B2 -.-&gt;|&quot;SRPC (P2P)&lt;br/&gt;encrypted via MLS&quot;| SN1 C2 -.-&gt;|&quot;SRPC (Groups)&lt;br/&gt;encrypted via MLS&quot;| SN2 SN1 -.-&gt;|routes| SN2 SN2 -.-&gt;|routes| SN1 style Protocol fill:#e8f4f8,stroke:#2980b9,stroke-width:3px style Transport fill:#fef5e7,stroke:#f39c12,stroke-width:3px style Endpoints fill:#fff,stroke:#95a5a6,stroke-width:2px style Network fill:#fff,stroke:#95a5a6,stroke-width:2px style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style C1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style B2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style C2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style SN1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style SN2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff Architecture Overview: Protocol Layer (blue, left): A2A SDKs implement agent-level semantics — defining what agents say through standardized task delegation, message formats, and coordination patterns. Transport Layer (green/orange, right): SLIM provides the secure infrastructure for how messages are delivered: SLIM Bindings (green): Include SRPC for RPC semantics, Session Layer for reliability and encryption, and Data Plane client for connectivity. SLIM Network (orange): Pure data plane nodes route encrypted messages without understanding agent semantics. Communication Patterns: Current: A2A uses SRPC for point-to-point (P2P) agent interactions with MLS encryption. Future: SLIM naturally provides SRPC group capabilities and MLS-based group encryption, ready to support A2A’s evolution toward groups and bidirectional streaming. SLIM also provides the transport layer for other agent communication protocols: MCP (Model Context Protocol) for context sharing between agents and tools. Custom protocols for domain-specific agent interactions. For more information about A2A, see the official A2A documentation. Getting Started Installation Install the SLIM node: # Docker docker pull ghcr.io/agntcy/slim:v1.0.0 # Cargo cargo install agntcy-slim # Helm (Kubernetes) helm pull oci://ghcr.io/agntcy/slim/helm/slim --version v1.0.0 Install Python bindings: pip install slim-bindings Quick Example Create your first SLIM agent in minutes: import asyncio import slim_bindings import datetime async def main(): # Initialize the global service service = slim_bindings.get_global_service() # Create app with shared secret authentication local_name = slim_bindings.Name(&quot;org&quot;, &quot;namespace&quot;, &quot;agent&quot;) app = service.create_app_with_secret(local_name, &quot;my-shared-secret&quot;) # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( &quot;http://127.0.0.1:46357&quot; ) conn_id = await service.connect_async(client_config) # Subscribe to local name await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Handle messages while True: received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload print(f&quot;Received: {payload.decode()}&quot;) await session.publish_async(b&quot;Acknowledged: &quot; + payload, None, None) asyncio.run(main()) The Road Ahead SLIM is being actively developed as an open-source project under the Apache 2.0 license. The protocol specification has been submitted as an Internet-Draft to the IETF, reflecting its ambition to become a standard for agentic AI communication. Current capabilities include: Rust core with multi-language bindings (Python, Go, and more coming) MLS-based end-to-end encryption Point-to-point and group sessions SRPC for RPC patterns Control plane for management Kubernetes deployment support The community is working on: Additional language bindings (C#, JavaScript/TypeScript, Kotlin) Enhanced monitoring and observability Integration with popular AI frameworks Extended A2A support for groups and bidirectional streaming Reference implementations of MCP over SLIM Performance optimizations Why SLIM Matters As AI systems evolve from monolithic models to distributed networks of specialized agents, the communication infrastructure becomes critical. SLIM provides a foundation that: Ensures security: end-to-end encryption without complexity. Scales with demand: from prototype to production. Simplifies development: intuitive APIs for complex capabilities. Future-proofs architecture: standards-based, extensible design. Whether you’re building a multi-agent AI system, an agentic workflow platform, or the next generation of AI applications, SLIM provides the messaging infrastructure you need. Get Involved SLIM is open source and welcomes contributions: GitHub Documentation Specification You can find comprehensive Python and Go examples in the GitHub repository. Join the community building the communication layer for agentic AI. Try SLIM in your next project with our language binding examples, contribute to the codebase, or share your use cases. The future of AI is collaborative, distributed, and secure. SLIM makes it possible. SLIM is developed by AGNTCY Contributors and released under the Apache 2.0 License.","headline":"SLIM v1.0: Secure Low-Latency Interactive Messaging for Agentic AI","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/feat-gh-pages-pr-previews/technical/2026/02/03/slim-v1.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/feat-gh-pages-pr-previews/assets/images/logo-light.svg"},"name":"Mauro Sardara"},"url":"https://blogs.agntcy.org/drafts/feat-gh-pages-pr-previews/technical/2026/02/03/slim-v1.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/drafts/feat-gh-pages-pr-previews/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/drafts/feat-gh-pages-pr-previews/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/drafts/feat-gh-pages-pr-previews/feed.xml" title="AGNTCY Blogs" /><script>
+    // Set theme immediately to prevent flash of wrong theme
+    (function() {
+      const theme = localStorage.getItem('theme-preference') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><div class="site-branding">
+      <a class="site-logo-link" rel="author" href="/drafts/feat-gh-pages-pr-previews/"><img class="site-logo logo-light" src="/drafts/feat-gh-pages-pr-previews/assets/images/logo-light.svg" alt="AGNTCY"><img class="site-logo logo-dark" src="/drafts/feat-gh-pages-pr-previews/assets/images/logo-dark.svg" alt="AGNTCY"></a>
+      <span class="site-title-text">Blogs</span>
+    </div><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/drafts/feat-gh-pages-pr-previews/archive/">Archive</a><a class="page-link" href="/drafts/feat-gh-pages-pr-previews/about/">About</a><button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </nav></div>
+</header>
+
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">SLIM v1.0: Secure Low-Latency Interactive Messaging for Agentic AI</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-02-03T07:00:00+00:00" itemprop="datePublished">
+        February 3, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/msardara" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Mauro Sardara</a></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>The AI landscape is rapidly evolving from isolated models to interconnected
+networks of intelligent agents. As AI systems become more sophisticated, they
+need to communicate, collaborate, and coordinate in real-time. Protocols like
+<a href="https://a2a-protocol.org/latest/">A2A (Agent-to-Agent)</a> define <em>what</em>
+agents say to each other: standardized messages, task delegation, and 
+coordination semantics. But A2A needs a robust transport layer that defines 
+<em>how</em> agents securely exchange these messages across network boundaries.</p>
+
+<p>Existing messaging frameworks weren’t designed for the unique demands of
+agentic AI. They either sacrifice security for performance, lack proper group
+communication primitives, or can’t scale to support distributed multi-agent
+systems. Others rely on centralized brokers that can’t be safely exposed across
+network boundaries, limiting agents to run only where the broker is deployed.</p>
+
+<p>Enter <a href="https://docs.agntcy.org/slim/overview/">SLIM (Secure Low-Latency Interactive Messaging)</a>, a next-generation
+communication framework that provides the secure, scalable transport layer for
+agentic AI protocols like A2A. SLIM handles the “piping”: secure connections,
+message routing, group communication, and end-to-end encryption, so protocol
+implementations can focus on agent semantics, not infrastructure.</p>
+
+<h2 id="the-problem-agent-protocols-need-secure-transport">The Problem: Agent Protocols Need Secure Transport</h2>
+
+<p>Modern AI applications are increasingly agentic. They don’t just respond to
+prompts, they take action, use tools, coordinate with other agents, and make
+autonomous decisions. The A2A protocol has emerged as a
+standard for defining how agents communicate: specifying message formats, task
+delegation patterns, and coordination semantics. A2A comes with SDKs in
+multiple languages (Python, JavaScript, Java, C#, Go) that implement these
+agent-level semantics.</p>
+
+<p>However, A2A and similar agent protocols need a robust transport layer beneath
+them. Whether you’re building:</p>
+
+<ul>
+  <li><strong>Multi-agent AI systems</strong> where specialized agents collaborate to solve
+complex problems.</li>
+  <li><strong>AI-powered workflows</strong> that orchestrate between LLMs, tools, and data
+sources.</li>
+  <li><strong>Real-time agent collaboration</strong> where agents need to share context and
+coordinate actions.</li>
+  <li><strong>Distributed AI services</strong> that span data centers, edge devices, and
+browsers.</li>
+</ul>
+
+<p>You need a messaging infrastructure that can handle:</p>
+
+<ol>
+  <li><strong>Real-time, low-latency communication</strong> — AI agents can’t wait seconds for
+responses.</li>
+  <li><strong>End-to-end security</strong> — Agent communications must remain confidential even
+through untrusted infrastructure.</li>
+  <li><strong>Flexible communication patterns</strong> — From point-to-point tool calls to
+group coordination.</li>
+  <li><strong>Scale</strong> — Supporting thousands of concurrent agents across distributed
+environments.</li>
+  <li><strong>Protocol flexibility</strong> — Supporting A2A, MCP, and custom agent protocols</li>
+  <li><strong>Simplicity</strong> — Developers shouldn’t need to be cryptography or distributed
+systems experts.</li>
+  <li><strong>Flexible deployment</strong> — Agents should be reachable without requiring
+direct server exposure.</li>
+</ol>
+
+<p>Traditional messaging systems fall short. <a href="https://mqtt.org/">MQTT</a> and
+<a href="https://www.amqp.org/">AMQP</a> weren’t designed for
+interactive AI workflows. <a href="https://grpc.io/">gRPC</a> provides excellent RPC semantics but lacks
+group capabilities and end-to-end encryption. Message queues add latency and
+complexity. Rolling your own solution means reinventing security, scaling, and
+reliability.</p>
+
+<p>A critical networking challenge also emerges: when A2A runs on direct HTTP/gRPC
+connections, servers must be continuously exposed and directly reachable.
+However, A2A can instead use SLIM as its transport layer. SLIM’s
+registration-based model allows agents to register with the SLIM network and
+become reachable by peers without exposing server ports. While SLIM routing
+nodes themselves need to be exposed, agent endpoints can run behind NATs and
+firewalls while remaining fully accessible, significantly simplifying
+deployment.</p>
+
+<p>SLIM was built to solve exactly these challenges. It provides the secure,
+scalable “piping” that agent protocols like A2A need to operate across
+network boundaries.</p>
+
+<h2 id="what-is-slim">What is SLIM?</h2>
+
+<p>SLIM is a secure, scalable, and developer-friendly messaging framework that
+provides the transport layer for agent communication protocols like A2A.</p>
+
+<p>While A2A defines <em>what</em> agents say (message formats, task semantics, coordination
+patterns), SLIM defines <em>how</em> these messages are securely delivered across
+distributed networks.</p>
+
+<p>At its core, SLIM combines:</p>
+
+<ul>
+  <li><strong>gRPC’s performance and reliability</strong> — Built on HTTP/2 for efficient,
+multiplexed transport.</li>
+  <li><strong>Messaging capabilities</strong> — Native support for channels and group
+communication.</li>
+  <li><strong>End-to-end encryption</strong> — Using Message Layer Security (MLS) protocol.</li>
+  <li><strong>Native RPC support</strong> — SRPC (SLIM RPC) for request-response patterns
+alongside messaging.</li>
+  <li><strong>Distributed architecture</strong> — Separate control and data planes for
+scalability and management.</li>
+  <li><strong>Protocol flexibility</strong> — Transport layer for A2A, MCP, and custom agent
+protocols.</li>
+</ul>
+
+<p>SLIM enables AI agents to communicate securely whether they’re running in a
+data center, in a browser, on mobile devices, or across organizational
+boundaries, all while maintaining sub-second latencies and strong security
+guarantees.</p>
+
+<h2 id="key-strengths-and-capabilities">Key Strengths and Capabilities</h2>
+
+<p>The strengths and capabilities of SLIM are:</p>
+
+<ul>
+  <li><a href="#scalable-distributed-architecture">Scalable Distributed Architecture</a></li>
+  <li><a href="#end-to-end-security-by-design">End-to-End Security by Design</a></li>
+  <li><a href="#two-powerful-session-types">Two Powerful Session Types</a></li>
+  <li><a href="#intelligent-routing-and-naming">Intelligent Routing and Naming</a></li>
+  <li><a href="#low-latency-architecture">Low Latency Architecture</a></li>
+  <li><a href="#developer-friendly-apis">Developer-Friendly APIs</a></li>
+  <li><a href="#native-rpc-support-with-srpc">Native RPC Support with SRPC</a></li>
+</ul>
+
+<h3 id="scalable-distributed-architecture">Scalable Distributed Architecture</h3>
+
+<p>SLIM is architected with three main components that cleanly separate
+concerns:</p>
+
+<h4 id="the-data-plane">The Data Plane</h4>
+
+<p>The data plane’s sole purpose is to route messages across SLIM nodes. It
+handles:</p>
+
+<ul>
+  <li>Efficient message forwarding based on hierarchical names.</li>
+  <li>Connection management between SLIM nodes.</li>
+  <li>Network topology and routing table maintenance.</li>
+  <li>Transport optimization without needing to inspect message contents.</li>
+</ul>
+
+<p>The data plane operates purely on message metadata, forwarding packets without
+understanding application-level sessions or encryption.</p>
+
+<h4 id="the-session-layer">The Session Layer</h4>
+
+<p>The session layer sits on top of the data plane and handles the complex
+requirements of secure agent communication:</p>
+
+<ul>
+  <li>Reliable delivery: automatic retries, acknowledgments, and ordering
+guarantees.</li>
+  <li>Encryption: end-to-end encryption using the Message Layer Security
+(MLS) protocol.</li>
+  <li>Session management: group creation, invites, membership changes, and
+state synchronization.</li>
+</ul>
+
+<p>While the session layer is required for applications to achieve secure,
+reliable communication, it is not used by SLIM nodes themselves—they only need
+the data plane.</p>
+
+<h4 id="the-control-plane">The Control Plane</h4>
+
+<p>The control plane manages the distributed network of SLIM nodes:</p>
+
+<ul>
+  <li>Configuration management for routing nodes.</li>
+  <li>Monitoring and telemetry collection (planned for future releases).</li>
+  <li>Network orchestration and service discovery.</li>
+  <li>Administrative operations across the SLIM infrastructure.</li>
+</ul>
+
+<h4 id="architecture-diagram">Architecture Diagram</h4>
+
+<p>The following diagram illustrates how these components are distributed across
+applications and intermediate routing nodes:</p>
+
+<pre><code class="language-mermaid">graph TB
+    subgraph "Application Node (Agent A)"
+        A1[Session Layer 1]
+        A2[Session Layer 2]
+        A3[Data Plane Client]
+        A1 -.-&gt;|encrypted messages| A3
+        A2 -.-&gt;|encrypted messages| A3
+    end
+    
+    subgraph "Intermediate SLIM Node 1"
+        I1[Data Plane]
+    end
+    
+    subgraph "Intermediate SLIM Node 2"
+        I2[Data Plane]
+    end
+    
+    subgraph "Application Node (Agent B)"
+        B1[Session Layer 1]
+        B2[Session Layer 2]
+        B3[Data Plane Client]
+        B1 -.-&gt;|encrypted messages| B3
+        B2 -.-&gt;|encrypted messages| B3
+    end
+    
+    subgraph "Control Plane"
+        CP[Configuration &amp; Monitoring]
+    end
+    
+    A3 -.-&gt;|encrypted messages| I1
+    I1 -.-&gt;|route| I2
+    I2 -.-&gt;|encrypted messages| B3
+    
+    CP -.-&gt;|manages| I1
+    CP -.-&gt;|manages| I2
+    
+    style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff
+    style A2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff
+    style A3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff
+    style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff
+    style B2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff
+    style B3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff
+    style I1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff
+    style I2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff
+    style CP fill:#7f8c8d,stroke:#5a6970,stroke-width:2px,color:#fff
+</code></pre>
+
+<h4 id="distributed-artifacts">Distributed Artifacts</h4>
+
+<p>This architecture dictates how SLIM is distributed:</p>
+
+<ul>
+  <li>
+    <p><strong>Pure Data Plane</strong></p>
+
+    <p>We distribute the <code class="language-plaintext highlighter-rouge">slim</code> binary and Docker images as
+pure data-plane artifacts. Since SLIM routing nodes only forward messages
+and don’t participate in application sessions, they don’t need the session
+layer. This keeps the infrastructure lightweight, fast, and simple to deploy.</p>
+  </li>
+  <li>
+    <p><strong>Language Bindings</strong></p>
+
+    <p>We distribute libraries (Python, Go, etc.)
+that include both the data plane client and the session layer on top.
+Applications use these bindings to get the full stack: secure, reliable,
+encrypted communication with automatic session management.</p>
+  </li>
+</ul>
+
+<p>This separation means you can run a global network of SLIM routing nodes
+without any application logic, while your agents use the rich, full-featured
+language bindings for their communication needs. The control plane manages the
+routing infrastructure independently, ensuring the network operates efficiently.</p>
+
+<h3 id="end-to-end-security-by-design">End-to-End Security by Design</h3>
+
+<p>SLIM leverages the <strong>Message Layer Security (MLS)</strong> protocol
+(<a href="https://www.rfc-editor.org/rfc/rfc9420.txt">RFC 9420</a>) to
+provide end-to-end encryption for all agent communications. Unlike TLS, which
+only secures point-to-point connections, MLS ensures that messages remain
+encrypted even when passing through intermediate nodes or experiencing TLS
+termination along the path.</p>
+
+<p>This means:</p>
+
+<ul>
+  <li>Messages are confidential. Only authorized group members can decrypt
+content.</li>
+  <li>Authentication is built-in. Cryptographic identities verify agent
+authenticity.</li>
+  <li>Zero-trust architecture. You don’t need to trust intermediate
+infrastructure</li>
+  <li>Group security. Add or remove agents from secure groups without
+rekeying everything.</li>
+</ul>
+
+<p>For AI applications, this is crucial. Your agent conversations, tool outputs,
+and coordination messages stay private even when traversing cloud
+infrastructure you don’t control.</p>
+
+<h3 id="two-powerful-session-types">Two Powerful Session Types</h3>
+
+<p>SLIM provides two session abstractions that map perfectly to agentic AI
+patterns: point-to-point and group sessions.</p>
+
+<h4 id="point-to-point-sessions">Point-to-Point Sessions</h4>
+
+<p>Perfect for tool invocations and direct agent-to-agent communication:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Discover and connect to a specific service instance
+</span><span class="n">session_config</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">SessionConfig</span><span class="p">(</span>
+    <span class="n">session_type</span><span class="o">=</span><span class="n">slim_bindings</span><span class="p">.</span><span class="n">SessionType</span><span class="p">.</span><span class="n">POINT_TO_POINT</span><span class="p">,</span>
+    <span class="n">enable_mls</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">max_retries</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">interval</span><span class="o">=</span><span class="n">datetime</span><span class="p">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+    <span class="n">metadata</span><span class="o">=</span><span class="p">{}</span>
+<span class="p">)</span>
+
+<span class="c1"># Create session and wait for establishment
+</span><span class="n">session_context</span> <span class="o">=</span> <span class="k">await</span> <span class="n">app</span><span class="p">.</span><span class="n">create_session_async</span><span class="p">(</span><span class="n">session_config</span><span class="p">,</span> <span class="n">remote_name</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">session_context</span><span class="p">.</span><span class="n">completion</span><span class="p">.</span><span class="n">wait_async</span><span class="p">()</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">session_context</span><span class="p">.</span><span class="n">session</span>
+
+<span class="c1"># Send a request
+</span><span class="k">await</span> <span class="n">session</span><span class="p">.</span><span class="n">publish_async</span><span class="p">(</span>
+    <span class="sa">b</span><span class="s">"execute_tool: search(query='AI agents')"</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span>
+<span class="p">)</span>
+
+<span class="c1"># Get the response
+</span><span class="n">received_msg</span> <span class="o">=</span> <span class="k">await</span> <span class="n">session</span><span class="p">.</span><span class="n">get_message_async</span><span class="p">(</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="n">datetime</span><span class="p">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">received_msg</span><span class="p">.</span><span class="n">payload</span>
+</code></pre></div></div>
+
+<p>The session automatically:</p>
+
+<ul>
+  <li>Discovers an available service instance.</li>
+  <li>Establishes a secure MLS group (if enabled).</li>
+  <li>Binds all subsequent communication to that instance.</li>
+  <li>Provides reliable delivery with automatic retries.</li>
+</ul>
+
+<h4 id="group-sessions">Group Sessions</h4>
+
+<p>Ideal for multi-agent coordination, broadcast updates, and
+collaborative workflows:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Create a coordination channel
+</span><span class="n">session_config</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">SessionConfig</span><span class="p">(</span>
+    <span class="n">session_type</span><span class="o">=</span><span class="n">slim_bindings</span><span class="p">.</span><span class="n">SessionType</span><span class="p">.</span><span class="n">GROUP</span><span class="p">,</span>
+    <span class="n">enable_mls</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">max_retries</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">interval</span><span class="o">=</span><span class="n">datetime</span><span class="p">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+    <span class="n">metadata</span><span class="o">=</span><span class="p">{}</span>
+<span class="p">)</span>
+
+<span class="c1"># Create group session and wait for establishment
+</span><span class="n">session_context</span> <span class="o">=</span> <span class="k">await</span> <span class="n">app</span><span class="p">.</span><span class="n">create_session_async</span><span class="p">(</span><span class="n">session_config</span><span class="p">,</span> <span class="n">channel_name</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">session_context</span><span class="p">.</span><span class="n">completion</span><span class="p">.</span><span class="n">wait_async</span><span class="p">()</span>
+<span class="n">session</span> <span class="o">=</span> <span class="n">session_context</span><span class="p">.</span><span class="n">session</span>
+
+<span class="c1"># Invite other agents to join
+</span><span class="n">handle</span> <span class="o">=</span> <span class="k">await</span> <span class="n">session</span><span class="p">.</span><span class="n">invite_async</span><span class="p">(</span><span class="n">agent_name</span><span class="p">)</span>
+<span class="k">await</span> <span class="n">handle</span><span class="p">.</span><span class="n">wait_async</span><span class="p">()</span>
+
+<span class="c1"># Broadcast to all participants
+</span><span class="k">await</span> <span class="n">session</span><span class="p">.</span><span class="n">publish_async</span><span class="p">(</span>
+    <span class="sa">b</span><span class="s">"task_update: analysis complete"</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>Group sessions support:</p>
+
+<ul>
+  <li>Many-to-many communication: all messages delivered to all participants.</li>
+  <li>Dynamic membership: add or remove agents on the fly.</li>
+  <li>Moderation: channel creators control membership.</li>
+  <li>Secure group state: MLS ensures all members share cryptographic context.</li>
+</ul>
+
+<h3 id="intelligent-routing-and-naming">Intelligent Routing and Naming</h3>
+
+<p>SLIM uses a hierarchical naming system based on Decentralized Identifiers
+(DIDs) that enables both human-readable names and secure, globally unique
+identifiers:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>organization/namespace/service/instance
+</code></pre></div></div>
+
+<p>For example: <code class="language-plaintext highlighter-rouge">agntcy/production/search-agent/a3f9k2</code></p>
+
+<p>This structure supports:</p>
+
+<ul>
+  <li>Anycast routing: send to <code class="language-plaintext highlighter-rouge">org/ns/service</code> and reach any available instance.</li>
+  <li>Unicast routing: target a specific instance with the full four-part name.</li>
+  <li>Service discovery: find agents by their organizational and service identifiers.</li>
+  <li>Scalable forwarding: hierarchical names aggregate efficiently in routing tables.</li>
+</ul>
+
+<p>No more hardcoded endpoints or complex service registries. SLIM’s naming
+system just works.</p>
+
+<h3 id="low-latency-architecture">Low Latency Architecture</h3>
+
+<p>SLIM is optimized for interactive AI workloads where every millisecond
+counts:</p>
+
+<ul>
+  <li>Multiplexed streams: multiple logical streams over single connections.</li>
+  <li>Efficient message routing: intelligent forwarding tables minimize hops.</li>
+  <li>Zero-copy operations: where possible, avoid unnecessary data copying.</li>
+  <li>Async-first design: non-blocking I/O throughout the stack.</li>
+  <li>HTTP/2 transport: proven, efficient binary protocol.</li>
+</ul>
+
+<p>Real-world deployments show sub-second end-to-end latencies even with MLS
+encryption enabled.</p>
+
+<h3 id="developer-friendly-apis">Developer-Friendly APIs</h3>
+
+<p>SLIM provides high-quality bindings for multiple languages that abstract
+complexity. Here’s an example in Python:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">slim_bindings</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="c1"># Initialize the global service
+</span><span class="n">service</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">get_global_service</span><span class="p">()</span>
+
+<span class="c1"># Create a SLIM instance with shared secret auth
+</span><span class="n">local_name</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Name</span><span class="p">(</span><span class="s">"org"</span><span class="p">,</span> <span class="s">"namespace"</span><span class="p">,</span> <span class="s">"my-agent"</span><span class="p">)</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">service</span><span class="p">.</span><span class="n">create_app_with_secret</span><span class="p">(</span>
+    <span class="n">local_name</span><span class="p">,</span> <span class="s">"my-shared-secret"</span>
+<span class="p">)</span>
+
+<span class="c1"># Connect to SLIM node
+</span><span class="n">client_config</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">new_insecure_client_config</span><span class="p">(</span>
+    <span class="s">"http://127.0.0.1:46357"</span>
+<span class="p">)</span>
+<span class="n">conn_id</span> <span class="o">=</span> <span class="k">await</span> <span class="n">service</span><span class="p">.</span><span class="n">connect_async</span><span class="p">(</span><span class="n">client_config</span><span class="p">)</span>
+
+<span class="c1"># Subscribe to receive messages
+</span><span class="k">await</span> <span class="n">app</span><span class="p">.</span><span class="n">subscribe_async</span><span class="p">(</span><span class="n">local_name</span><span class="p">,</span> <span class="n">conn_id</span><span class="p">)</span>
+
+<span class="c1"># Listen for incoming session
+</span><span class="n">session</span> <span class="o">=</span> <span class="k">await</span> <span class="n">app</span><span class="p">.</span><span class="n">listen_for_session_async</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+<span class="c1"># Receive and reply to messages
+</span><span class="n">received_msg</span> <span class="o">=</span> <span class="k">await</span> <span class="n">session</span><span class="p">.</span><span class="n">get_message_async</span><span class="p">(</span>
+    <span class="n">timeout</span><span class="o">=</span><span class="n">datetime</span><span class="p">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">payload</span> <span class="o">=</span> <span class="n">received_msg</span><span class="p">.</span><span class="n">payload</span>
+<span class="k">await</span> <span class="n">session</span><span class="p">.</span><span class="n">publish_async</span><span class="p">(</span><span class="sa">b</span><span class="s">"response"</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>No need to manage MLS groups manually, handle connection pooling, or worry
+about encryption keys — SLIM’s session layer handles it all.</p>
+
+<h3 id="native-rpc-support-with-srpc">Native RPC Support with SRPC</h3>
+
+<p>Many agent-facing protocols (like A2A and MCP) are RPC-oriented. SLIM includes
+<strong>SRPC</strong> (SLIM RPC), which provides gRPC-like streaming RPC semantics directly
+over the SLIM transport.</p>
+
+<p>SRPC supports all four gRPC patterns:</p>
+
+<ul>
+  <li><strong>Unary → Unary</strong> — Simple request-response</li>
+  <li><strong>Unary → Stream</strong> — Server streaming responses</li>
+  <li><strong>Stream → Unary</strong> — Client streaming requests</li>
+  <li><strong>Stream → Stream</strong> — Bidirectional streaming</li>
+</ul>
+
+<p>Define services with Protocol Buffers:</p>
+
+<div class="language-proto highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">service</span> <span class="n">AgentService</span> <span class="p">{</span>
+  <span class="k">rpc</span> <span class="n">ExecuteTool</span><span class="p">(</span><span class="n">ToolRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">ToolResponse</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">StreamResults</span><span class="p">(</span><span class="n">Query</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">stream</span> <span class="n">Result</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">CollectInputs</span><span class="p">(</span><span class="n">stream</span> <span class="n">Input</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">Summary</span><span class="p">);</span>
+  <span class="k">rpc</span> <span class="n">Coordinate</span><span class="p">(</span><span class="n">stream</span> <span class="n">Message</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">stream</span> <span class="n">Message</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The SLIM RPC compiler generates language-specific stubs that work seamlessly
+with SLIM’s secure messaging layer. You get familiar RPC semantics with SLIM’s
+security and group communication benefits. We are also studying how to extend
+these RPC interaction patterns to support group communication scenarios,
+enabling multi-agent RPC workflows.</p>
+
+<h3 id="single-implementation-multiple-languages">Single Implementation, Multiple Languages</h3>
+
+<p>SLIM is implemented in Rust, providing a high-performance, memory-safe
+core that powers all language bindings. This approach ensures:</p>
+
+<ul>
+  <li>Consistent behavior: all language bindings use the same battle-tested
+implementation.</li>
+  <li>Performance: Rust’s zero-cost abstractions deliver native speed across
+all platforms.</li>
+  <li>Security: Memory safety guarantees prevent entire classes of
+vulnerabilities.</li>
+  <li>Maintainability: Bug fixes and improvements benefit all language
+ecosystems simultaneously.</li>
+</ul>
+
+<p><strong>Currently Available:</strong></p>
+
+<ul>
+  <li><strong>Python</strong>. Full-featured bindings with async/await support</li>
+  <li><strong>Go</strong>. Native Go bindings for seamless integration (see our technical
+blog posts on <a href="https://blogs.agntcy.org/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html">integrating Rust and Go with
+UniFFI</a>
+and <a href="https://blogs.agntcy.org/technical/2026/01/20/distributing-c-artifacts-for-go-modules.html">distributing C artifacts for Go
+modules</a>)</li>
+</ul>
+
+<p><strong>Coming Soon:</strong></p>
+
+<ul>
+  <li><strong>C#</strong>. For .NET and Unity applications.</li>
+  <li><strong>JavaScript/TypeScript</strong>. Browser and Node.js support.</li>
+  <li><strong>Kotlin</strong>. Android and JVM applications.</li>
+</ul>
+
+<p>This multi-language strategy means you can build heterogeneous agent systems
+where different components use their most appropriate language, all
+communicating seamlessly through SLIM’s unified protocol.</p>
+
+<p>One of the key reasons SLIM provides multiple language bindings is to
+support agent communication protocols like A2A across different
+programming ecosystems. A2A
+comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go), and
+SLIM’s language bindings enable these A2A SDKs to communicate securely. An A2A
+Python agent can securely communicate with an A2A Java agent, with SLIM
+handling the underlying transport transparently.</p>
+
+<h2 id="real-world-use-cases">Real-World Use Cases</h2>
+
+<h3 id="slim--a2a-agent-to-agent-communication">SLIM + A2A: Agent-to-Agent Communication</h3>
+
+<p>SLIM and A2A are designed to work together:</p>
+
+<ul>
+  <li><a href="https://a2a-protocol.org/latest/sdk/">A2A SDKs</a> (Python, JavaScript,
+Java, C#, Go) implement agent-level
+semantics — task delegation, message formats, coordination patterns.</li>
+  <li><a href="https://github.com/agntcy/slim/tree/main/data-plane/bindings">SLIM bindings</a>
+provide the secure transport, handling connection
+management, routing, encryption, and delivery guarantees.</li>
+</ul>
+
+<p>Currently, A2A sits on top of SLIM RPC (SRPC), enabling secure point-to-point agent interactions.
+We provide <a href="https://github.com/agntcy/slim-a2a-python">slim-a2a-python</a>, a
+Python A2A SDK implementation built on SLIMRPC that enables developers to
+build A2A-compliant agents with SLIM as the transport layer. We are actively
+working to add A2A SDK support for the remaining SLIM language bindings (Go,
+C#, JavaScript/TypeScript, Kotlin).</p>
+
+<p>Looking ahead, A2A is evolving to support bidirectional streaming for real-time, interactive agent conversations and group communication for multi-agent coordination and collaboration.</p>
+
+<p>SLIM naturally provides both capabilities at the transport level through SRPC
+and MLS-based end-to-end encryption for groups, which many pub-sub
+systems lack. This positions SLIM as an ideal transport foundation for A2A’s
+continued evolution toward richer, more secure agent communication
+patterns.</p>
+
+<p>The following diagram illustrates how A2A and SLIM capabilities combine:</p>
+
+<pre><code class="language-mermaid">graph LR
+    subgraph Protocol["Protocol Layer (Application Semantics)"]
+        direction TB
+        A1["A2A Go SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"]
+        B1["A2A C# SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"]
+        C1["A2A Python SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"]
+    end
+    
+    subgraph Transport["Transport Layer (SLIM)"]
+        direction TB
+        subgraph Endpoints["Agent Endpoints"]
+            A2["SLIM Go Bindings&lt;br/&gt;SRPC + Session + Data Plane"]
+            B2["SLIM C# Bindings&lt;br/&gt;SRPC + Session + Data Plane"]
+            C2["SLIM Python Bindings&lt;br/&gt;SRPC + Session + Data Plane"]
+        end
+        
+        subgraph Network["SLIM Network Infrastructure"]
+            SN1[SLIM Node 1&lt;br/&gt;Data Plane]
+            SN2[SLIM Node 2&lt;br/&gt;Data Plane]
+        end
+    end
+    
+    A1 --&gt;|uses| A2
+    B1 --&gt;|uses| B2
+    C1 --&gt;|uses| C2
+    
+    A2 -.-&gt;|"SRPC (P2P)&lt;br/&gt;encrypted via MLS"| SN1
+    B2 -.-&gt;|"SRPC (P2P)&lt;br/&gt;encrypted via MLS"| SN1
+    C2 -.-&gt;|"SRPC (Groups)&lt;br/&gt;encrypted via MLS"| SN2
+    
+    SN1 -.-&gt;|routes| SN2
+    SN2 -.-&gt;|routes| SN1
+    
+    style Protocol fill:#e8f4f8,stroke:#2980b9,stroke-width:3px
+    style Transport fill:#fef5e7,stroke:#f39c12,stroke-width:3px
+    style Endpoints fill:#fff,stroke:#95a5a6,stroke-width:2px
+    style Network fill:#fff,stroke:#95a5a6,stroke-width:2px
+    
+    style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff
+    style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff
+    style C1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff
+    style A2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff
+    style B2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff
+    style C2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff
+    style SN1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff
+    style SN2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff
+</code></pre>
+
+<p><strong>Architecture Overview:</strong></p>
+
+<ul>
+  <li><strong>Protocol Layer</strong> (blue, left): A2A SDKs implement agent-level
+semantics — defining <em>what</em> agents say through standardized task
+delegation, message formats, and coordination patterns.</li>
+  <li><strong>Transport Layer</strong> (green/orange, right): SLIM provides the secure
+infrastructure for <em>how</em> messages are delivered:
+    <ul>
+      <li><strong>SLIM Bindings</strong> (green): Include SRPC for RPC semantics, Session
+Layer for reliability and encryption, and Data Plane client for
+connectivity.</li>
+      <li><strong>SLIM Network</strong> (orange): Pure data plane nodes route encrypted
+messages without understanding agent semantics.</li>
+    </ul>
+  </li>
+</ul>
+
+<p><strong>Communication Patterns:</strong></p>
+
+<ul>
+  <li><strong>Current</strong>: A2A uses SRPC for point-to-point (P2P) agent interactions
+with MLS encryption.</li>
+  <li><strong>Future</strong>: SLIM naturally provides SRPC group capabilities and
+MLS-based group encryption, ready to support A2A’s evolution toward
+groups and bidirectional streaming.</li>
+</ul>
+
+<p>SLIM also provides the transport layer for other agent communication
+protocols:</p>
+
+<ul>
+  <li><strong>MCP (Model Context Protocol)</strong> for context sharing between agents and tools.</li>
+  <li><strong>Custom protocols</strong> for domain-specific agent interactions.</li>
+</ul>
+
+<p>For more information about A2A, see the <a href="https://a2a-protocol.org/">official A2A
+documentation</a>.</p>
+
+<h2 id="getting-started">Getting Started</h2>
+
+<h3 id="installation">Installation</h3>
+
+<p>Install the SLIM node:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Docker</span>
+docker pull ghcr.io/agntcy/slim:v1.0.0
+
+<span class="c"># Cargo</span>
+cargo <span class="nb">install </span>agntcy-slim
+
+<span class="c"># Helm (Kubernetes)</span>
+helm pull oci://ghcr.io/agntcy/slim/helm/slim <span class="nt">--version</span> v1.0.0
+</code></pre></div></div>
+
+<p>Install Python bindings:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pip <span class="nb">install </span>slim-bindings
+</code></pre></div></div>
+
+<h3 id="quick-example">Quick Example</h3>
+
+<p>Create your first SLIM agent in minutes:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">asyncio</span>
+<span class="kn">import</span> <span class="nn">slim_bindings</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="k">async</span> <span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="c1"># Initialize the global service
+</span>    <span class="n">service</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">get_global_service</span><span class="p">()</span>
+    
+    <span class="c1"># Create app with shared secret authentication
+</span>    <span class="n">local_name</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">Name</span><span class="p">(</span><span class="s">"org"</span><span class="p">,</span> <span class="s">"namespace"</span><span class="p">,</span> <span class="s">"agent"</span><span class="p">)</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">service</span><span class="p">.</span><span class="n">create_app_with_secret</span><span class="p">(</span><span class="n">local_name</span><span class="p">,</span> <span class="s">"my-shared-secret"</span><span class="p">)</span>
+    
+    <span class="c1"># Connect to SLIM node
+</span>    <span class="n">client_config</span> <span class="o">=</span> <span class="n">slim_bindings</span><span class="p">.</span><span class="n">new_insecure_client_config</span><span class="p">(</span>
+        <span class="s">"http://127.0.0.1:46357"</span>
+    <span class="p">)</span>
+    <span class="n">conn_id</span> <span class="o">=</span> <span class="k">await</span> <span class="n">service</span><span class="p">.</span><span class="n">connect_async</span><span class="p">(</span><span class="n">client_config</span><span class="p">)</span>
+    
+    <span class="c1"># Subscribe to local name
+</span>    <span class="k">await</span> <span class="n">app</span><span class="p">.</span><span class="n">subscribe_async</span><span class="p">(</span><span class="n">local_name</span><span class="p">,</span> <span class="n">conn_id</span><span class="p">)</span>
+    
+    <span class="c1"># Listen for incoming session
+</span>    <span class="n">session</span> <span class="o">=</span> <span class="k">await</span> <span class="n">app</span><span class="p">.</span><span class="n">listen_for_session_async</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+    
+    <span class="c1"># Handle messages
+</span>    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">received_msg</span> <span class="o">=</span> <span class="k">await</span> <span class="n">session</span><span class="p">.</span><span class="n">get_message_async</span><span class="p">(</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="n">datetime</span><span class="p">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">received_msg</span><span class="p">.</span><span class="n">payload</span>
+        <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"Received: </span><span class="si">{</span><span class="n">payload</span><span class="p">.</span><span class="n">decode</span><span class="p">()</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+        <span class="k">await</span> <span class="n">session</span><span class="p">.</span><span class="n">publish_async</span><span class="p">(</span><span class="sa">b</span><span class="s">"Acknowledged: "</span> <span class="o">+</span> <span class="n">payload</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+<span class="n">asyncio</span><span class="p">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
+</code></pre></div></div>
+
+<h2 id="the-road-ahead">The Road Ahead</h2>
+
+<p>SLIM is being actively developed as an open-source project under the Apache
+2.0 license. The protocol specification has been submitted as an
+Internet-Draft to
+the IETF, reflecting its ambition to become a standard for agentic AI
+communication.</p>
+
+<p>Current capabilities include:</p>
+
+<ul>
+  <li>Rust core with multi-language bindings (Python, Go, and more coming)</li>
+  <li>MLS-based end-to-end encryption</li>
+  <li>Point-to-point and group sessions</li>
+  <li>SRPC for RPC patterns</li>
+  <li>Control plane for management</li>
+  <li>Kubernetes deployment support</li>
+</ul>
+
+<p>The community is working on:</p>
+
+<ul>
+  <li>Additional language bindings (C#, JavaScript/TypeScript, Kotlin)</li>
+  <li>Enhanced monitoring and observability</li>
+  <li>Integration with popular AI frameworks</li>
+  <li>Extended A2A support for groups and bidirectional streaming</li>
+  <li>Reference implementations of MCP over SLIM</li>
+  <li>Performance optimizations</li>
+</ul>
+
+<h2 id="why-slim-matters">Why SLIM Matters</h2>
+
+<p>As AI systems evolve from monolithic models to distributed networks of
+specialized agents, the communication infrastructure becomes critical. SLIM
+provides a foundation that:</p>
+
+<ul>
+  <li>Ensures security: end-to-end encryption without complexity.</li>
+  <li>Scales with demand: from prototype to production.</li>
+  <li>Simplifies development: intuitive APIs for complex capabilities.</li>
+  <li>Future-proofs architecture: standards-based, extensible design.</li>
+</ul>
+
+<p>Whether you’re building a multi-agent AI system, an agentic workflow platform,
+or the next generation of AI applications, SLIM provides the messaging
+infrastructure you need.</p>
+
+<h2 id="get-involved">Get Involved</h2>
+
+<p>SLIM is open source and welcomes contributions:</p>
+
+<ul>
+  <li><a href="https://github.com/agntcy/slim">GitHub</a></li>
+  <li><a href="https://docs.agntcy.org/slim/overview">Documentation</a></li>
+  <li><a href="https://spec.slim.agntcy.org/draft-mpsb-agntcy-slim.html">Specification</a></li>
+</ul>
+
+<p>You can find comprehensive <a href="https://github.com/agntcy/slim/tree/slim-v1.0.0/data-plane/bindings/python/examples">Python</a>
+and <a href="https://github.com/agntcy/slim/tree/slim-v1.0.0/data-plane/bindings/go/examples">Go</a>
+examples in the GitHub repository.</p>
+
+<p>Join the community building the communication layer for agentic AI. Try
+SLIM in your next project with our <a href="https://github.com/agntcy/slim/tree/main/data-plane/bindings">language binding
+examples</a>,
+contribute to the codebase, or share your use cases.</p>
+
+<p>The future of AI is collaborative, distributed, and secure. SLIM makes it
+possible.</p>
+
+<hr />
+
+<p><em>SLIM is developed by AGNTCY Contributors and released under the Apache 2.0
+License.</em></p>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"><span class="post-nav-label">← Previous</span>
+        <a href="/drafts/feat-gh-pages-pr-previews/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html">Integrating Rust and Go with UniFFI: A Complete Guide</a></div>
+    <div class="post-nav-next"><span class="post-nav-label">Next →</span>
+        <a href="/drafts/feat-gh-pages-pr-previews/technical/2026/02/19/dir-v1.html">Agent Directory v1.0: Distributed Announce and Discovery of Multi-Agentic-Systems</a></div>
+  </nav>
+
+  <a class="u-url" href="/drafts/feat-gh-pages-pr-previews/technical/2026/02/03/slim-v1.html" hidden></a>
+</article>
+
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/drafts/feat-gh-pages-pr-previews/"></data>
+
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">
+        <h2 class="footer-heading">AGNTCY Blogs</h2>
+        <p class="footer-copyright">Copyright © AGNTCY a Series of LF Projects, LLC</p>
+      </div>
+
+      <div class="footer-col">
+        <ul class="social-media-list"><li>
+            <a href="https://github.com/agntcy">
+              <svg class="svg-icon"><use xlink:href="/drafts/feat-gh-pages-pr-previews/assets/minima-social-icons.svg#github"></use></svg>
+              <span class="username">GitHub</span>
+            </a>
+          </li><li>
+            <a href="https://www.linkedin.com/company/agntcyproject">
+              <svg class="svg-icon"><use xlink:href="/drafts/feat-gh-pages-pr-previews/assets/minima-social-icons.svg#linkedin"></use></svg>
+              <span class="username">LinkedIn</span>
+            </a>
+          </li><li>
+            <a href="https://www.youtube.com/@agntcy-lf">
+              <svg class="svg-icon"><use xlink:href="/drafts/feat-gh-pages-pr-previews/assets/minima-social-icons.svg#youtube"></use></svg>
+              <span class="username">YouTube</span>
+            </a>
+          </li><li>
+            <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">
+              <svg class="svg-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.362 10.11c0 .926-.756 1.681-1.681 1.681S0 11.036 0 10.111c0-.926.756-1.681 1.681-1.681h1.681v1.68zm.846 0c0-.926.756-1.681 1.681-1.681s1.681.756 1.681 1.681v4.21c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681v-4.21zM5.89 3.362c-.926 0-1.681-.756-1.681-1.681S4.964 0 5.89 0s1.681.756 1.681 1.681v1.681H5.89zm0 .846c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681H1.68C.756 7.57 0 6.814 0 5.889s.756-1.681 1.681-1.681h4.21zm6.749 1.681c0-.926.756-1.681 1.681-1.681S16 4.964 16 5.889s-.756 1.681-1.681 1.681h-1.681V5.89zm-.846 0c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681V1.68C8.43.756 9.186 0 10.111 0s1.681.756 1.681 1.681v4.21zm-1.681 6.749c.926 0 1.681.756 1.681 1.681S11.036 16 10.111 16s-1.681-.756-1.681-1.681v-1.681h1.681zm0-.846c-.926 0-1.681-.756-1.681-1.681s.756-1.681 1.681-1.681h4.21c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681h-4.21z"/>
+              </svg>
+              <span class="username">Slack</span>
+            </a>
+          </li></ul>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-description">Building infrastructure for the Internet of Agents</p>
+      </div>
+
+    </div>
+  </div>
+
+</footer>
+<script src="/drafts/feat-gh-pages-pr-previews/assets/js/theme-toggle.js"></script>
+    <script src="/drafts/feat-gh-pages-pr-previews/assets/js/code-copy.js"></script>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      async function renderMermaid() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Agntcy color scheme for mermaid
+        const agntcyTheme = {
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: isDark ? {
+            // Dark mode - agntcy slate theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#e3e3e3',
+            secondaryColor: '#002a4d',
+            tertiaryColor: '#03142b',
+            background: '#03142b',
+            mainBkg: '#03142b',
+            secondBkg: '#002a4d',
+            textColor: '#e3e3e3',
+            nodeBorder: '#0251af',
+            clusterBkg: '#002a4d',
+            clusterBorder: '#0251af',
+            titleColor: '#fbaf46',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#e3e3e3',
+            signalColor: '#e3e3e3',
+            signalTextColor: '#e3e3e3',
+            labelBoxBkgColor: '#002a4d',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#e3e3e3',
+            loopTextColor: '#e3e3e3',
+            noteBkgColor: '#002a4d',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#e3e3e3',
+            activationBkgColor: '#002a4d',
+            activationBorderColor: '#fbaf46',
+            sequenceNumberColor: '#03142b'
+          } : {
+            // Light mode - agntcy blue theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#1c1e21',
+            secondaryColor: '#e8eefb',
+            tertiaryColor: '#eff3fc',
+            background: '#eff3fc',
+            mainBkg: '#eff3fc',
+            secondBkg: '#e8eefb',
+            textColor: '#1c1e21',
+            nodeBorder: '#0251af',
+            clusterBkg: '#e8eefb',
+            clusterBorder: '#0251af',
+            titleColor: '#0251af',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#1c1e21',
+            signalColor: '#1c1e21',
+            signalTextColor: '#1c1e21',
+            labelBoxBkgColor: '#e8eefb',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#1c1e21',
+            loopTextColor: '#1c1e21',
+            noteBkgColor: '#e8eefb',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#1c1e21',
+            activationBkgColor: '#e8eefb',
+            activationBorderColor: '#0251af',
+            sequenceNumberColor: '#f3f6fd'
+          }
+        };
+
+        mermaid.initialize(agntcyTheme);
+        await mermaid.run();
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
+              newDiv.textContent = graphDefinition;
+
+              container.replaceWith(newDiv);
+          });
+
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      });
+    </script>
+    <style>
+    #cookie-notice {
+        padding: 2rem 2rem;
+        display: none;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #1a1a1a;
+        color: #ffffff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 9999;
+        border-top: 3px solid #4a90e2;
+    }
+    #cookie-notice span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    #cookie-notice a {
+        display: inline-block;
+        cursor: pointer;
+        padding: 0.875rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: #4a90e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    #cookie-notice a:hover {
+        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    @media (max-width: 767px) {
+        #cookie-notice {
+            padding: 1.5rem 1rem;
+        }
+        #cookie-notice span {
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        #cookie-notice a {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+<div id="cookie-notice"><span>We would like to use third party cookies and scripts to improve the functionality of this website.</span><a id="cookie-notice-accept" class="btn btn-primary">Approve</a></div>
+<script>
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
+    function loadGoogleAnalytics() {
+        
+        // Load Google Analytics V4
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-3D9938KZCN";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-3D9938KZCN');
+        
+    }
+
+    if(readCookie('cookie-notice-dismissed')=='true') {
+        loadGoogleAnalytics();
+    } else {
+        document.getElementById('cookie-notice').style.display = 'block';
+    }
+
+    document.getElementById('cookie-notice-accept').addEventListener("click",function() {
+        createCookie('cookie-notice-dismissed','true',31);
+        document.getElementById('cookie-notice').style.display = 'none';
+        location.reload();
+    });
+
+</script>
+
+  </body>
+
+</html>
+
