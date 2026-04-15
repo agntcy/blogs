@@ -1,7 +1,7 @@
 ---
 layout: post
-title: "Directory v1.x: Unified OIDC Authentication for Humans, Machines, and CI"
-date: 2026-03-16 09:00:00 +0000
+title: "Directory v1.x: Unified OIDC Authentication for Humans, Service Users, and CI"
+date: 2026-04-15 09:00:00 +0000
 author: Tibor Kircsi
 author_url: https://github.com/tkircsi
 categories: [security, authentication, directory]
@@ -12,7 +12,7 @@ mermaid: true
 Authentication in Directory has evolved significantly. We moved from a mixed model centered on GitHub OAuth for user access to a **unified OIDC-first model** that supports three real-world access patterns with one consistent trust and authorization pipeline:
 
 1. Human interactive login
-2. Service user (machine-to-machine) login
+2. Service user and non-interactive automation access
 3. GitHub Actions workload identity
 
 This post explains the architecture, security model, migration path, and practical usage patterns for the new OIDC-based setup.
@@ -24,12 +24,12 @@ This post explains the architecture, security model, migration path, and practic
 The previous model solved an important problem, but it became limiting as usage expanded:
 
 - Human operators needed browser-based login and cached session behavior
-- Service users needed one-step non-interactive auth without manual token curl flows
+- Service users needed a clean non-interactive path without falling back to long-lived GitHub tokens
 - CI pipelines needed short-lived workload identity without long-lived PAT secrets
 
 A single OIDC model gives us:
 
-- ✅ One identity protocol across humans, machines, and workflows
+- ✅ One identity protocol across humans, service users, and workflows
 - ✅ Short-lived bearer tokens instead of long-lived static credentials
 - ✅ Cleaner RBAC principal mapping in `envoy-authz`
 - ✅ Better security posture for automation and public gateway usage
@@ -106,7 +106,7 @@ sequenceDiagram
 1. `dirctl` gets an access token from Dex (PKCE) and caches it locally.
 2. CLI sends gRPC request with `Authorization: Bearer <token>` to Envoy.
 3. Envoy `jwt_authn` validates issuer/signature and routes only verified JWTs forward.
-4. `ext_authz` extracts canonical principal (typically `user:{iss}:{email}`) and checks method permission in Casbin.
+4. `ext_authz` extracts canonical principal (typically `user:{iss}:{sub}` or another configured `claims.userID` value) and checks method permission in Casbin.
 5. On allow, request is forwarded and backend sees the authorized identity context.
 
 This keeps authn/authz logic centralized at the edge while keeping backend behavior consistent.
@@ -133,7 +133,7 @@ dirctl search --version "v1.*" \
 
 ---
 
-# Part 2: Service User / Machine Authentication
+# Part 2: Service Users and Non-Interactive Automation
 
 Service users (bots, automation, MCP agents) authenticate using pre-issued tokens passed via `--auth-token` or the `DIRECTORY_CLIENT_AUTH_TOKEN` environment variable.
 
@@ -154,9 +154,9 @@ dirctl search --version "v1.*" \
 
 1. The pre-issued JWT is passed directly to Envoy via `Authorization: Bearer` header.
 2. Runtime requests go through the same edge chain: `jwt_authn` -> `ext_authz` -> backend.
-3. Principal is resolved as `client:{iss}:{email}` based on the token's claims and issuer configuration.
+3. Principal is resolved as `client:{iss}:{client_id}` (or another configured machine identity claim) based on the token's claims and issuer configuration.
 
-This keeps service user auth consistent with human OIDC transport and policy enforcement, while supporting long-lived tokens for automation that cannot use interactive login.
+This keeps service user auth consistent with human OIDC transport and policy enforcement, while avoiding interactive login requirements for automation that already receives a token from a trusted issuer.
 
 ---
 
@@ -243,10 +243,10 @@ Before landing on the current setup, we evaluated multiple GitHub Actions integr
 
 GitHub appears in two very different roles:
 
-- **GitHub federation for humans** (browser login UX)
+- **Dex-backed OIDC login for humans** (browser or device flow UX)
 - **GitHub Actions OIDC for workloads** (ephemeral workflow identity)
 
-Treating workflow identity as machine/workload auth (not human federation) was a key design choice.
+Treating workflow identity as service-user/workload auth (not human federation) was a key design choice.
 
 ---
 
@@ -289,15 +289,15 @@ These identity headers are forwarded downstream after authorization and can be u
 
 - `x-authorized-principal`: canonical identity used by Casbin (for example `user:...`, `client:...`, `ghwf:...`)
 - `x-user-id`: set to the same canonical principal value for consistent identity handling
-- `x-principal-type`: principal class (for example `user`, `service`, `github`, `public`)
+- `x-principal-type`: principal class (for example `user`, `client`, `ghwf`, `public`)
 - `x-user-issuer`: issuer claim projected by `jwt_authn` (`iss`)
 
 The verified JWT payload header (`x-jwt-payload`) is used by `ext_authz` for extraction/evaluation; client-supplied values are stripped at the edge before JWT validation.
 
 ## Principal types
 
-- Human users: `user:{iss}:{email}`
-- Machine clients: `client:{iss}:{email}`
+- Human users: `user:{iss}:{sub}` or `user:{iss}:{<configured-userID-claim>}`
+- Service users / machine clients: `client:{iss}:{client_id}`
 - GitHub workflows: `ghwf:repo:{repo}:workflow:{file}:ref:{ref}[:env:{env}]`
 
 ## GitHub workflow wildcard support
@@ -337,8 +337,8 @@ Design boundary we keep strict:
 
 The OIDC rollout included additional hardening:
 
-- Removed `grpc.reflection` from public auth server paths
 - Added ingress rate limits for publicly exposed gateway endpoints
+- Kept authorization at the edge with explicit role-to-method mappings instead of trusting role claims in tokens
 
 Combined with short-lived OIDC tokens and explicit RBAC roles, this improves default security for both human and CI traffic.
 
@@ -351,7 +351,7 @@ If you still have legacy GitHub auth config/docs, this is the practical migratio
 1. Switch CLI and workflows to `--auth-mode=oidc`
 2. Replace `DIRECTORY_CLIENT_GITHUB_TOKEN` with `DIRECTORY_CLIENT_AUTH_TOKEN` in CI
 3. Configure OIDC issuer/JWKS trust in Envoy
-4. Migrate RBAC principals from `github:<user>` to OIDC principal forms (`user:{iss}:{email}`, `ghwf:...`)
+4. Migrate RBAC principals from `github:<user>` to canonical OIDC principal forms (`user:{iss}:{sub}`, `client:{iss}:{client_id}`, `ghwf:...`)
 5. Add dedicated least-privilege roles for CI workflows
 
 ---
@@ -388,7 +388,7 @@ Guardrails we would keep:
 
 Directory’s authentication model is now simpler and stronger:
 
-- ✅ One OIDC-first model for humans, machines, and CI
+- ✅ One OIDC-first model for humans, service users, and CI
 - ✅ Explicit role-based authorization with method-level control
 - ✅ Reduced secret sprawl by removing PAT dependence in CI
 - ✅ Preserved service-to-service trust boundaries in backend infrastructure
@@ -398,6 +398,7 @@ This is a meaningful step toward secure-by-default Directory operations at scale
 ## 📚 References
 
 - [Directory GitHub Repository](https://github.com/agntcy/dir)
+- [Directory staging OIDC add-on example](https://github.com/agntcy/dir-staging)
 - [Dex OIDC Provider](https://dexidp.io/docs/)
 - [OpenID Connect Core](https://openid.net/specs/openid-connect-core-1_0.html)
 - [OAuth 2.0 Authorization Framework (RFC 6749)](https://datatracker.ietf.org/doc/html/rfc6749)
