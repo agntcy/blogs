@@ -26,16 +26,203 @@ style: |
 
 ## How SLIM solves the problem
 
-- No need to expose services one by one
-- gRPC based streaming communication for cross network boundaries
-- e2e encryption
-- 
+**SLIM** — Secure Low latency Interactive Messaging
+
+<div style="font-size: 11px;">
+
+| <span style="font-size: 13px; font-weight: bold;">Problem</span> | <span style="font-size: 13px; font-weight: bold;">SLIM Solution</span> |
+|---|---|
+| **Public cloud:** every new service requires a dedicated public endpoint | Single SLIM endpoint exposes all services — no per-service ingress |
+| **Private environments:** services behind firewalls are unreachable | Private SLIM nodes connect outbound to a public SLIM endpoint — no inbound exposure needed |
+| Data flows in the clear on middle boxes | E2E encryption via MLS — data stays encrypted through intermediate nodes |
+
+</div>
+
+<br>
+
+<div style="transform: scale(0.75); transform-origin: top left;">
+
+```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
+graph LR
+    subgraph PRV["Private Datacenter"]
+        S4[Svc D] <--> SN2[SLIM Node]
+        S5[Svc E] <--> SN2
+    end
+    subgraph PUB["Public Cloud"]
+        IG[Public Ingress] <--> SN1[SLIM Node]
+        SN1 <--> S1[Svc A]
+        SN1 <--> S2[Svc B]
+        SN1 <--> S3[Svc C]
+    end
+    C((Client)) --> IG
+    SN2 -- "outbound" --> IG
+    style IG fill:#FF6B6B,color:#fff
+    style SN1 fill:#4A90E2,color:#fff
+    style SN2 fill:#4A90E2,color:#fff
+    style PUB fill:#e0e0e0,stroke:#999,color:#333
+    style PRV fill:#e0e0e0,stroke:#999,color:#333
+```
+
+*e.g. Svc A communicates with Svc E through: Svc A ↔ SLIM Node ↔ Public Ingress ↔ SLIM Node ↔ Svc E*
+
+</div>
 
 ---
 
-## Introducing SLIM
+## Comparison with Existing Solutions
 
-see slides 35/36/37 of agntcy-intro
+<div style="font-size: 12px;">
+
+| **System/Protocol** | **Limitation** |
+|---|---|
+| Message queues (SQS, RabbitMQ, Kafka, NATS etc.) | • One-directional <br> • No e2e encryption <br> • Can't cross org boundaries |
+| HTTP/gRPC | • No E2E encryption <br> • Services must be exposed on the internet |
+| VPNs | • No per-service granularity <br> • No e2e encryption <br> • Hard to manage across orgs |
+| Reverse proxies | • Per-service exposure and configuration <br> • No e2e encryption <br> • Does not solve cross-org trust |
+
+</div>
+
+---
+
+## SLIM Architecture
+
+<div style="font-size: 11px;">
+
+| **Layer** | **Primary Function** | **Key Responsibilities** |
+|---|---|---|
+| Data Plane | Message Routing | Message forwarding, Connection management, gRPC over HTTP/2 |
+| Session Layer | Secure Messaging | Reliable delivery, E2E encryption |
+| Control Plane | Network Orchestration | Node configuration, Route management |
+
+</div>
+
+<br>
+
+<div style="transform: scale(0.85); transform-origin: top left;">
+
+```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 10, 'rankSpacing': 30, 'padding': 8}}}%%
+graph LR
+    subgraph ClusterA["Cluster A"]
+        direction TB
+        subgraph SA["Service"]
+            SLA[Session Layer]
+            DPA[Data Plane]
+            SLA <--> DPA
+        end
+        subgraph SN1["SLIM Node 1"]
+            DPN1[Data Plane]
+        end
+        DPA <-- "gRPC/TLS" --> DPN1
+    end
+
+    DPN1 <-- "gRPC/TLS" --> DPN2
+    SN1 -.-> CP[Control Plane]
+    SN2 -.-> CP
+
+    subgraph ClusterB["Cluster B"]
+        direction TB
+        subgraph SB["Service"]
+            SLB[Session Layer]
+            DPB[Data Plane]
+            SLB <--> DPB
+        end
+        subgraph SN2["SLIM Node 2"]
+            DPN2[Data Plane]
+        end
+        DPB <-- "gRPC/TLS" --> DPN2
+    end
+
+    style CP fill:#555,color:#fff
+    style SA fill:#29b6f6,color:#fff
+    style SB fill:#29b6f6,color:#fff
+    style SLA fill:#1976d2,color:#fff
+    style SLB fill:#1976d2,color:#fff
+    style DPA fill:#FF9F43,color:#fff
+    style DPB fill:#FF9F43,color:#fff
+    style SN1 fill:#1976d2,color:#fff
+    style SN2 fill:#1976d2,color:#fff
+    style DPN1 fill:#FF9F43,color:#fff
+    style DPN2 fill:#FF9F43,color:#fff
+    style ClusterA fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
+    style ClusterB fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
+```
+
+</div>
+
+<div style="font-size: 9px;">
+
+Each service embeds a **Session Layer** and connects to a local **SLIM Node**, which handles cross-network delivery through the **Data Plane**.
+
+</div>
+
+---
+
+## Zero Trust Data Security
+
+**Network Security + Data Security**
+
+| **Network Security (TLS)** | **Data Security (E2E / MLS)** |
+|---|---|
+| Secures the link | Secures the data |
+| If a node is compromised, traffic can be read | Even if a node is compromised, content stays encrypted |
+| Fine for single-hop, trusted infrastructure | Essential for multi-cloud, cross-org scenarios |
+
+```mermaid
+graph LR
+    A1[Service] -- "gRPC/TLS" --> SN1[SLIM Node 1]
+    SN1 -- "gRPC/TLS" --> SN2[SLIM Node 2]
+    SN2 -- "gRPC/TLS" --> A2[Service]
+
+    A1 -. "MLS (E2E encrypted)" .-> A2
+
+    style SN1 fill:#4A90E2,color:#fff
+    style SN2 fill:#4A90E2,color:#fff
+```
+
+MLS: https://www.rfc-editor.org/rfc/rfc9420.txt
+
+---
+
+## Communication Patterns — P2P, Group and RPCs
+
+SLIM natively supports the following interaction patterns between services.
+
+```mermaid
+graph TB
+    subgraph RPCM[RPC Multicast]
+        direction TB
+        rm1((Client)) -- "requests" --> rch{{o/n/rpc-channel}}
+        rch -- "responses" --> rm1
+        rm2((Server 1)) -- "responses" --> rch
+        rm3((Server 2)) -- "responses" --> rch
+    end
+
+    subgraph RPC[RPC P2P]
+        direction LR
+        rc((o/n/c/did)) -- "requests" --> rs((o/n/s/did))
+        rs -- "responses" --> rc
+    end
+
+    subgraph GRP[Group]
+        direction TB
+        g1((Service 1)) --> ch{{o/n/channel/0xffff}}
+        g2((Service 2)) --> ch
+        g3((Service 3)) --> ch
+    end
+
+    subgraph P2P[Point-to-Point]
+        direction LR
+        pp1((o/n/a1/did)) <--> pp2((o/n/a2/did))
+    end
+```
+
+Services are identified using a hierarchical naming system based on Decentralized Identifiers (DIDs):
+- `organization/namespace/service/h(did:key)` — the DID is the hash of the public key presented by the service
+
+Services can join a shared channel and form groups:
+- `organization/namespace/group/0xffffffff`
 
 ---
 
@@ -107,6 +294,10 @@ graph LR
 ---
 
 ## Video
+
+<video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
+  <source src="/videos/routes.mp4" type="video/mp4">
+</video>
 
 ---
 
