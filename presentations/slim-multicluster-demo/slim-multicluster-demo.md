@@ -9,7 +9,7 @@ style: |
   h2 { font-size: 20px; margin: 0; }
 ---
 
-# SLIM Multicluster Use Case
+# Cluster Customer Remediation Use Case with SLIM
 
 ---
 
@@ -30,15 +30,15 @@ graph LR
         IG <--> S3[Svc C]
     end
     C((Client)) --> IG
-    RP -- "outbound" --> IG
-    style IG fill:#FF6B6B,color:#fff
-    style RP fill:#FF9F43,color:#fff
-    style PUB fill:#e0e0e0,stroke:#999,color:#333
-    style PRV fill:#e0e0e0,stroke:#999,color:#333
-    style S1 fill:#50C878,color:#fff
-    style S2 fill:#50C878,color:#fff
-    style S3 fill:#50C878,color:#fff
-    style S4 fill:#50C878,color:#fff
+    RP <--> IG
+    style IG fill:#C62828,color:#fff
+    style RP fill:#E65100,color:#fff
+    style PUB fill:#F5F6FA,stroke:#9E9E9E,color:#333
+    style PRV fill:#F5F6FA,stroke:#9E9E9E,color:#333
+    style S1 fill:#2E7D32,color:#fff
+    style S2 fill:#2E7D32,color:#fff
+    style S3 fill:#2E7D32,color:#fff
+    style S4 fill:#2E7D32,color:#fff
 ```
 
 </div>
@@ -47,9 +47,11 @@ graph LR
 
 ✗ Every service needs a **dedicated public endpoint**
 
-✗ **Custom reverse proxy** required per customer app
+✗ **Custom reverse proxy** to access the cluster
 
-✗ Data flows **in the clear** through middle boxes
+✗ Data flows **in the clear** through middle boxes 
+
+TODO: add comment on the out/in bound connection
 
 </div>
 
@@ -74,16 +76,16 @@ graph LR
     end
     C((Client)) --> IG
     SN2 -- "outbound" --> IG
-    style IG fill:#FF6B6B,color:#fff
-    style SN1 fill:#4A90E2,color:#fff
-    style SN2 fill:#4A90E2,color:#fff
-    style S1 fill:#50C878,color:#fff
-    style S2 fill:#50C878,color:#fff
-    style S3 fill:#50C878,color:#fff
-    style S4 fill:#50C878,color:#fff
-    style S5 fill:#50C878,color:#fff
-    style PUB fill:#e0e0e0,stroke:#999,color:#333
-    style PRV fill:#e0e0e0,stroke:#999,color:#333
+    style IG fill:#C62828,color:#fff
+    style SN1 fill:#1565C0,color:#fff
+    style SN2 fill:#1565C0,color:#fff
+    style S1 fill:#2E7D32,color:#fff
+    style S2 fill:#2E7D32,color:#fff
+    style S3 fill:#2E7D32,color:#fff
+    style S4 fill:#2E7D32,color:#fff
+    style S5 fill:#2E7D32,color:#fff
+    style PUB fill:#F5F6FA,stroke:#9E9E9E,color:#333
+    style PRV fill:#F5F6FA,stroke:#9E9E9E,color:#333
 ```
 
 </div>
@@ -94,7 +96,7 @@ graph LR
 
 ✓ Private SLIM nodes connect **outbound** — no inbound firewall exposure
 
-✓ **E2E encryption** via MLS — data stays encrypted through all intermediate nodes
+✓ **E2E encryption** via MLS — data stays encrypted through all intermediate nodes **+TLS + GRPC**
 
 </div>
 
@@ -129,10 +131,12 @@ graph LR
 | **Layer** | **Primary Function** | **Key Responsibilities** |
 |---|---|---|
 | Data Plane | Message Routing | Message forwarding, Connection management, gRPC over HTTP/2 |
-| Session Layer | Secure Messaging | Reliable delivery, E2E encryption |
-| Control Plane | Network Orchestration | Node configuration, Route management |
+| SLIM SDK | Secure Messaging | Reliable delivery, E2E encryption |
+| Controller| Network Orchestration | Node configuration, Route management |
 
 </div>
+
+TODO: Remove the table, add text to the diagram for Key Responsibilities
 
 <br>
 
@@ -200,7 +204,9 @@ Each service embeds a **Session Layer** and connects to a local **SLIM Node**, w
 
 **Network Security + Data Security**
 
-| **Network Security (TLS)** | **Data Security (E2E / MLS)** |
+TODO: Remove the table and do as before
+
+| **Network Security (TLS)** | **Data Security (E2Ee / MLS)** |
 |---|---|
 | Secures the link | Secures the data |
 | If a node is compromised, traffic can be read | Even if a node is compromised, content stays encrypted |
@@ -220,7 +226,7 @@ graph LR
     style A2 fill:#50C878,color:#fff
 ```
 
-MLS: https://www.rfc-editor.org/rfc/rfc9420.txt
+MLS: https://www.rfc-editor.org/rfc/rfc9420.txt -> remove rfc
 
 ---
 
@@ -273,6 +279,8 @@ layout: cover
 
 ## SLIM Multicluster Demo — Functional Topology
 
+TODO: center 
+
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 30, 'padding': 10}}}%%
 graph LR
@@ -280,26 +288,26 @@ graph LR
         direction TB
         subgraph Customer[Customer Cluster]
             direction LR
-            AMCP[Atlassian MCP] --> CSN[SLIM Node]
-            KMCP[K8s MCP] --> CSN
+            AMCP[Atlassian MCP Server] --> CSN[SLIM Node]
+            KMCP[k8s MCP Server] --> CSN
         end
         subgraph Laptop[IT Ops Laptop]
-            Copilot[Copilot]
+            Copilot[Copilot - A2A client]
         end
     end
 
     subgraph Cloud[Cloud Cluster]
         direction LR
         SN[SLIM Node]
-        SC[SLIM Controller]
-        HCJ[Health Check Job]
-        K8S[k8s TBA]
+        SC[Controller]
+        HCJ[Health Check Job - A2A client]
+        K8S[k8s TB Agent + MCP client SLIM channel 1/ SLIM channel 2 + A2A server]
         SN -. "gRPC" .-> SC
-        SN ---|A2A/SLIM| K8S
-        K8S ---|A2A/SLIM| HCJ
+        SN ---|SLIM| K8S
+        K8S ---|SLIM| HCJ
     end
 
-    Copilot -- "A2A/SLIM" --> SN
+    Copilot -- "SLIM" --> SN
     CSN <-- "gRPC" --> SN
     CSN -. "gRPC" .-> SC
 
@@ -316,105 +324,112 @@ graph LR
     style HCJ fill:#50C878,color:#fff
     style Copilot fill:#50C878,color:#fff
 ```
-
+TODO: Control channel / Data channel
 ---
 
 ## SLIM Multicluster Demo — Full Deployment
 
-<br>
-
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 25, 'padding': 8}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '11px'}, 'flowchart': {'nodeSpacing': 6, 'rankSpacing': 18, 'padding': 4}}}%%
 graph LR
     subgraph Left[" "]
         direction TB
-        subgraph Laptop[IT Ops Laptop]
-            direction LR
-            Copilot[Copilot]
-            LSA[Spire Agent]
-            Copilot -.- LSA
-        end
         subgraph Customer[Customer Cluster]
             direction LR
             subgraph CustServices[Services]
                 direction LR
-                AMCP[Atlassian MCP] ---|MCP| MP1[MCP Proxy]
-                KMCP[K8s MCP] ---|MCP| MP1
+                AMCP[Atlassian MCP] --- MP1[MCP Proxy]
+                KMCP[K8s MCP] --- MP1
             end
             subgraph CustSLIM[SLIM]
                 direction LR
                 CSN[Slim Node]
             end
             NP[Network Proxy]
-            CSN ---|SLIM| NP
+            CSN --- NP
             subgraph CustIdentity[Identity]
                 CSA[Spire Agent]
             end
-            MP1 ---|MCP/SLIM| CSN
+            MP1 --- CSN
             CSA -.- CSN
             CSA -.- NP
+        end
+        subgraph Laptop[IT Ops Laptop]
+            direction LR
+            Copilot[Copilot]
+            LSA[Spire Agent]
+            Copilot -.- LSA
         end
     end
 
     subgraph Cloud[Cloud Cluster]
         direction TB
-        Ingress[nginx ingress]
+        Ingress[nginx Ingress]
         subgraph CloudSLIM[SLIM]
             direction LR
-            SC[Slim Controller] ---|gRPC| SN[Slim Node]
+            SC[Slim Controller] --- SN[Slim Node]
         end
         subgraph CloudServices[Services]
             direction LR
-            HCJ[Health Check job] ---|A2A/SLIM| K8S[k8s TBA]
+            HCJ[Health Check job] --- K8S[k8s Agent]
         end
         subgraph CloudIdentity[Identity]
             direction LR
             SS[Spire Server] --- SA[Spire Agent]
         end
-        Ingress ---|gRPC| SC
-        Ingress ---|SLIM| SN
+        Ingress --- SC
+        Ingress --- SN
         Ingress --- SS
-        K8S ---|A2A/SLIM| SN
+        K8S --- SN
         SA -.- SC
         SA -.- SN
         SA -.- K8S
         SA -.- HCJ
     end
 
-    NP -- "outbound" --> Ingress
-    Copilot ---|A2A/SLIM| Ingress
-    LSA --- Ingress
+    NP --> Ingress
+    Copilot --- Ingress
+    LSA -.- Ingress
+
+    classDef service fill:#2E7D32,color:#fff,padding:4px 8px
+    classDef slim fill:#1565C0,color:#fff,padding:4px 8px
+    classDef identity fill:#6A1B9A,color:#fff,padding:4px 8px
+    classDef proxy fill:#E65100,color:#fff,padding:4px 8px
+    classDef ingress fill:#C62828,color:#fff,padding:4px 8px
+    classDef ctrl fill:#37474F,color:#fff,padding:4px 8px
+
+    class AMCP,KMCP,MP1,K8S,HCJ,Copilot service
+    class CSN,SN slim
+    class CSA,LSA,SA,SS identity
+    class NP proxy
+    class Ingress ingress
+    class SC ctrl
 
     style Left fill:none,stroke:none
-    style Customer fill:#e0e0e0,stroke:#999,color:#333
-    style Cloud fill:#e0e0e0,stroke:#999,color:#333
-    style Laptop fill:#e0e0e0,stroke:#999,color:#333
+    style Customer fill:#F5F6FA,stroke:#9E9E9E,color:#333
+    style Cloud fill:#F5F6FA,stroke:#9E9E9E,color:#333
+    style Laptop fill:#F5F6FA,stroke:#9E9E9E,color:#333
     style CustServices fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style CustSLIM fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style CustIdentity fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style CloudSLIM fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style CloudServices fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style CloudIdentity fill:none,stroke:#ccc,stroke-dasharray: 3 3
-    style NP fill:#FF9F43,color:#fff
-    style Ingress fill:#FF6B6B,color:#fff
-    style SC fill:#555,color:#fff
-    style SN fill:#4A90E2,color:#fff
-    style K8S fill:#50C878,color:#fff
-    style HCJ fill:#50C878,color:#fff
-    style SS fill:#9C27B0,color:#fff
-    style SA fill:#9C27B0,color:#fff
-    style AMCP fill:#50C878,color:#fff
-    style KMCP fill:#50C878,color:#fff
-    style MP1 fill:#50C878,color:#fff
-    style CSN fill:#4A90E2,color:#fff
-    style CSA fill:#9C27B0,color:#fff
-    style Copilot fill:#50C878,color:#fff
-    style LSA fill:#9C27B0,color:#fff
 ```
+
+<div style="position:absolute; bottom:10px; left:16px; display:flex; gap:14px; font-size:10px; align-items:center; background:rgba(255,255,255,0.85); padding:5px 10px; border-radius:4px; border:1px solid #ddd">
+  <span><span style="display:inline-block;width:11px;height:11px;background:#1565C0;border-radius:2px;margin-right:4px;vertical-align:middle"></span>SLIM Node</span>
+  <span><span style="display:inline-block;width:11px;height:11px;background:#37474F;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Controller</span>
+  <span><span style="display:inline-block;width:11px;height:11px;background:#2E7D32;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Service / Agent</span>
+  <span><span style="display:inline-block;width:11px;height:11px;background:#E65100;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Network Proxy</span>
+  <span><span style="display:inline-block;width:11px;height:11px;background:#C62828;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Ingress</span>
+  <span><span style="display:inline-block;width:11px;height:11px;background:#6A1B9A;border-radius:2px;margin-right:4px;vertical-align:middle"></span>Identity (SPIRE)</span>
+  <span style="color:#555; border-left:1px solid #ccc; padding-left:10px">─── data &nbsp; ╌╌╌ identity</span>
+</div>
 
 ---
 
-## How to Configure SLIM Names
+## How to Configure Service Names
 
 In SLIM all services are identified by a name `organization/namespace/service/h(did:key)`
 
@@ -453,8 +468,8 @@ In SLIM all services are identified by a name `organization/namespace/service/h(
 The on-boarding of a new customer in the platform is fully automated
 
 The customer only needs:
-- An authentication Token
-- The public address of the Controller
+- An authentication token
+- The public address of the controller
 
 ```yaml
 slim:
