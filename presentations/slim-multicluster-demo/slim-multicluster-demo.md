@@ -139,7 +139,21 @@ graph LR
 
 ## What is SLIM
 
-...
+**Secure Low-latency Interactive Messaging** — a communication framework that provides the secure transport layer for services across network boundaries.
+
+<div style="font-size: 13px;">
+
+| | |
+|---|---|
+| **Built on gRPC/HTTP2** | For easy NAT/firewall traversal |
+| **E2E Encryption** | Network layer secured through TLS, data layer encrypted E2E through MLS (RFC 9420) |
+| **Flexible communication Patterns** | Point-to-point, group channels and RPC |
+| **Distributed Architecture** | Separate Data Plane (routing), SDK (encryption + reliability), and Controller (configuration) |
+| **No Direct Exposure** | Services register with SLIM and become reachable without exposing server ports |
+| **Multi-language** | Single Rust core with bindings for Python, Go, C#, JS/TS, Kotlin, Java |
+| **Protocol Agnostic** | Transport layer for A2A, MCP, OTel, and custom protocols |
+
+</div>
 
 ---
 
