@@ -179,7 +179,7 @@ graph LR
     end
 
     DPN1 <-- "gRPC/TLS" --> DPN2
-    SN1 -.-> CP[SLIM Controller]
+    SN1 -.-> CP[Controller]
     SN2 -.-> CP
 
     subgraph ClusterB["Cluster B"]
@@ -259,7 +259,7 @@ graph LR
 
 <br><br><br><br><br><br>
 
-MLS: https://www.rfc-editor.org/rfc/rfc9420.txt
+MLS: Message Layer security https://www.rfc-editor.org/rfc/rfc9420.txt
 
 ---
 
@@ -340,7 +340,7 @@ graph LR
     subgraph Cloud[Cloud Cluster]
         direction LR
         SN[SLIM Node]
-        SC[SLIM Controller]
+        SC[Controller]
         HCJ["Health Check Job\n[A2A Client]"]
         K8S["k8s troubleshooting agent\n[A2A Server]\n[MCP Client]"]
         SN -.-> SC
@@ -401,7 +401,7 @@ graph LR
         direction LR
         Ingress[nginx ingress] --- SN[Slim Node]
         Ingress --- SS[Spire Server]
-        Ingress --- SC[Slim Controller]
+        Ingress --- SC[Controller]
         SC --- SN
         SN --- K8S["k8s troubleshooting agent\n[A2A Server]\n[MCP Client]"]
         SN --- HCJ["Health Check job\n[A2A Client]"]
