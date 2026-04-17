@@ -21,13 +21,13 @@ style: |
 %%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
 graph LR
     subgraph PRV["Private Datacenter"]
-        S4[Svc A] <--> RP[Reverse Proxy]
+        S4[svc A] <--> RP[Reverse Proxy]
     end
     subgraph PUB["Public Cloud"]
         IG[Public Ingress]
-        IG <--> S1[Svc A]
-        IG <--> S2[Svc B]
-        IG <--> S3[Svc C]
+        IG <--> S1[svc A]
+        IG <--> S2[svc B]
+        IG <--> S3[svc C]
     end
     C((Client)) --> IG
     RP -- "outbound" --> IG
@@ -63,14 +63,14 @@ graph LR
 %%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
 graph LR
     subgraph PRV["Private Datacenter"]
-        S4[Svc D] <--> SN2[SLIM Node]
-        S5[Svc E] <--> SN2
+        S4[svc D] <--> SN2[SLIM Node]
+        S5[svc E] <--> SN2
     end
     subgraph PUB["Public Cloud"]
         IG[Public Ingress] <--> SN1[SLIM Node]
-        SN1 <--> S1[Svc A]
-        SN1 <--> S2[Svc B]
-        SN1 <--> S3[Svc C]
+        SN1 <--> S1[svc A]
+        SN1 <--> S2[svc B]
+        SN1 <--> S3[svc C]
     end
     C((Client)) --> IG
     SN2 -- "outbound" --> IG
@@ -116,7 +116,7 @@ graph LR
 
 <div style="transform: scale(0.75); transform-origin: top left;">
 
-*e.g. Svc A communicates with Svc E through: Svc A ↔ SLIM Node ↔ Public Ingress ↔ SLIM Node ↔ Svc E*
+*e.g. svc A communicates with svc E through: svc A ↔ SLIM Node ↔ Public Ingress ↔ SLIM Node ↔ svc E*
 
 </div>
 -->
