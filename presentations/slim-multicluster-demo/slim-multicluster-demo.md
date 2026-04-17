@@ -353,10 +353,10 @@ graph LR
 
 </div>
 
-<div style="display:flex; justify-content:center; margin-top:5px; transform:scale(3.0); transform-origin:top center">
+<div style="display:flex; justify-content:center; margin-top:80px; transform:scale(3.2); transform-origin:top center">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '14px'}, 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 35, 'padding': 10}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '20px'}, 'flowchart': {'nodeSpacing': 50, 'rankSpacing': 45, 'padding': 20}}}%%
 graph LR
     subgraph Customer[Customer Cluster]
         direction LR
@@ -382,7 +382,7 @@ graph LR
         SC --- SN
         Ingress --- SS[Spire Server]
         SN --- K8S["k8s TBA\n(A2A, MCP)"]
-        K8S --- HCJ[Health Check job]
+        SN --- HCJ["Health Check job\n(A2A)"]
         SS --- SA[Spire Agent]
         SA --- SC
         SA --- SN
