@@ -366,7 +366,9 @@ After the chart is installed, the controller automatically discovers the new nod
 
 ## Human Interaction
 
-- Humand can use an a2a CLI to interact with the cloud services
+<br>
+
+- Humans can use an a2a CLI to interact with the cloud services
   - connecting to the SLIM endpoint and invoking A2A RPCs on the services running in the cloud cluster
 - Authentication is handled via JWT tokens (using SPIRE in this particular case)
 - The a2a CLI can also be used as a skill for an agent
