@@ -291,9 +291,11 @@ layout: cover
 
 <div style="font-size: 9px; margin-bottom: 4px;">
 
-── data channel &nbsp;&nbsp;&nbsp; ┄┄ control channel
+── data channel (gRPC) &nbsp;&nbsp;&nbsp; ┄┄ control channel (gRPC)
 
 </div>
+
+<div style="display:flex; justify-content:center; margin-top:40px; transform:scale(2.2); transform-origin:top center">
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 30, 'padding': 10}}}%%
@@ -316,14 +318,14 @@ graph LR
         SC[SLIM Controller]
         HCJ[Health Check Job]
         K8S["k8s TBA\n(A2A, MCP)"]
-        SN -. "gRPC" .-> SC
+        SN -.-> SC
         SN --- K8S
         K8S --- HCJ
     end
 
-    Copilot -- "A2A/SLIM" --> SN
-    CSN <-- "gRPC" --> SN
-    CSN -. "gRPC" .-> SC
+    Copilot --> SN
+    CSN <--> SN
+    CSN -.-> SC
 
     style Left fill:none,stroke:none
     style Customer fill:#e0e0e0,stroke:#999,color:#333
@@ -339,88 +341,70 @@ graph LR
     style Copilot fill:#90CAF9,color:#1a1a1a
 ```
 
+</div>
+
 ---
 
 ## SLIM Multicluster Demo — Full Deployment
 
 <div style="font-size: 9px; margin-bottom: 4px;">
 
-── data channel &nbsp;&nbsp;&nbsp; ┄┄ control channel
+── data channel (gRPC) &nbsp;&nbsp;&nbsp; ┄┄ control channel (gRPC) &nbsp;&nbsp;&nbsp; <span style="color:#9C27B0">━━</span> identity channel
 
 </div>
 
+<div style="display:flex; justify-content:center; margin-top:5px; transform:scale(3.0); transform-origin:top center">
+
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 25, 'padding': 8}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '14px'}, 'flowchart': {'nodeSpacing': 20, 'rankSpacing': 35, 'padding': 10}}}%%
 graph LR
-    subgraph Left[" "]
-        direction TB
-        subgraph Laptop[IT Ops Laptop]
-            direction LR
-            Copilot[Copilot]
-            LSA[Spire Agent]
-            Copilot -.- LSA
-        end
-        subgraph Customer[Customer Cluster]
-            direction LR
-            subgraph CustServices[Services]
-                direction LR
-                AMCP[Atlassian MCP] ---|MCP| MP1[MCP Proxy]
-                KMCP[K8s MCP] ---|MCP| MP1
-            end
-            subgraph CustSLIM[SLIM]
-                direction LR
-                CSN[Slim Node]
-            end
-            NP[Network Proxy]
-            CSN ---|SLIM| NP
-            subgraph CustIdentity[Identity]
-                CSA[Spire Agent]
-            end
-            MP1 ---|MCP/SLIM| CSN
-            CSA -.- CSN
-            CSA -.- NP
-        end
+    subgraph Customer[Customer Cluster]
+        direction LR
+        AMCP[Atlassian MCP] --- MP1[MCP Proxy]
+        KMCP[K8s MCP] --- MP1
+        MP1 --- CSN[Slim Node]
+        CSN --- NP[Network Proxy]
+        CSA[Spire Agent] --- CSN
+        CSA --- NP
+    end
+
+    subgraph Laptop[IT Ops Laptop]
+        direction LR
+        Copilot[Copilot]
+        LSA[Spire Agent]
+        Copilot --- LSA
     end
 
     subgraph Cloud[Cloud Cluster]
-        direction TB
-        Ingress[nginx ingress]
-        subgraph CloudSLIM[SLIM]
-            direction LR
-            SC[Slim Controller] ---|gRPC| SN[Slim Node]
-        end
-        subgraph CloudServices[Services]
-            direction LR
-            HCJ[Health Check job] --- K8S["k8s TBA\n(A2A, MCP)"]
-        end
-        subgraph CloudIdentity[Identity]
-            direction LR
-            SS[Spire Server] --- SA[Spire Agent]
-        end
-        Ingress ---|gRPC| SC
-        Ingress ---|SLIM| SN
-        Ingress --- SS
-        K8S --- SN
-        SA -.- SC
-        SA -.- SN
-        SA -.- K8S
-        SA -.- HCJ
+        direction LR
+        Ingress[nginx ingress] --- SN[Slim Node]
+        Ingress --- SC[Slim Controller]
+        SC --- SN
+        Ingress --- SS[Spire Server]
+        SN --- K8S["k8s TBA\n(A2A, MCP)"]
+        K8S --- HCJ[Health Check job]
+        SS --- SA[Spire Agent]
+        SA --- SC
+        SA --- SN
+        SA --- K8S
+        SA --- HCJ
     end
 
-    NP -- "outbound" --> Ingress
-    Copilot ---|A2A/SLIM| Ingress
+    NP --> Ingress
+    Copilot --- Ingress
     LSA --- Ingress
 
-    style Left fill:none,stroke:none
+    linkStyle 4 stroke:#9C27B0
+    linkStyle 5 stroke:#9C27B0
+    linkStyle 6 stroke:#9C27B0
+    linkStyle 14 stroke:#9C27B0
+    linkStyle 15 stroke:#9C27B0
+    linkStyle 16 stroke:#9C27B0
+    linkStyle 17 stroke:#9C27B0
+
     style Customer fill:#e0e0e0,stroke:#999,color:#333
     style Cloud fill:#e0e0e0,stroke:#999,color:#333
     style Laptop fill:#e0e0e0,stroke:#999,color:#333
-    style CustServices fill:none,stroke:#ccc,stroke-dasharray: 3 3
-    style CustSLIM fill:none,stroke:#ccc,stroke-dasharray: 3 3
-    style CustIdentity fill:none,stroke:#ccc,stroke-dasharray: 3 3
-    style CloudSLIM fill:none,stroke:#ccc,stroke-dasharray: 3 3
-    style CloudServices fill:none,stroke:#ccc,stroke-dasharray: 3 3
-    style CloudIdentity fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style NP fill:#42A5F5,color:#fff
     style Ingress fill:#E53935,color:#fff
     style SC fill:#0D47A1,color:#fff
@@ -437,6 +421,8 @@ graph LR
     style Copilot fill:#90CAF9,color:#1a1a1a
     style LSA fill:#BBDEFB,color:#1a1a1a
 ```
+
+</div>
 
 ---
 
