@@ -1,6 +1,5 @@
 ---
 marp: true
-theme: default
 paginate: true
 html: true
 size: 16:9
@@ -30,7 +29,7 @@ graph LR
         IG <--> S3[svc C]
     end
     C((Client)) --> IG
-    RP -- "outbound" --> IG
+    RP <--> IG
     style IG fill:#E53935,color:#fff
     style RP fill:#42A5F5,color:#fff
     style PUB fill:#e0e0e0,stroke:#999,color:#333
@@ -73,7 +72,7 @@ graph LR
         SN1 <--> S3[svc C]
     end
     C((Client)) --> IG
-    SN2 -- "outbound" --> IG
+    SN2 <--> IG
     style IG fill:#E53935,color:#fff
     style SN1 fill:#1565C0,color:#fff
     style SN2 fill:#1565C0,color:#fff
@@ -143,7 +142,7 @@ graph LR
 <div style="font-size: 11px;">
 
 | **Component** | **Key Responsibilities** |
-|---|---|---|
+|---|---|
 | Data Plane | Message forwarding, Connection management, gRPC over HTTP/2 |
 | Slim SDK | Reliable delivery, E2E encryption |
 | Controller | Node configuration, Route management |
@@ -216,11 +215,13 @@ Each service embeds a **Session Layer** and connects to a local **SLIM Node**, w
 
 **Network Security + Data Security**
 
-| **Network Security (TLS)** | **Data Security (E2EE / MLS)** |
+<!--| **Network Security (TLS)** | **Data Security (E2EE / MLS)** |
 |---|---|
 | Secures the link | Secures the data |
 | If a node is compromised, traffic can be read | Even if a node is compromised, content stays encrypted |
-| Fine for single-hop, trusted infrastructure | Essential for multi-cloud, cross-org scenarios |
+| Fine for single-hop, trusted infrastructure | Essential for multi-cloud, cross-org scenarios |-->
+
+<br><br><br>
 
 ```mermaid
 graph LR
@@ -235,6 +236,8 @@ graph LR
     style A1 fill:#90CAF9,color:#1a1a1a
     style A2 fill:#90CAF9,color:#1a1a1a
 ```
+
+<br><br><br><br><br><br>
 
 MLS: https://www.rfc-editor.org/rfc/rfc9420.txt
 
@@ -287,18 +290,20 @@ layout: cover
 
 ---
 
-## SLIM Multicluster Demo — Functional Topology
+## SLIM Multicluster Demo — Topology
 
-<div style="font-size: 9px; margin-bottom: 4px;">
+<div style="display:flex; flex-direction:column; align-items:center; gap:0px">
 
-── data channel (gRPC) &nbsp;&nbsp;&nbsp; ┄┄ control channel (gRPC)
+<div style="font-size:8px; align-self:flex-start">
+
+**Functional Topology** &nbsp;&nbsp;&nbsp; ── data (gRPC) &nbsp; ┄┄ control (gRPC)
 
 </div>
 
-<div style="display:flex; justify-content:center; margin-top:40px; transform:scale(2.2); transform-origin:top center">
+<div style="transform:scale(2); transform-origin:top center">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 30, 'padding': 10}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '14px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 30, 'padding': 10}}}%%
 graph LR
     subgraph Left[" "]
         direction TB
@@ -343,16 +348,16 @@ graph LR
 
 </div>
 
----
+<div style="font-size:8px; align-self:flex-start; margin-top:70px">
 
-## SLIM Multicluster Demo — Full Deployment
+**Full Deployment**
 
-<br><br>
+</div>
 
-<div style="display:flex; justify-content:center; margin-top:30px; transform:scale(3.2); transform-origin:top center">
+<div style="transform:scale(2.7); transform-origin:top center">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '20px'}, 'flowchart': {'nodeSpacing': 40, 'rankSpacing': 35, 'padding': 12}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '24px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 25, 'padding': 8}}}%%
 graph LR
     subgraph Customer[Customer Cluster]
         direction LR
@@ -419,6 +424,8 @@ graph LR
     style Copilot fill:#90CAF9,color:#1a1a1a
     style LSA fill:#BBDEFB,color:#1a1a1a
 ```
+
+</div>
 
 </div>
 
