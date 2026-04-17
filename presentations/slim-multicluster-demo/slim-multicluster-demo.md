@@ -509,7 +509,7 @@ Route List: Only Local services are available
 
 ## SLIM Controller Status: After On-Boarding
 
-Node List: New SLIM node registerd
+Node List: New SLIM node registered
 
 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
   <div>
@@ -552,7 +552,7 @@ Route List: Customer services are now reachable
 
 <br>
 
-- Humans can interact with the sistem at all times
+- Humans can interact with the system at all times
 - Authentication is handled via JWT tokens (using SPIRE in this particular case)
 - The application need to know the address of the SLIM endpoint
 
@@ -565,6 +565,10 @@ slim:
     jwt-audiences:
       - "slim"
 ```
+
+---
+
+## Human Interaction Demo Flow Chart
 
 ---
 
