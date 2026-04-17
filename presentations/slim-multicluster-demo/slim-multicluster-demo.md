@@ -51,23 +51,9 @@ graph LR
 
 ---
 
-## How SLIM solves the problem
+## Use Case: How SLIM solves the problem
 
-**SLIM** — Secure Low latency Interactive Messaging
-
-<div style="font-size: 11px;">
-
-| <span style="font-size: 13px; font-weight: bold;">Problem</span> | <span style="font-size: 13px; font-weight: bold;">SLIM Solution</span> |
-|---|---|
-| **Public cloud:** every new service requires a dedicated public endpoint | Single SLIM endpoint exposes all services — no per-service ingress |
-| **Private environments:** services behind firewalls are unreachable | Private SLIM nodes connect outbound to a public SLIM endpoint — no inbound exposure needed |
-| Data flows in the clear on middle boxes | E2E encryption via MLS — data stays encrypted through intermediate nodes |
-
-</div>
-
-<br>
-
-<div style="transform: scale(0.75); transform-origin: top left;">
+<div style="display:flex; justify-content:center; margin-top:15px; transform:scale(2.2); transform-origin:top center">
 
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
@@ -96,10 +82,40 @@ graph LR
     style PRV fill:#e0e0e0,stroke:#999,color:#333
 ```
 
-*e.g. Svc A communicates with Svc E through: Svc A ↔ SLIM Node ↔ Public Ingress ↔ SLIM Node ↔ Svc E*
+</div>
+
+<div style="margin-top:150px; font-size:14px; line-height:2; text-align:center">
+
+✓ **Single SLIM endpoint** exposes all services — no per-service ingress
+
+✓ Private SLIM nodes connect **outbound** — no inbound firewall exposure
+
+✓ **E2E encryption** via MLS — data stays encrypted through all intermediate nodes
 
 </div>
 
+<!--
+
+**SLIM** — Secure Low latency Interactive Messaging
+
+<div style="font-size: 11px;">
+
+| <span style="font-size: 13px; font-weight: bold;">Problem</span> | <span style="font-size: 13px; font-weight: bold;">SLIM Solution</span> |
+|---|---|
+| **Public cloud:** every new service requires a dedicated public endpoint | Single SLIM endpoint exposes all services — no per-service ingress |
+| **Private environments:** services behind firewalls are unreachable | Private SLIM nodes connect outbound to a public SLIM endpoint — no inbound exposure needed |
+| Data flows in the clear on middle boxes | E2E encryption via MLS — data stays encrypted through intermediate nodes |
+
+</div>
+
+<br>
+
+<div style="transform: scale(0.75); transform-origin: top left;">
+
+*e.g. Svc A communicates with Svc E through: Svc A ↔ SLIM Node ↔ Public Ingress ↔ SLIM Node ↔ Svc E*
+
+</div>
+-->
 ---
 
 ## Comparison with Existing Solutions
