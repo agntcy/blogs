@@ -583,7 +583,89 @@ slim:
 
 ---
 
-## Human Interaction Demo Flow Chart
+## Human Interaction — Sequence Diagram
+
+<div style="transform:scale(0.9); transform-origin:top center; margin-top:15px">
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '11px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
+sequenceDiagram
+    box rgb(245,246,250) IT Ops Laptop
+        actor Human as IT Ops
+        participant Copilot as Copilot
+    end
+    box rgb(227,242,253) Cloud Cluster
+        participant SNc as SLIM Node (cloud)
+        participant Agent as k8s Agent
+    end
+    box rgb(232,245,233) Customer Cluster
+        participant SNp as SLIM Node (on-prem)
+        participant Proxy as MCP Proxy
+        participant MCP as k8s MCP Server
+    end
+
+    Human->>Copilot: "What's the status of the cluster?"
+    Note over Copilot: A2A client skill invoked
+    Copilot->>SNc: A2A request over SLIM
+    SNc->>Agent: 
+    Note over Agent: analyse request,<br/>invoke MCP tool
+    Agent->>SNc: MCP request over SLIM
+    SNc->>SNp: route to on-prem cluster
+    SNp->>Proxy: 
+    Proxy->>MCP: MCP request
+    MCP-->>Proxy: MCP response
+    Proxy-->>SNp: MCP response over SLIM
+    SNp-->>SNc: route back to cloud
+    SNc-->>Agent: 
+    Note over Agent: compose A2A reply
+    Agent-->>SNc: A2A response over SLIM
+    SNc-->>Copilot: 
+    Copilot-->>Human: cluster status report
+```
+
+</div>
+
+---
+
+## Automated Health Check — Sequence Diagram
+
+<div style="transform:scale(0.9); transform-origin:top center; margin-top:15px">
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '11px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
+sequenceDiagram
+    box rgb(227,242,253) Cloud Cluster
+        participant HCJ as Health Check Job
+        participant SNc as SLIM Node (cloud)
+        participant Agent as k8s Agent
+    end
+    box rgb(232,245,233) Customer Cluster
+        participant SNp as SLIM Node (on-prem)
+        participant Proxy as MCP Proxy
+        participant KMCP as k8s MCP Server
+        participant AMCP as Atlassian MCP Server
+    end
+
+    Note over SNp,AMCP: pod ImagePullBackOff — container fails to start
+    HCJ->>SNc: "What's the status of the cluster?"<br/>A2A request over SLIM
+    SNc->>Agent: 
+    Note over SNc,KMCP: MCP call over SLIM → get pod status<br/>(see previous diagram)
+    SNc-->>Agent: MCP response over SLIM
+    Note over Agent: pod failure detected,<br/>create Jira issue
+    Agent->>SNc: MCP request over SLIM
+    SNc->>SNp: route to on-prem cluster
+    SNp->>Proxy: 
+    Proxy->>AMCP: MCP request
+    Note over AMCP: create new issue on<br/> the customer Jira
+    AMCP-->>Proxy: MCP response
+    Proxy-->>SNp: MCP response over SLIM
+    SNp-->>SNc: route back to cloud
+    SNc-->>Agent: 
+    Agent-->>SNc: A2A response over SLIM
+    SNc-->>HCJ: 
+```
+
+</div>
 
 ---
 
