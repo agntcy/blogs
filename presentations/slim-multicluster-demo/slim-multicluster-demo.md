@@ -294,7 +294,7 @@ layout: cover
 
 <div style="display:flex; flex-direction:column; align-items:center; gap:0px">
 
-<div style="font-size:8px; align-self:flex-start">
+<div style="font-size:12px; align-self:flex-start">
 
 **Functional Topology** &nbsp;&nbsp;&nbsp; ── data (gRPC) &nbsp; ┄┄ control (gRPC)
 
@@ -348,7 +348,7 @@ graph LR
 
 </div>
 
-<div style="font-size:8px; align-self:flex-start; margin-top:70px">
+<div style="font-size:12px; align-self:flex-start; margin-top:70px">
 
 **Full Deployment**
 
