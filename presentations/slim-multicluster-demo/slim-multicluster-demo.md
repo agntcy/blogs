@@ -290,6 +290,44 @@ graph LR
 
 ## Customer Zero-Touch Onboarding
 
+intro in zero touch on-boarding
+
+---
+
+## SLIM Controller Status: Before On-Boarding
+
+Node List: Only one SLIM node available
+
+<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+  <div>
+    <img src="./figures/nodes-before-on-boarding.png" style="width:100%; border-radius:4px">
+  </div>
+</div>
+
+Link List: No connection set
+
+<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+  <div>
+    <img src="./figures/links-before-on-boarding.png" style="width:100%; border-radius:4px">
+  </div>
+</div>
+
+---
+
+## SLIM Controller Status: Before On-Boarding
+
+Route List: Only Local services are available
+
+<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
+  <div style="flex:1">
+    <img src="./figures/routes-before-on-boarding.png" style="width:98%; border-radius:4px">
+  </div>
+</div>
+
+---
+
+## Customer Zero-Touch On-Boarding
+
 The on-boarding of a new customer in the platform is fully automated
 
 The customer only needs:
@@ -316,39 +354,34 @@ slim:
 
 ---
 
-## Customer Onboarding: Before
+## SLIM Controller Status: After On-Boarding
 
-Before on-boarding, the controller only knows about its own cloud-side node. No links to external environments exist yet.
+Node List: New SLIM node registerd
 
-<div style="margin-top:8px">
-  <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Nodes (cloud only)</p>
-  <img src="./figures/nodes-before-on-boarding.jpg" style="width:80%; border-radius:4px">
+<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+  <div>
+    <img src="./figures/nodes-after-on-boarding.png" style="width:100%; border-radius:4px">
+  </div>
 </div>
-<div style="margin-top:8px">
-  <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Links (none)</p>
-  <img src="./figures/links-before-on-boarding.jpg" style="width:80%; border-radius:4px">
+
+
+Link List: New connection established with remote cluster
+
+<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+  <div>
+    <img src="./figures/links-after-on-boarding.png" style="width:100%; border-radius:4px">
+  </div>
 </div>
 
 ---
 
-## Customer Onboarding: Install the Helm Chart
+## SLIM Controller Status: After On-Boarding
 
-Show the values we see in the demo
-
----
-
-## Customer Onboarding: After
-
-After the chart is installed, the controller automatically discovers the new node, creates a link, and populates routes to the customer's services.
+Route List: Customer services are now reachable
 
 <div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
   <div style="flex:1">
-    <p style="margin:0 0 4px; font-weight:bold; font-size:11px">New cross-cluster link</p>
-    <img src="./figures/links-after-on-boarding.jpg" style="width:100%; border-radius:4px">
-  </div>
-  <div style="flex:1.5">
-    <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Routes to customer services</p>
-    <img src="./figures/routes-after-on-boarding.jpg" style="width:100%; border-radius:4px">
+    <img src="./figures/routes-after-on-boarding.png" style="width:90%; border-radius:4px">
   </div>
 </div>
 
