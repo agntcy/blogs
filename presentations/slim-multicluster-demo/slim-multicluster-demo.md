@@ -288,16 +288,31 @@ graph LR
 
 ---
 
-## Customer On-Boarding
+## Customer Zero-Touch On-Boarding
 
-Joining a new customer cluster is **simple** — only two pieces of configuration are needed:
+The on-boarding of a new customer in the platform is fully authomated
 
-| # | What | Example |
-|---|------|---------|
-| 1 | Authentication token | `eyJhbGc...` |
-| 2 | Public address of the SLIM controller | `slim-dataplane.dev.eticloud.io:443` |
+The customer only needs:
+- An authentication Token
+- The public address of the Controller
 
-Once the customer installs the Helm chart, **all connections and routes are established automatically** — no manual networking configuration required.
+```yaml
+slim:
+    services:
+        slim/0:
+          controller:
+            clients:
+              - endpoint: "https://slim-control-plane-south.dev.eticloud.io:443"
+                tls:
+                  insecure: false
+                  include_system_ca_certs_pool: true
+                auth:
+                  type: spire
+                  jwt_audiences:
+                    - "slim"
+                  socket_path: /tmp/spire-agent/public/spire-agent.sock
+
+```
 
 ---
 
