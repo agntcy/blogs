@@ -364,9 +364,24 @@ After the chart is installed, the controller automatically discovers the new nod
 
 ---
 
-## Human Interacion
+## Human Interaction
 
-- show the a2acli.yaml file
+- Humand can use an a2a CLI to interact with the cloud services
+  - connecting to the SLIM endpoint and invoking A2A RPCs on the services running in the cloud cluster
+- Authentication is handled via JWT tokens (using SPIRE in this particular case)
+- The a2a CLI can also be used as a skill for an agent
+  - enabling automated human-in-the-loop workflows — demonstrated in the video
+- The CLI configuration is minimal:
+
+```yaml
+slim:
+  endpoint: "https://slim-dataplane.dev.eticloud.io"
+  local-name: "agntcy/cli/a2acli"
+  spire:
+    socket-path: "/tmp/spire-agent/public/api.sock"
+    jwt-audiences:
+      - "slim"
+```
 
 ---
 
