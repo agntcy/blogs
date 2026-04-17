@@ -511,7 +511,7 @@ slim:
 <br>
 
 - Humans can interact with the system at all times
-- Authentication is handled via JWT tokens (using SPIRE in this particular case)
+- Authentication is handled via JWT tokens
 - The application needs to know the address of the SLIM endpoint
 
 ```yaml
@@ -547,7 +547,7 @@ sequenceDiagram
         participant MCP as k8s MCP Server
     end
 
-    Human->>Copilot: "What's the status of the cluster?"
+    Human->>Copilot: "Give me the list of pods?"
     Note over Copilot: A2A client skill invoked
     Copilot->>SNc: A2A request over SLIM
     SNc->>Agent: 
