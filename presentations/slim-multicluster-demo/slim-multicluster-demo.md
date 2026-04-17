@@ -333,13 +333,13 @@ Before on-boarding, the controller only knows about its own cloud-side node. No 
 
 ---
 
-## Customer On-Boarding: Install the Helm Chart
+## Customer Onboarding: Install the Helm Chart
 
 Show the values we see in the demo
 
 ---
 
-## Customer On-Boarding: After
+## Customer Onboarding: After
 
 After the chart is installed, the controller automatically discovers the new node, creates a link, and populates routes to the customer's services.
 
