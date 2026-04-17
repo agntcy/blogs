@@ -356,13 +356,11 @@ After the chart is installed, the controller automatically discovers the new nod
 
 ---
 
-## Video
+## Customer On-Boarding Demo
 
-<!--
 <video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
   <source src="/videos/routes.mp4" type="video/mp4">
 </video>
--->
 
 ---
 
@@ -372,4 +370,8 @@ After the chart is installed, the controller automatically discovers the new nod
 
 ---
 
-## Video
+## Human Interacion Demo
+
+<video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
+  <source src="/videos/application.mp4" type="video/mp4">
+</video>
