@@ -2,6 +2,7 @@
 marp: true
 theme: default
 paginate: true
+html: true
 size: 16:9
 style: |
   section { font-size: 12px; padding: 5px 10px; }
@@ -289,19 +290,68 @@ graph LR
 
 ## Customer On-Boarding
 
-- screen shot with routes and upfront description of the demo 
+Joining a new customer cluster is **simple** — only two pieces of configuration are needed:
+
+| # | What | Example |
+|---|------|---------|
+| 1 | Authentication token | `eyJhbGc...` |
+| 2 | Public address of the SLIM controller | `slim-dataplane.dev.eticloud.io:443` |
+
+Once the customer installs the Helm chart, **all connections and routes are established automatically** — no manual networking configuration required.
+
+---
+
+## Customer On-Boarding: Before
+
+Before on-boarding, the controller only knows about its own cloud-side node. No links to external environments exist yet.
+
+<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
+  <div style="flex:1">
+    <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Nodes (cloud only)</p>
+    <img src="./figures/nodes-before-on-boarding.jpg" style="width:100%; border-radius:4px">
+  </div>
+  <div style="flex:1">
+    <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Links (none)</p>
+    <img src="./figures/links-before-on-boarding.jpg" style="width:100%; border-radius:4px">
+  </div>
+</div>
+
+---
+
+## Customer On-Boarding: Install the Helm Chart
+
+Show the values we see in the demo
+
+---
+
+## Customer On-Boarding: After
+
+After the chart is installed, the controller automatically discovers the new node, creates a link, and populates routes to the customer's services.
+
+<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
+  <div style="flex:1">
+    <p style="margin:0 0 4px; font-weight:bold; font-size:11px">New cross-cluster link</p>
+    <img src="./figures/links-after-on-boarding.jpg" style="width:100%; border-radius:4px">
+  </div>
+  <div style="flex:1">
+    <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Routes to customer services</p>
+    <img src="./figures/routes-after-on-boarding.jpg" style="width:100%; border-radius:4px">
+  </div>
+</div>
 
 ---
 
 ## Video
 
+<!--
 <video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
   <source src="/videos/routes.mp4" type="video/mp4">
 </video>
+-->
 
 ---
 
-## Human in the Loop
+## Human Interacion
 
 - show the a2acli.yaml file
 
