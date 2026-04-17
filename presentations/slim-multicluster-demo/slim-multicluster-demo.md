@@ -290,7 +290,7 @@ graph LR
 
 ## Customer Zero-Touch On-Boarding
 
-The on-boarding of a new customer in the platform is fully authomated
+The on-boarding of a new customer in the platform is fully automated
 
 The customer only needs:
 - An authentication Token
