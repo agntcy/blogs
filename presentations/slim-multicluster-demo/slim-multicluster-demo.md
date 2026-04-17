@@ -9,7 +9,7 @@ style: |
   h2 { font-size: 20px; margin: 0; }
 ---
 
-# SLIM Multicluster Demo
+# SLIM Multicluster Use Case
 
 ---
 
@@ -98,28 +98,6 @@ graph LR
 
 </div>
 
-<!--
-
-**SLIM** — Secure Low latency Interactive Messaging
-
-<div style="font-size: 11px;">
-
-| <span style="font-size: 13px; font-weight: bold;">Problem</span> | <span style="font-size: 13px; font-weight: bold;">SLIM Solution</span> |
-|---|---|
-| **Public cloud:** every new service requires a dedicated public endpoint | Single SLIM endpoint exposes all services — no per-service ingress |
-| **Private environments:** services behind firewalls are unreachable | Private SLIM nodes connect outbound to a public SLIM endpoint — no inbound exposure needed |
-| Data flows in the clear on middle boxes | E2E encryption via MLS — data stays encrypted through intermediate nodes |
-
-</div>
-
-<br>
-
-<div style="transform: scale(0.75); transform-origin: top left;">
-
-*e.g. Svc A communicates with Svc E through: Svc A ↔ SLIM Node ↔ Public Ingress ↔ SLIM Node ↔ Svc E*
-
-</div>
--->
 ---
 
 ## Comparison with Existing Solutions
@@ -135,6 +113,12 @@ graph LR
 | Reverse proxies | • Per-service exposure and configuration <br> • No e2e encryption <br> • Does not solve cross-org trust |
 
 </div>
+
+---
+
+## What is SLIM
+
+...
 
 ---
 
@@ -568,12 +552,9 @@ Route List: Customer services are now reachable
 
 <br>
 
-- Humans can use an a2a CLI to interact with the cloud services
-  - connecting to the SLIM endpoint and invoking A2A RPCs on the services running in the cloud cluster
+- Humans can interact with the sistem at all times
 - Authentication is handled via JWT tokens (using SPIRE in this particular case)
-- The a2a CLI can also be used as a skill for an agent
-  - enabling automated human-in-the-loop workflows — demonstrated in the video
-- The CLI configuration is minimal:
+- The application need to know the address of the SLIM endpoint
 
 ```yaml
 slim:
