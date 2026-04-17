@@ -288,7 +288,7 @@ graph LR
 
 ---
 
-## Customer Zero-Touch On-Boarding
+## Customer Zero-Touch Onboarding
 
 The on-boarding of a new customer in the platform is fully automated
 
@@ -316,7 +316,7 @@ slim:
 
 ---
 
-## Customer On-Boarding: Before
+## Customer Onboarding: Before
 
 Before on-boarding, the controller only knows about its own cloud-side node. No links to external environments exist yet.
 
