@@ -146,17 +146,6 @@ graph LR
 ---
 
 ## SLIM Architecture
-
-<div style="font-size: 9px;">
-
-| **Layer** | **Key Responsibilities** |
-|---|---|
-| Data Plane | Message forwarding, Connection management, gRPC over HTTP/2 |
-| SLIM SDK | Reliable delivery, E2E encryption |
-| Controller| Node configuration, Route management |
-
-</div>
-
 <br>
 
 <div style="transform: scale(0.85); transform-origin: top left;">
@@ -208,6 +197,16 @@ graph LR
     style ClusterA fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
     style ClusterB fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
 ```
+
+<div style="font-size: 12px;">
+
+| **Layer** | **Key Responsibilities** |
+|---|---|
+| Data Plane | Message forwarding, Connection management, gRPC over HTTP/2 |
+| SLIM SDK | Reliable delivery, E2E encryption |
+| Controller| Node configuration, Route management |
+
+</div>
 
 <div style="font-size: 12px;">
 
@@ -331,7 +330,7 @@ graph LR
         SN[SLIM Node]
         SC[SLIM Controller]
         HCJ[Health Check Job]
-        K8S["k8s TBA\n(A2A, MCP)"]
+        K8S["k8s troubleshooting agent (A2A, MCP)"]
         SN -.-> SC
         SN --- K8S
         K8S --- HCJ
@@ -392,7 +391,7 @@ graph LR
         Ingress --- SS[Spire Server]
         Ingress --- SC[Slim Controller]
         SC --- SN
-        SN --- K8S["k8s TBA\n(A2A, MCP)"]
+        SN --- K8S["k8s troubleshooting agent\n(A2A, MCP)"]
         SN --- HCJ["Health Check job\n(A2A)"]
         SS --- SA[Spire Agent]
         SA --- SC
