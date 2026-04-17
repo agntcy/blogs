@@ -61,6 +61,11 @@ graph LR
     style IG fill:#FF6B6B,color:#fff
     style SN1 fill:#4A90E2,color:#fff
     style SN2 fill:#4A90E2,color:#fff
+    style S1 fill:#50C878,color:#fff
+    style S2 fill:#50C878,color:#fff
+    style S3 fill:#50C878,color:#fff
+    style S4 fill:#50C878,color:#fff
+    style S5 fill:#50C878,color:#fff
     style PUB fill:#e0e0e0,stroke:#999,color:#333
     style PRV fill:#e0e0e0,stroke:#999,color:#333
 ```
@@ -181,6 +186,8 @@ graph LR
 
     style SN1 fill:#4A90E2,color:#fff
     style SN2 fill:#4A90E2,color:#fff
+    style A1 fill:#50C878,color:#fff
+    style A2 fill:#50C878,color:#fff
 ```
 
 MLS: https://www.rfc-editor.org/rfc/rfc9420.txt
@@ -270,14 +277,14 @@ graph LR
     style Customer fill:#e0e0e0,stroke:#999,color:#333
     style Cloud fill:#e0e0e0,stroke:#999,color:#333
     style Laptop fill:#e0e0e0,stroke:#999,color:#333
-    style SC fill:#4A90E2,color:#fff
+    style SC fill:#555,color:#fff
     style SN fill:#4A90E2,color:#fff
     style CSN fill:#4A90E2,color:#fff
-    style AMCP fill:#4A90E2,color:#fff
-    style KMCP fill:#4A90E2,color:#fff
-    style K8S fill:#4A90E2,color:#fff
-    style HCJ fill:#4A90E2,color:#fff
-    style Copilot fill:#4A90E2,color:#fff
+    style AMCP fill:#50C878,color:#fff
+    style KMCP fill:#50C878,color:#fff
+    style K8S fill:#50C878,color:#fff
+    style HCJ fill:#50C878,color:#fff
+    style Copilot fill:#50C878,color:#fff
 ```
 
 ---
@@ -360,19 +367,19 @@ graph LR
     style CloudIdentity fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style NP fill:#FF9F43,color:#fff
     style Ingress fill:#FF6B6B,color:#fff
-    style SC fill:#4A90E2,color:#fff
+    style SC fill:#555,color:#fff
     style SN fill:#4A90E2,color:#fff
-    style K8S fill:#4A90E2,color:#fff
-    style HCJ fill:#4A90E2,color:#fff
-    style SS fill:#50C878,color:#fff
-    style SA fill:#50C878,color:#fff
-    style AMCP fill:#4A90E2,color:#fff
-    style KMCP fill:#4A90E2,color:#fff
-    style MP1 fill:#4A90E2,color:#fff
+    style K8S fill:#50C878,color:#fff
+    style HCJ fill:#50C878,color:#fff
+    style SS fill:#9C27B0,color:#fff
+    style SA fill:#9C27B0,color:#fff
+    style AMCP fill:#50C878,color:#fff
+    style KMCP fill:#50C878,color:#fff
+    style MP1 fill:#50C878,color:#fff
     style CSN fill:#4A90E2,color:#fff
-    style CSA fill:#50C878,color:#fff
-    style Copilot fill:#4A90E2,color:#fff
-    style LSA fill:#50C878,color:#fff
+    style CSA fill:#9C27B0,color:#fff
+    style Copilot fill:#50C878,color:#fff
+    style LSA fill:#9C27B0,color:#fff
 ```
 
 ---
