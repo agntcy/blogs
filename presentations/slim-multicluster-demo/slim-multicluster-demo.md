@@ -31,14 +31,14 @@ graph LR
     end
     C((Client)) --> IG
     RP -- "outbound" --> IG
-    style IG fill:#FF6B6B,color:#fff
-    style RP fill:#FF9F43,color:#fff
+    style IG fill:#E53935,color:#fff
+    style RP fill:#42A5F5,color:#fff
     style PUB fill:#e0e0e0,stroke:#999,color:#333
     style PRV fill:#e0e0e0,stroke:#999,color:#333
-    style S1 fill:#50C878,color:#fff
-    style S2 fill:#50C878,color:#fff
-    style S3 fill:#50C878,color:#fff
-    style S4 fill:#50C878,color:#fff
+    style S1 fill:#90CAF9,color:#1a1a1a
+    style S2 fill:#90CAF9,color:#1a1a1a
+    style S3 fill:#90CAF9,color:#1a1a1a
+    style S4 fill:#90CAF9,color:#1a1a1a
 ```
 
 </div>
@@ -74,14 +74,14 @@ graph LR
     end
     C((Client)) --> IG
     SN2 -- "outbound" --> IG
-    style IG fill:#FF6B6B,color:#fff
-    style SN1 fill:#4A90E2,color:#fff
-    style SN2 fill:#4A90E2,color:#fff
-    style S1 fill:#50C878,color:#fff
-    style S2 fill:#50C878,color:#fff
-    style S3 fill:#50C878,color:#fff
-    style S4 fill:#50C878,color:#fff
-    style S5 fill:#50C878,color:#fff
+    style IG fill:#E53935,color:#fff
+    style SN1 fill:#1565C0,color:#fff
+    style SN2 fill:#1565C0,color:#fff
+    style S1 fill:#90CAF9,color:#1a1a1a
+    style S2 fill:#90CAF9,color:#1a1a1a
+    style S3 fill:#90CAF9,color:#1a1a1a
+    style S4 fill:#90CAF9,color:#1a1a1a
+    style S5 fill:#90CAF9,color:#1a1a1a
     style PUB fill:#e0e0e0,stroke:#999,color:#333
     style PRV fill:#e0e0e0,stroke:#999,color:#333
 ```
@@ -142,11 +142,11 @@ graph LR
 
 <div style="font-size: 11px;">
 
-| **Layer** | **Primary Function** | **Key Responsibilities** |
+| **Component** | **Key Responsibilities** |
 |---|---|---|
-| Data Plane | Message Routing | Message forwarding, Connection management, gRPC over HTTP/2 |
-| Session Layer | Secure Messaging | Reliable delivery, E2E encryption |
-| Control Plane | Network Orchestration | Node configuration, Route management |
+| Data Plane | Message forwarding, Connection management, gRPC over HTTP/2 |
+| Slim SDK | Reliable delivery, E2E encryption |
+| Controller | Node configuration, Route management |
 
 </div>
 
@@ -171,7 +171,7 @@ graph LR
     end
 
     DPN1 <-- "gRPC/TLS" --> DPN2
-    SN1 -.-> CP[Control Plane]
+    SN1 -.-> CP[SLIM Controller]
     SN2 -.-> CP
 
     subgraph ClusterB["Cluster B"]
@@ -187,17 +187,17 @@ graph LR
         DPB <-- "gRPC/TLS" --> DPN2
     end
 
-    style CP fill:#555,color:#fff
-    style SA fill:#29b6f6,color:#fff
-    style SB fill:#29b6f6,color:#fff
-    style SLA fill:#1976d2,color:#fff
-    style SLB fill:#1976d2,color:#fff
-    style DPA fill:#FF9F43,color:#fff
-    style DPB fill:#FF9F43,color:#fff
-    style SN1 fill:#1976d2,color:#fff
-    style SN2 fill:#1976d2,color:#fff
-    style DPN1 fill:#FF9F43,color:#fff
-    style DPN2 fill:#FF9F43,color:#fff
+    style CP fill:#0D47A1,color:#fff
+    style SA fill:#90CAF9,color:#1a1a1a
+    style SB fill:#90CAF9,color:#1a1a1a
+    style SLA fill:#1565C0,color:#fff
+    style SLB fill:#1565C0,color:#fff
+    style DPA fill:#42A5F5,color:#fff
+    style DPB fill:#42A5F5,color:#fff
+    style SN1 fill:#1565C0,color:#fff
+    style SN2 fill:#1565C0,color:#fff
+    style DPN1 fill:#42A5F5,color:#fff
+    style DPN2 fill:#42A5F5,color:#fff
     style ClusterA fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
     style ClusterB fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
 ```
@@ -216,7 +216,7 @@ Each service embeds a **Session Layer** and connects to a local **SLIM Node**, w
 
 **Network Security + Data Security**
 
-| **Network Security (TLS)** | **Data Security (E2E / MLS)** |
+| **Network Security (TLS)** | **Data Security (E2EE / MLS)** |
 |---|---|
 | Secures the link | Secures the data |
 | If a node is compromised, traffic can be read | Even if a node is compromised, content stays encrypted |
@@ -224,16 +224,16 @@ Each service embeds a **Session Layer** and connects to a local **SLIM Node**, w
 
 ```mermaid
 graph LR
-    A1[Service] -- "gRPC/TLS" --> SN1[SLIM Node 1]
-    SN1 -- "gRPC/TLS" --> SN2[SLIM Node 2]
-    SN2 -- "gRPC/TLS" --> A2[Service]
+    A1[Service] <-- "gRPC/TLS" --> SN1[SLIM Node 1]
+    SN1 <-- "gRPC/TLS" --> SN2[SLIM Node 2]
+    SN2 <-- "gRPC/TLS" --> A2[Service]
 
-    A1 -. "MLS (E2E encrypted)" .-> A2
+    A1 <-. "MLS (E2E encrypted)" .-> A2
 
-    style SN1 fill:#4A90E2,color:#fff
-    style SN2 fill:#4A90E2,color:#fff
-    style A1 fill:#50C878,color:#fff
-    style A2 fill:#50C878,color:#fff
+    style SN1 fill:#1565C0,color:#fff
+    style SN2 fill:#1565C0,color:#fff
+    style A1 fill:#90CAF9,color:#1a1a1a
+    style A2 fill:#90CAF9,color:#1a1a1a
 ```
 
 MLS: https://www.rfc-editor.org/rfc/rfc9420.txt
@@ -289,6 +289,12 @@ layout: cover
 
 ## SLIM Multicluster Demo — Functional Topology
 
+<div style="font-size: 9px; margin-bottom: 4px;">
+
+── data channel &nbsp;&nbsp;&nbsp; ┄┄ control channel
+
+</div>
+
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 30, 'padding': 10}}}%%
 graph LR
@@ -309,10 +315,10 @@ graph LR
         SN[SLIM Node]
         SC[SLIM Controller]
         HCJ[Health Check Job]
-        K8S[k8s TBA]
+        K8S["k8s TBA\n(A2A, MCP)"]
         SN -. "gRPC" .-> SC
-        SN ---|A2A/SLIM| K8S
-        K8S ---|A2A/SLIM| HCJ
+        SN --- K8S
+        K8S --- HCJ
     end
 
     Copilot -- "A2A/SLIM" --> SN
@@ -323,21 +329,25 @@ graph LR
     style Customer fill:#e0e0e0,stroke:#999,color:#333
     style Cloud fill:#e0e0e0,stroke:#999,color:#333
     style Laptop fill:#e0e0e0,stroke:#999,color:#333
-    style SC fill:#555,color:#fff
-    style SN fill:#4A90E2,color:#fff
-    style CSN fill:#4A90E2,color:#fff
-    style AMCP fill:#50C878,color:#fff
-    style KMCP fill:#50C878,color:#fff
-    style K8S fill:#50C878,color:#fff
-    style HCJ fill:#50C878,color:#fff
-    style Copilot fill:#50C878,color:#fff
+    style SC fill:#0D47A1,color:#fff
+    style SN fill:#1565C0,color:#fff
+    style CSN fill:#1565C0,color:#fff
+    style AMCP fill:#90CAF9,color:#1a1a1a
+    style KMCP fill:#90CAF9,color:#1a1a1a
+    style K8S fill:#90CAF9,color:#1a1a1a
+    style HCJ fill:#90CAF9,color:#1a1a1a
+    style Copilot fill:#90CAF9,color:#1a1a1a
 ```
 
 ---
 
 ## SLIM Multicluster Demo — Full Deployment
 
-<br>
+<div style="font-size: 9px; margin-bottom: 4px;">
+
+── data channel &nbsp;&nbsp;&nbsp; ┄┄ control channel
+
+</div>
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 25, 'padding': 8}}}%%
@@ -381,7 +391,7 @@ graph LR
         end
         subgraph CloudServices[Services]
             direction LR
-            HCJ[Health Check job] ---|A2A/SLIM| K8S[k8s TBA]
+            HCJ[Health Check job] --- K8S["k8s TBA\n(A2A, MCP)"]
         end
         subgraph CloudIdentity[Identity]
             direction LR
@@ -390,7 +400,7 @@ graph LR
         Ingress ---|gRPC| SC
         Ingress ---|SLIM| SN
         Ingress --- SS
-        K8S ---|A2A/SLIM| SN
+        K8S --- SN
         SA -.- SC
         SA -.- SN
         SA -.- K8S
@@ -411,21 +421,21 @@ graph LR
     style CloudSLIM fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style CloudServices fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style CloudIdentity fill:none,stroke:#ccc,stroke-dasharray: 3 3
-    style NP fill:#FF9F43,color:#fff
-    style Ingress fill:#FF6B6B,color:#fff
-    style SC fill:#555,color:#fff
-    style SN fill:#4A90E2,color:#fff
-    style K8S fill:#50C878,color:#fff
-    style HCJ fill:#50C878,color:#fff
-    style SS fill:#9C27B0,color:#fff
-    style SA fill:#9C27B0,color:#fff
-    style AMCP fill:#50C878,color:#fff
-    style KMCP fill:#50C878,color:#fff
-    style MP1 fill:#50C878,color:#fff
-    style CSN fill:#4A90E2,color:#fff
-    style CSA fill:#9C27B0,color:#fff
-    style Copilot fill:#50C878,color:#fff
-    style LSA fill:#9C27B0,color:#fff
+    style NP fill:#42A5F5,color:#fff
+    style Ingress fill:#E53935,color:#fff
+    style SC fill:#0D47A1,color:#fff
+    style SN fill:#1565C0,color:#fff
+    style K8S fill:#90CAF9,color:#1a1a1a
+    style HCJ fill:#90CAF9,color:#1a1a1a
+    style SS fill:#BBDEFB,color:#1a1a1a
+    style SA fill:#BBDEFB,color:#1a1a1a
+    style AMCP fill:#90CAF9,color:#1a1a1a
+    style KMCP fill:#90CAF9,color:#1a1a1a
+    style MP1 fill:#90CAF9,color:#1a1a1a
+    style CSN fill:#1565C0,color:#fff
+    style CSA fill:#BBDEFB,color:#1a1a1a
+    style Copilot fill:#90CAF9,color:#1a1a1a
+    style LSA fill:#BBDEFB,color:#1a1a1a
 ```
 
 ---
