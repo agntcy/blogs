@@ -465,9 +465,9 @@ In SLIM all services are identified by a name `organization/namespace/service/h(
 
 ---
 
-## Customer Zero-Touch On-Boarding
+## Customer Zero-Touch Onboarding
 
-The on-boarding of a new customer in the platform is fully automated
+The onboarding of a new customer in the platform is fully automated
 
 The customer only needs:
 - An authentication token
@@ -492,7 +492,7 @@ slim:
 ```
 ---
 
-## Customer On-Boarding Demo
+## Customer Onboarding Demo
 
 <video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
   <source src="/videos/routes.mp4" type="video/mp4">
@@ -621,13 +621,13 @@ layout: cover
 
 ---
 
-## SLIM Controller Status: Before On-Boarding
+## SLIM Controller Status: Before Onboarding
 
 Node List: Only one SLIM node available
 
 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
   <div>
-    <img src="./figures/nodes-before-on-boarding.png" style="width:100%; border-radius:4px">
+    <img src="./figures/nodes-before-onboarding.png" style="width:100%; border-radius:4px">
   </div>
 </div>
 
@@ -635,31 +635,31 @@ Link List: No connection set
 
 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
   <div>
-    <img src="./figures/links-before-on-boarding.png" style="width:100%; border-radius:4px">
+    <img src="./figures/links-before-onboarding.png" style="width:100%; border-radius:4px">
   </div>
 </div>
 
 ---
 
-## SLIM Controller Status: Before On-Boarding
+## SLIM Controller Status: Before Onboarding
 
 Route List: Only Local services are available
 
 <div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
   <div style="flex:1">
-    <img src="./figures/routes-before-on-boarding.png" style="width:98%; border-radius:4px">
+    <img src="./figures/routes-before-onboarding.png" style="width:98%; border-radius:4px">
   </div>
 </div>
 
 ---
 
-## SLIM Controller Status: After On-Boarding
+## SLIM Controller Status: After Onboarding
 
 Node List: New SLIM node registered
 
 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
   <div>
-    <img src="./figures/nodes-after-on-boarding.png" style="width:100%; border-radius:4px">
+    <img src="./figures/nodes-after-onboarding.png" style="width:100%; border-radius:4px">
   </div>
 </div>
 
@@ -668,19 +668,19 @@ Link List: New connection established with remote cluster
 
 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
   <div>
-    <img src="./figures/links-after-on-boarding.png" style="width:100%; border-radius:4px">
+    <img src="./figures/links-after-onboarding.png" style="width:100%; border-radius:4px">
   </div>
 </div>
 
 ---
 
-## SLIM Controller Status: After On-Boarding
+## SLIM Controller Status: After Onboarding
 
 Route List: Customer services are now reachable
 
 <div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
   <div style="flex:1">
-    <img src="./figures/routes-after-on-boarding.png" style="width:90%; border-radius:4px">
+    <img src="./figures/routes-after-onboarding.png" style="width:90%; border-radius:4px">
   </div>
 </div>
 
