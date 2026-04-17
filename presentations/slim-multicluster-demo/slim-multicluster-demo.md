@@ -323,7 +323,7 @@ layout: cover
 <div style="transform:scale(2); transform-origin:top center">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '14px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 30, 'padding': 10}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '16px'}, 'flowchart': {'nodeSpacing': 24, 'rankSpacing': 30, 'padding': 10}}}%%
 graph LR
     subgraph Left[" "]
         direction TB
@@ -333,7 +333,7 @@ graph LR
             KMCP[k8s MCP Server] --> CSN
         end
         subgraph Laptop[IT Ops Laptop]
-            Copilot[Copilot - A2A client]
+            Copilot["Copilot [A2A client]"]
         end
     end
 
@@ -377,7 +377,7 @@ graph LR
 <div style="transform:scale(2.7); transform-origin:top center">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '24px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 25, 'padding': 8}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '24px'}, 'flowchart': {'nodeSpacing': 24, 'rankSpacing': 25, 'padding': 8}}}%%
 graph LR
     subgraph Customer[Customer Cluster]
         direction LR
@@ -392,7 +392,7 @@ graph LR
 
     subgraph Laptop[IT Ops Laptop]
         direction LR
-        Copilot[Copilot]
+        Copilot["Copilot\n[A2A Client]"]
         LSA[Spire Agent]
         Copilot --- LSA
     end
