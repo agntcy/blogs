@@ -147,7 +147,15 @@ graph LR
 
 ## SLIM Architecture
 
-TODO: Remove the table, add text to the diagram for Key Responsibilities
+<div style="font-size: 9px;">
+
+| **Layer** | **Key Responsibilities** |
+|---|---|
+| Data Plane | Message forwarding, Connection management, gRPC over HTTP/2 |
+| SLIM SDK | Reliable delivery, E2E encryption |
+| Controller| Node configuration, Route management |
+
+</div>
 
 <br>
 
@@ -201,13 +209,14 @@ graph LR
     style ClusterB fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
 ```
 
-</div>
-
-<div style="font-size: 9px;">
+<div style="font-size: 12px;">
 
 Each service interact with the **SLIM SDK** and connects to a local **SLIM Node**, which handles cross-network delivery through the **Data Plane**.
 
 </div>
+
+</div>
+
 
 ---
 
