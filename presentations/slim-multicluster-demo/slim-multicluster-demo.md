@@ -159,7 +159,7 @@ graph LR
     subgraph ClusterA["Cluster A"]
         direction TB
         subgraph SA["Service"]
-            SLA[Session Layer]
+            SLA[SLIM SDK]
             DPA[Data Plane]
             SLA <--> DPA
         end
@@ -176,7 +176,7 @@ graph LR
     subgraph ClusterB["Cluster B"]
         direction TB
         subgraph SB["Service"]
-            SLB[Session Layer]
+            SLB[SLIM SDK]
             DPB[Data Plane]
             SLB <--> DPB
         end
@@ -205,7 +205,7 @@ graph LR
 
 <div style="font-size: 9px;">
 
-Each service embeds a **Session Layer** and connects to a local **SLIM Node**, which handles cross-network delivery through the **Data Plane**.
+Each service interact with the **SLIM SDK** and connects to a local **SLIM Node**, which handles cross-network delivery through the **Data Plane**.
 
 </div>
 
