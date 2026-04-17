@@ -226,8 +226,14 @@ Services can join a shared channel and form groups:
 - `organization/namespace/group/0xffffffff`
 
 ---
+layout: cover
+---
 
-## SLIM Multicluster Demo Deployment
+# SLIM Multicluster Use Case
+
+---
+
+## SLIM Multicluster Use Case Deployment
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 8, 'rankSpacing': 15, 'padding': 3}}}%%
@@ -285,6 +291,40 @@ graph LR
     style Copilot fill:#4A90E2,color:#fff
     style LSA fill:#50C878,color:#fff
 ```
+
+---
+
+## How to Configure SLIM Names
+
+In SLIM all services are identified by a name `organization/namespace/service/h(did:key)`
+
+
+<table style="font-size:14px; width:100%; border-collapse:collapse">
+  <thead>
+    <tr>
+      <th style="padding:18px 12px; text-align:left; white-space:nowrap; border-bottom:2px solid #ccc">Entity</th>
+      <th style="padding:18px 12px; text-align:left; white-space:nowrap; border-bottom:2px solid #ccc">Pattern</th>
+      <th style="padding:18px 12px; text-align:left; white-space:nowrap; border-bottom:2px solid #ccc">Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Splunk</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>splunk/&lt;deployment-region&gt;/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>splunk/eu-central-1/k8s_troubleshooting_agent</code></td>
+    </tr>
+    <tr>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Customer (on-cluster)</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>&lt;customer-id&gt;/&lt;cluster-id&gt;/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>customer-1/on-prem-cluster/k8s-mcp-proxy</code></td>
+    </tr>
+    <tr>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Customer (off-cluster)</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>&lt;customer-id&gt;/off-cluster/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>customer-1/off-cluster/a2acli</code></td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
@@ -409,7 +449,7 @@ Route List: Customer services are now reachable
 ```yaml
 slim:
   endpoint: "https://slim-dataplane.dev.eticloud.io"
-  local-name: "agntcy/cli/a2acli"
+  local-name: "customer-1/off-cluster/a2acli"
   spire:
     socket-path: "/tmp/spire-agent/public/api.sock"
     jwt-audiences:
