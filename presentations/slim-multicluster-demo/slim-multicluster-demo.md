@@ -50,8 +50,6 @@ graph LR
 
 ✗ Data flows **in the clear** through middle boxes 
 
-TODO: add comment on the out/in bound connection
-
 </div>
 
 ---
@@ -93,7 +91,7 @@ graph LR
 
 ✓ **Single SLIM endpoint** exposes all services — no per-service ingress
 
-✓ Private SLIM nodes connect **outbound** — no inbound firewall exposure
+✓ Private SLIM nodes connect **outbound** — communication is **bidirectional** once established
 
 ✓ **E2E encryption** via MLS — data stays encrypted through all intermediate nodes **+TLS + GRPC**
 
