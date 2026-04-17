@@ -32,9 +32,13 @@ graph LR
     C((Client)) --> IG
     RP -- "outbound" --> IG
     style IG fill:#FF6B6B,color:#fff
-    style RP fill:#4A90E2,color:#fff
+    style RP fill:#FF9F43,color:#fff
     style PUB fill:#e0e0e0,stroke:#999,color:#333
     style PRV fill:#e0e0e0,stroke:#999,color:#333
+    style S1 fill:#50C878,color:#fff
+    style S2 fill:#50C878,color:#fff
+    style S3 fill:#50C878,color:#fff
+    style S4 fill:#50C878,color:#fff
 ```
 
 </div>
