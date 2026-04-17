@@ -13,16 +13,42 @@ style: |
 
 ---
 
-## Use Case
+## Use case
 
-- The customer needs to access the services (Agents) running in the Splunk cloud
-- Splunk needs to access services in the customer environment (e.g. Kubectl, Jira)
-- Customer IT should be able to access services running in both environments 
+<div style="display:flex; justify-content:center; margin-top:15px; transform:scale(2.2); transform-origin:top center">
 
-- Problems:
-    - All the agents need to be exposed publically on the internet
-    - Reverse Proxy to access customer environment (customized for each app)
-    - Data flow in the clear on middle boxes
+```mermaid
+%%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
+graph LR
+    subgraph PRV["Private Datacenter"]
+        S4[Svc A] <--> RP[Reverse Proxy]
+    end
+    subgraph PUB["Public Cloud"]
+        IG[Public Ingress]
+        IG <--> S1[Svc A]
+        IG <--> S2[Svc B]
+        IG <--> S3[Svc C]
+    end
+    C((Client)) --> IG
+    RP -- "outbound" --> IG
+    style IG fill:#FF6B6B,color:#fff
+    style RP fill:#4A90E2,color:#fff
+    style PUB fill:#e0e0e0,stroke:#999,color:#333
+    style PRV fill:#e0e0e0,stroke:#999,color:#333
+```
+
+</div>
+
+<div style="margin-top:150px; font-size:14px; line-height:2; text-align:center">
+
+✗ Every service needs a **dedicated public endpoint**
+
+✗ **Custom reverse proxy** required per customer app
+
+✗ Data flows **in the clear** through middle boxes
+
+</div>
+
 ---
 
 ## How SLIM solves the problem
@@ -418,10 +444,31 @@ In SLIM all services are identified by a name `organization/namespace/service/h(
 
 ---
 
-## Customer Zero-Touch Onboarding
+## Customer Zero-Touch On-Boarding
 
-intro in zero touch on-boarding
+The on-boarding of a new customer in the platform is fully automated
 
+The customer only needs:
+- An authentication Token
+- The public address of the Controller
+
+```yaml
+slim:
+  services:
+    slim/0:
+      controller:
+        clients:
+          - endpoint: "https://slim-control-plane-south.dev.eticloud.io:443"
+            tls:
+              insecure: false
+              include_system_ca_certs_pool: true
+            auth:
+              type: spire
+              jwt_audiences:
+                - "slim"
+              socket_path: /tmp/spire-agent/public/spire-agent.sock
+
+```
 ---
 
 ## SLIM Controller Status: Before On-Boarding
@@ -453,34 +500,6 @@ Route List: Only Local services are available
     <img src="./figures/routes-before-on-boarding.png" style="width:98%; border-radius:4px">
   </div>
 </div>
-
----
-
-## Customer Zero-Touch On-Boarding
-
-The on-boarding of a new customer in the platform is fully automated
-
-The customer only needs:
-- An authentication Token
-- The public address of the Controller
-
-```yaml
-slim:
-  services:
-    slim/0:
-      controller:
-        clients:
-          - endpoint: "https://slim-control-plane-south.dev.eticloud.io:443"
-            tls:
-              insecure: false
-              include_system_ca_certs_pool: true
-            auth:
-              type: spire
-              jwt_audiences:
-                - "slim"
-              socket_path: /tmp/spire-agent/public/spire-agent.sock
-
-```
 
 ---
 
