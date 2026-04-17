@@ -74,7 +74,7 @@ graph LR
         SN1 <--> S3[svc C]
     end
     C((Client)) --> IG
-    SN2 -- "outbound" --> IG
+    SN2 <--> IG
     style IG fill:#E53935,color:#fff
     style SN1 fill:#1565C0,color:#fff
     style SN2 fill:#1565C0,color:#fff
