@@ -320,15 +320,13 @@ slim:
 
 Before on-boarding, the controller only knows about its own cloud-side node. No links to external environments exist yet.
 
-<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
-  <div style="flex:1">
-    <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Nodes (cloud only)</p>
-    <img src="./figures/nodes-before-on-boarding.jpg" style="width:100%; border-radius:4px">
-  </div>
-  <div style="flex:1">
-    <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Links (none)</p>
-    <img src="./figures/links-before-on-boarding.jpg" style="width:100%; border-radius:4px">
-  </div>
+<div style="margin-top:8px">
+  <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Nodes (cloud only)</p>
+  <img src="./figures/nodes-before-on-boarding.jpg" style="width:80%; border-radius:4px">
+</div>
+<div style="margin-top:8px">
+  <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Links (none)</p>
+  <img src="./figures/links-before-on-boarding.jpg" style="width:80%; border-radius:4px">
 </div>
 
 ---
@@ -348,7 +346,7 @@ After the chart is installed, the controller automatically discovers the new nod
     <p style="margin:0 0 4px; font-weight:bold; font-size:11px">New cross-cluster link</p>
     <img src="./figures/links-after-on-boarding.jpg" style="width:100%; border-radius:4px">
   </div>
-  <div style="flex:1">
+  <div style="flex:1.5">
     <p style="margin:0 0 4px; font-weight:bold; font-size:11px">Routes to customer services</p>
     <img src="./figures/routes-after-on-boarding.jpg" style="width:100%; border-radius:4px">
   </div>
