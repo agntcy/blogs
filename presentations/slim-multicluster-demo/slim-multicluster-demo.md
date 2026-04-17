@@ -347,16 +347,12 @@ graph LR
 
 ## SLIM Multicluster Demo — Full Deployment
 
-<div style="font-size: 9px; margin-bottom: 4px;">
+<br><br>
 
-── data channel (gRPC) &nbsp;&nbsp;&nbsp; ┄┄ control channel (gRPC) &nbsp;&nbsp;&nbsp; <span style="color:#9C27B0">━━</span> identity channel
-
-</div>
-
-<div style="display:flex; justify-content:center; margin-top:80px; transform:scale(3.2); transform-origin:top center">
+<div style="display:flex; justify-content:center; margin-top:30px; transform:scale(3.2); transform-origin:top center">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '20px'}, 'flowchart': {'nodeSpacing': 50, 'rankSpacing': 45, 'padding': 20}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '20px'}, 'flowchart': {'nodeSpacing': 40, 'rankSpacing': 35, 'padding': 12}}}%%
 graph LR
     subgraph Customer[Customer Cluster]
         direction LR
@@ -366,6 +362,7 @@ graph LR
         CSN --- NP[Network Proxy]
         CSA[Spire Agent] --- CSN
         CSA --- NP
+        CSA --- MP1
     end
 
     subgraph Laptop[IT Ops Laptop]
@@ -378,9 +375,9 @@ graph LR
     subgraph Cloud[Cloud Cluster]
         direction LR
         Ingress[nginx ingress] --- SN[Slim Node]
+        Ingress --- SS[Spire Server]
         Ingress --- SC[Slim Controller]
         SC --- SN
-        Ingress --- SS[Spire Server]
         SN --- K8S["k8s TBA\n(A2A, MCP)"]
         SN --- HCJ["Health Check job\n(A2A)"]
         SS --- SA[Spire Agent]
@@ -397,10 +394,11 @@ graph LR
     linkStyle 4 stroke:#9C27B0
     linkStyle 5 stroke:#9C27B0
     linkStyle 6 stroke:#9C27B0
-    linkStyle 14 stroke:#9C27B0
+    linkStyle 7 stroke:#9C27B0
     linkStyle 15 stroke:#9C27B0
     linkStyle 16 stroke:#9C27B0
     linkStyle 17 stroke:#9C27B0
+    linkStyle 18 stroke:#9C27B0
 
     style Customer fill:#e0e0e0,stroke:#999,color:#333
     style Cloud fill:#e0e0e0,stroke:#999,color:#333
