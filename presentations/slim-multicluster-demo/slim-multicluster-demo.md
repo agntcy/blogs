@@ -9,7 +9,7 @@ style: |
   h2 { font-size: 20px; margin: 0; }
 ---
 
-# Cluster Customer Remediation Use Case with SLIM
+# Cluster Customer Remediation<br>Use Case with SLIM
 
 ---
 
@@ -490,71 +490,6 @@ slim:
 ```
 ---
 
-## SLIM Controller Status: Before On-Boarding
-
-Node List: Only one SLIM node available
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/nodes-before-on-boarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
-Link List: No connection set
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/links-before-on-boarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
----
-
-## SLIM Controller Status: Before On-Boarding
-
-Route List: Only Local services are available
-
-<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
-  <div style="flex:1">
-    <img src="./figures/routes-before-on-boarding.png" style="width:98%; border-radius:4px">
-  </div>
-</div>
-
----
-
-## SLIM Controller Status: After On-Boarding
-
-Node List: New SLIM node registered
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/nodes-after-on-boarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
-
-Link List: New connection established with remote cluster
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/links-after-on-boarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
----
-
-## SLIM Controller Status: After On-Boarding
-
-Route List: Customer services are now reachable
-
-<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
-  <div style="flex:1">
-    <img src="./figures/routes-after-on-boarding.png" style="width:90%; border-radius:4px">
-  </div>
-</div>
-
----
-
 ## Customer On-Boarding Demo
 
 <video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
@@ -674,3 +609,77 @@ sequenceDiagram
 <video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
   <source src="/videos/application.mp4" type="video/mp4">
 </video>
+
+
+---
+layout: cover
+---
+
+# Cluster Customer Remediation<br>Use Case with SLIM
+
+---
+
+## SLIM Controller Status: Before On-Boarding
+
+Node List: Only one SLIM node available
+
+<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+  <div>
+    <img src="./figures/nodes-before-on-boarding.png" style="width:100%; border-radius:4px">
+  </div>
+</div>
+
+Link List: No connection set
+
+<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+  <div>
+    <img src="./figures/links-before-on-boarding.png" style="width:100%; border-radius:4px">
+  </div>
+</div>
+
+---
+
+## SLIM Controller Status: Before On-Boarding
+
+Route List: Only Local services are available
+
+<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
+  <div style="flex:1">
+    <img src="./figures/routes-before-on-boarding.png" style="width:98%; border-radius:4px">
+  </div>
+</div>
+
+---
+
+## SLIM Controller Status: After On-Boarding
+
+Node List: New SLIM node registered
+
+<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+  <div>
+    <img src="./figures/nodes-after-on-boarding.png" style="width:100%; border-radius:4px">
+  </div>
+</div>
+
+
+Link List: New connection established with remote cluster
+
+<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
+  <div>
+    <img src="./figures/links-after-on-boarding.png" style="width:100%; border-radius:4px">
+  </div>
+</div>
+
+---
+
+## SLIM Controller Status: After On-Boarding
+
+Route List: Customer services are now reachable
+
+<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
+  <div style="flex:1">
+    <img src="./figures/routes-after-on-boarding.png" style="width:90%; border-radius:4px">
+  </div>
+</div>
+
+---
