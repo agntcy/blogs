@@ -73,11 +73,12 @@ graph LR
 
 ## Comparison with Existing Solutions
 
-<div style="font-size: 12px;">
+<br>
+
+<div style="font-size: 18px;">
 
 | **System/Protocol** | **Limitation** |
 |---|---|
-| Message queues (SQS, RabbitMQ, Kafka, NATS etc.) | • One-directional <br> • No e2e encryption <br> • Can't cross org boundaries |
 | HTTP/gRPC | • No E2E encryption <br> • Services must be exposed on the internet |
 | VPNs | • No per-service granularity <br> • No e2e encryption <br> • Hard to manage across orgs |
 | Reverse proxies | • Per-service exposure and configuration <br> • No e2e encryption <br> • Does not solve cross-org trust |
@@ -262,7 +263,7 @@ graph LR
     end
 
     Copilot -- "A2A/SLIM" --> SN
-    CSN -- "outbound / gRPC" --> SN
+    CSN <-- "gRPC" --> SN
     CSN -. "gRPC" .-> SC
 
     style Left fill:none,stroke:none
@@ -288,30 +289,34 @@ graph LR
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 25, 'padding': 8}}}%%
 graph LR
-    subgraph Customer[Customer Cluster]
+    subgraph Left[" "]
         direction TB
-        subgraph CustServices[Services]
+        subgraph Laptop[IT Ops Laptop]
             direction LR
-            AMCP[Atlassian MCP] ---|MCP| MP1[MCP Proxy]
-            KMCP[K8s MCP] ---|MCP| MP1
+            Copilot[Copilot]
+            LSA[Spire Agent]
+            Copilot -.- LSA
         end
-        subgraph CustSLIM[SLIM]
+        subgraph Customer[Customer Cluster]
             direction LR
-            CSN[Slim Node] ---|SLIM| NP[Network Proxy]
+            subgraph CustServices[Services]
+                direction LR
+                AMCP[Atlassian MCP] ---|MCP| MP1[MCP Proxy]
+                KMCP[K8s MCP] ---|MCP| MP1
+            end
+            subgraph CustSLIM[SLIM]
+                direction LR
+                CSN[Slim Node]
+            end
+            NP[Network Proxy]
+            CSN ---|SLIM| NP
+            subgraph CustIdentity[Identity]
+                CSA[Spire Agent]
+            end
+            MP1 ---|MCP/SLIM| CSN
+            CSA -.- CSN
+            CSA -.- NP
         end
-        subgraph CustIdentity[Identity]
-            CSA[Spire Agent]
-        end
-        MP1 ---|MCP/SLIM| CSN
-        CSA -.- CSN
-        CSA -.- NP
-    end
-
-    subgraph Laptop[IT Ops Laptop]
-        direction TB
-        Copilot[Copilot]
-        LSA[Spire Agent]
-        Copilot -.- LSA
     end
 
     subgraph Cloud[Cloud Cluster]
@@ -343,6 +348,7 @@ graph LR
     Copilot ---|A2A/SLIM| Ingress
     LSA --- Ingress
 
+    style Left fill:none,stroke:none
     style Customer fill:#e0e0e0,stroke:#999,color:#333
     style Cloud fill:#e0e0e0,stroke:#999,color:#333
     style Laptop fill:#e0e0e0,stroke:#999,color:#333
