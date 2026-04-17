@@ -341,8 +341,8 @@ graph LR
         direction LR
         SN[SLIM Node]
         SC[SLIM Controller]
-        HCJ[Health Check Job]
-        K8S["k8s troubleshooting agent (A2A, MCP)"]
+        HCJ["Health Check Job\n[A2A Client]"]
+        K8S["k8s troubleshooting agent\n[A2A Server]\n[MCP Client]"]
         SN -.-> SC
         SN --- K8S
         K8S --- HCJ
@@ -381,7 +381,7 @@ graph LR
 graph LR
     subgraph Customer[Customer Cluster]
         direction LR
-        AMCP[Atlassian MCP] --- MP1[MCP Proxy]
+        AMCP[Atlassian MCP] --- MP1["MCP Proxy\n[MCP Server]"]
         KMCP[K8s MCP] --- MP1
         MP1 --- CSN[Slim Node]
         CSN --- NP[Network Proxy]
@@ -403,8 +403,8 @@ graph LR
         Ingress --- SS[Spire Server]
         Ingress --- SC[Slim Controller]
         SC --- SN
-        SN --- K8S["k8s troubleshooting agent\n(A2A, MCP)"]
-        SN --- HCJ["Health Check job\n(A2A)"]
+        SN --- K8S["k8s troubleshooting agent\n[A2A Server]\n[MCP Client]"]
+        SN --- HCJ["Health Check job\n[A2A Client]"]
         SS --- SA[Spire Agent]
         SA --- SC
         SA --- SN
@@ -557,7 +557,7 @@ sequenceDiagram
     end
     box rgb(232,245,233) Customer Cluster
         participant SNp as SLIM Node (on-prem)
-        participant Proxy as MCP Proxy
+        participant Proxy as "MCP Proxy"
         participant MCP as k8s MCP Server
     end
 
