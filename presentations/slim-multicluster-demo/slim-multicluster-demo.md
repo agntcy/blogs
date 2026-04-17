@@ -387,7 +387,7 @@ slim:
 
 ---
 
-## Human Interacion Demo
+## Human Interaction Demo
 
 <video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
   <source src="/videos/application.mp4" type="video/mp4">
