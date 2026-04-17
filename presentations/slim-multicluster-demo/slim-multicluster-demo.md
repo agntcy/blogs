@@ -298,19 +298,19 @@ The customer only needs:
 
 ```yaml
 slim:
-    services:
-        slim/0:
-          controller:
-            clients:
-              - endpoint: "https://slim-control-plane-south.dev.eticloud.io:443"
-                tls:
-                  insecure: false
-                  include_system_ca_certs_pool: true
-                auth:
-                  type: spire
-                  jwt_audiences:
-                    - "slim"
-                  socket_path: /tmp/spire-agent/public/spire-agent.sock
+  services:
+    slim/0:
+      controller:
+        clients:
+          - endpoint: "https://slim-control-plane-south.dev.eticloud.io:443"
+            tls:
+              insecure: false
+              include_system_ca_certs_pool: true
+            auth:
+              type: spire
+              jwt_audiences:
+                - "slim"
+              socket_path: /tmp/spire-agent/public/spire-agent.sock
 
 ```
 
