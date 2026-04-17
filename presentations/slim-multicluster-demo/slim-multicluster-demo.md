@@ -229,52 +229,129 @@ Services can join a shared channel and form groups:
 layout: cover
 ---
 
-# SLIM Multicluster Use Case
+# SLIM Multicluster Demo
 
 ---
 
-## SLIM Multicluster Use Case Deployment
+## SLIM Multicluster Demo — Functional Topology
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 8, 'rankSpacing': 15, 'padding': 3}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 30, 'padding': 10}}}%%
+graph LR
+    subgraph Left[" "]
+        direction TB
+        subgraph Customer[Customer Cluster]
+            direction LR
+            AMCP[Atlassian MCP] --> CSN[SLIM Node]
+            KMCP[K8s MCP] --> CSN
+        end
+        subgraph Laptop[IT Ops Laptop]
+            Copilot[Copilot]
+        end
+    end
+
+    subgraph Cloud[Cloud Cluster]
+        direction LR
+        SN[SLIM Node]
+        SC[SLIM Controller]
+        HCJ[Health Check Job]
+        K8S[k8s TBA]
+        SN -. "gRPC" .-> SC
+        SN ---|A2A/SLIM| K8S
+        K8S ---|A2A/SLIM| HCJ
+    end
+
+    Copilot -- "A2A/SLIM" --> SN
+    CSN -- "outbound / gRPC" --> SN
+    CSN -. "gRPC" .-> SC
+
+    style Left fill:none,stroke:none
+    style Customer fill:#e0e0e0,stroke:#999,color:#333
+    style Cloud fill:#e0e0e0,stroke:#999,color:#333
+    style Laptop fill:#e0e0e0,stroke:#999,color:#333
+    style SC fill:#4A90E2,color:#fff
+    style SN fill:#4A90E2,color:#fff
+    style CSN fill:#4A90E2,color:#fff
+    style AMCP fill:#4A90E2,color:#fff
+    style KMCP fill:#4A90E2,color:#fff
+    style K8S fill:#4A90E2,color:#fff
+    style HCJ fill:#4A90E2,color:#fff
+    style Copilot fill:#4A90E2,color:#fff
+```
+
+---
+
+## SLIM Multicluster Demo — Full Deployment
+
+<br>
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '10px'}, 'flowchart': {'nodeSpacing': 12, 'rankSpacing': 25, 'padding': 8}}}%%
 graph LR
     subgraph Customer[Customer Cluster]
-        direction LR
-        AMCP[Atlassian MCP] ---|MCP| MP1[MCP Proxy]
-        KMCP[K8s MCP] ---|MCP| MP1[MCP Proxy]
-        MP1 ---|MCP/SLIM| CSN[Slim Node]
-        CSA[Spire Agent] -.- CSN
-        CSN ---|SLIM| NP[Network Proxy]
-        CSA --- NP
+        direction TB
+        subgraph CustServices[Services]
+            direction LR
+            AMCP[Atlassian MCP] ---|MCP| MP1[MCP Proxy]
+            KMCP[K8s MCP] ---|MCP| MP1
+        end
+        subgraph CustSLIM[SLIM]
+            direction LR
+            CSN[Slim Node] ---|SLIM| NP[Network Proxy]
+        end
+        subgraph CustIdentity[Identity]
+            CSA[Spire Agent]
+        end
+        MP1 ---|MCP/SLIM| CSN
+        CSA -.- CSN
+        CSA -.- NP
     end
-
-    NP ------ Ingress
 
     subgraph Laptop[IT Ops Laptop]
-        Copilot[Copilot] -.- LSA[Spire Agent]
+        direction TB
+        Copilot[Copilot]
+        LSA[Spire Agent]
+        Copilot -.- LSA
     end
 
-    LSA ------ Ingress
-    Copilot ---|A2A/SLIM| Ingress
-
-    subgraph Cloud [Cloud Cluster]
-        direction LR
+    subgraph Cloud[Cloud Cluster]
+        direction TB
         Ingress[nginx ingress]
-        Ingress ---|gRPC| SC[Slim Controller]
-        Ingress --- SS[Spire Server]
-        Ingress ---|SLIM| SN[Slim Node]
-        SC ---|gRPC| SN
-        HCJ[Health Check job] ---|A2A/SLIM| K8S[k8s TBA] ---|A2A/SLIM| SN
-        SA[Spire Agent] --- SS
+        subgraph CloudSLIM[SLIM]
+            direction LR
+            SC[Slim Controller] ---|gRPC| SN[Slim Node]
+        end
+        subgraph CloudServices[Services]
+            direction LR
+            HCJ[Health Check job] ---|A2A/SLIM| K8S[k8s TBA]
+        end
+        subgraph CloudIdentity[Identity]
+            direction LR
+            SS[Spire Server] --- SA[Spire Agent]
+        end
+        Ingress ---|gRPC| SC
+        Ingress ---|SLIM| SN
+        Ingress --- SS
+        K8S ---|A2A/SLIM| SN
         SA -.- SC
         SA -.- SN
         SA -.- K8S
         SA -.- HCJ
     end
 
+    NP -- "outbound" --> Ingress
+    Copilot ---|A2A/SLIM| Ingress
+    LSA --- Ingress
+
     style Customer fill:#e0e0e0,stroke:#999,color:#333
     style Cloud fill:#e0e0e0,stroke:#999,color:#333
     style Laptop fill:#e0e0e0,stroke:#999,color:#333
+    style CustServices fill:none,stroke:#ccc,stroke-dasharray: 3 3
+    style CustSLIM fill:none,stroke:#ccc,stroke-dasharray: 3 3
+    style CustIdentity fill:none,stroke:#ccc,stroke-dasharray: 3 3
+    style CloudSLIM fill:none,stroke:#ccc,stroke-dasharray: 3 3
+    style CloudServices fill:none,stroke:#ccc,stroke-dasharray: 3 3
+    style CloudIdentity fill:none,stroke:#ccc,stroke-dasharray: 3 3
     style NP fill:#FF9F43,color:#fff
     style Ingress fill:#FF6B6B,color:#fff
     style SC fill:#4A90E2,color:#fff
