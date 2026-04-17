@@ -8,7 +8,7 @@ style: |
   h2 { font-size: 20px; margin: 0; }
 ---
 
-# SLIM Multicluster Demo
+# Cluster Customer Remediation<br>Use Case with SLIM
 
 ---
 
@@ -46,9 +46,11 @@ graph LR
 
 ✗ Every service needs a **dedicated public endpoint**
 
-✗ **Custom reverse proxy** required per customer app
+✗ **Custom reverse proxy** to access the cluster
 
-✗ Data flows **in the clear** through middle boxes
+✗ Data flows **in the clear** through middle boxes 
+
+TODO: add comment on the out/in bound connection
 
 </div>
 
@@ -72,7 +74,7 @@ graph LR
         SN1 <--> S3[svc C]
     end
     C((Client)) --> IG
-    SN2 <--> IG
+    SN2 -- "outbound" --> IG
     style IG fill:#E53935,color:#fff
     style SN1 fill:#1565C0,color:#fff
     style SN2 fill:#1565C0,color:#fff
@@ -93,7 +95,7 @@ graph LR
 
 ✓ Private SLIM nodes connect **outbound** — no inbound firewall exposure
 
-✓ **E2E encryption** via MLS — data stays encrypted through all intermediate nodes
+✓ **E2E encryption** via MLS — data stays encrypted through all intermediate nodes **+TLS + GRPC**
 
 </div>
 
@@ -137,17 +139,15 @@ graph LR
 
 ---
 
+## What is SLIM
+
+...
+
+---
+
 ## SLIM Architecture
 
-<div style="font-size: 11px;">
-
-| **Component** | **Key Responsibilities** |
-|---|---|
-| Data Plane | Message forwarding, Connection management, gRPC over HTTP/2 |
-| Slim SDK | Reliable delivery, E2E encryption |
-| Controller | Node configuration, Route management |
-
-</div>
+TODO: Remove the table, add text to the diagram for Key Responsibilities
 
 <br>
 
@@ -309,11 +309,11 @@ graph LR
         direction TB
         subgraph Customer[Customer Cluster]
             direction LR
-            AMCP[Atlassian MCP] --> CSN[SLIM Node]
-            KMCP[K8s MCP] --> CSN
+            AMCP[Atlassian MCP Server] --> CSN[SLIM Node]
+            KMCP[k8s MCP Server] --> CSN
         end
         subgraph Laptop[IT Ops Laptop]
-            Copilot[Copilot]
+            Copilot[Copilot - A2A client]
         end
     end
 
@@ -431,7 +431,7 @@ graph LR
 
 ---
 
-## How to Configure SLIM Names
+## How to Configure Service Names
 
 In SLIM all services are identified by a name `organization/namespace/service/h(did:key)`
 
@@ -446,19 +446,19 @@ In SLIM all services are identified by a name `organization/namespace/service/h(
   </thead>
   <tbody>
     <tr>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Splunk</td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>splunk/&lt;deployment-region&gt;/&lt;service-name&gt;</code></td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>splunk/eu-central-1/k8s_troubleshooting_agent</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc">Splunk</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>splunk/&lt;deployment-region&gt;/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>splunk/eu-central-1/k8s_troubleshooting_agent</code></td>
     </tr>
     <tr>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Customer (on-cluster)</td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>&lt;customer-id&gt;/&lt;cluster-id&gt;/&lt;service-name&gt;</code></td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>customer-1/on-prem-cluster/k8s-mcp-proxy</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc">Customer (on-cluster)</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>&lt;customer-id&gt;/&lt;cluster-id&gt;/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>customer-1/on-prem-cluster/k8s-mcp-proxy</code></td>
     </tr>
     <tr>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Customer (off-cluster)</td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>&lt;customer-id&gt;/off-cluster/&lt;service-name&gt;</code></td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>customer-1/off-cluster/a2acli</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc">Customer (off-cluster)</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>&lt;customer-id&gt;/off-cluster/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>customer-1/off-cluster/a2acli</code></td>
     </tr>
   </tbody>
 </table>
@@ -470,8 +470,8 @@ In SLIM all services are identified by a name `organization/namespace/service/h(
 The on-boarding of a new customer in the platform is fully automated
 
 The customer only needs:
-- An authentication Token
-- The public address of the Controller
+- An authentication token
+- The public address of the controller
 
 ```yaml
 slim:
@@ -490,6 +490,135 @@ slim:
               socket_path: /tmp/spire-agent/public/spire-agent.sock
 
 ```
+---
+
+## Customer On-Boarding Demo
+
+<video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
+  <source src="/videos/routes.mp4" type="video/mp4">
+</video>
+
+---
+
+## Human Interaction
+
+<br>
+
+- Humans can interact with the system at all times
+- Authentication is handled via JWT tokens (using SPIRE in this particular case)
+- The application needs to know the address of the SLIM endpoint
+
+```yaml
+slim:
+  endpoint: "https://slim-dataplane.dev.eticloud.io"
+  local-name: "customer-1/off-cluster/a2acli"
+  spire:
+    socket-path: "/tmp/spire-agent/public/api.sock"
+    jwt-audiences:
+      - "slim"
+```
+
+---
+
+## Human Interaction — Sequence Diagram
+
+<div style="transform:scale(0.9); transform-origin:top center; margin-top:15px">
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '11px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
+sequenceDiagram
+    box rgb(245,246,250) IT Ops Laptop
+        actor Human as IT Ops
+        participant Copilot as Copilot
+    end
+    box rgb(227,242,253) Cloud Cluster
+        participant SNc as SLIM Node (cloud)
+        participant Agent as k8s Agent
+    end
+    box rgb(232,245,233) Customer Cluster
+        participant SNp as SLIM Node (on-prem)
+        participant Proxy as MCP Proxy
+        participant MCP as k8s MCP Server
+    end
+
+    Human->>Copilot: "What's the status of the cluster?"
+    Note over Copilot: A2A client skill invoked
+    Copilot->>SNc: A2A request over SLIM
+    SNc->>Agent: 
+    Note over Agent: analyse request,<br/>invoke MCP tool
+    Agent->>SNc: MCP request over SLIM
+    SNc->>SNp: route to on-prem cluster
+    SNp->>Proxy: 
+    Proxy->>MCP: MCP request
+    MCP-->>Proxy: MCP response
+    Proxy-->>SNp: MCP response over SLIM
+    SNp-->>SNc: route back to cloud
+    SNc-->>Agent: 
+    Note over Agent: compose A2A reply
+    Agent-->>SNc: A2A response over SLIM
+    SNc-->>Copilot: 
+    Copilot-->>Human: cluster status report
+```
+
+</div>
+
+---
+
+## Automated Health Check — Sequence Diagram
+
+<div style="transform:scale(0.9); transform-origin:top center; margin-top:15px">
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '11px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
+sequenceDiagram
+    box rgb(227,242,253) Cloud Cluster
+        participant HCJ as Health Check Job
+        participant SNc as SLIM Node (cloud)
+        participant Agent as k8s Agent
+    end
+    box rgb(232,245,233) Customer Cluster
+        participant SNp as SLIM Node (on-prem)
+        participant Proxy as MCP Proxy
+        participant KMCP as k8s MCP Server
+        participant AMCP as Atlassian MCP Server
+    end
+
+    Note over SNp,AMCP: pod ImagePullBackOff — container fails to start
+    HCJ->>SNc: "What's the status of the cluster?"<br/>A2A request over SLIM
+    SNc->>Agent: 
+    Note over SNc,KMCP: MCP call over SLIM → get pod status<br/>(see previous diagram)
+    SNc-->>Agent: MCP response over SLIM
+    Note over Agent: pod failure detected,<br/>create Jira issue
+    Agent->>SNc: MCP request over SLIM
+    SNc->>SNp: route to on-prem cluster
+    SNp->>Proxy: 
+    Proxy->>AMCP: MCP request
+    Note over AMCP: create new issue on<br/> the customer Jira
+    AMCP-->>Proxy: MCP response
+    Proxy-->>SNp: MCP response over SLIM
+    SNp-->>SNc: route back to cloud
+    SNc-->>Agent: 
+    Agent-->>SNc: A2A response over SLIM
+    SNc-->>HCJ: 
+```
+
+</div>
+
+---
+
+## Human Interaction Demo
+
+<video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
+  <source src="/videos/application.mp4" type="video/mp4">
+</video>
+
+
+---
+layout: cover
+---
+
+# Cluster Customer Remediation<br>Use Case with SLIM
+
 ---
 
 ## SLIM Controller Status: Before On-Boarding
@@ -526,7 +655,7 @@ Route List: Only Local services are available
 
 ## SLIM Controller Status: After On-Boarding
 
-Node List: New SLIM node registerd
+Node List: New SLIM node registered
 
 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
   <div>
@@ -556,40 +685,3 @@ Route List: Customer services are now reachable
 </div>
 
 ---
-
-## Customer On-Boarding Demo
-
-<video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
-  <source src="/videos/routes.mp4" type="video/mp4">
-</video>
-
----
-
-## Human Interaction
-
-<br>
-
-- Humans can use an a2a CLI to interact with the cloud services
-  - connecting to the SLIM endpoint and invoking A2A RPCs on the services running in the cloud cluster
-- Authentication is handled via JWT tokens (using SPIRE in this particular case)
-- The a2a CLI can also be used as a skill for an agent
-  - enabling automated human-in-the-loop workflows — demonstrated in the video
-- The CLI configuration is minimal:
-
-```yaml
-slim:
-  endpoint: "https://slim-dataplane.dev.eticloud.io"
-  local-name: "customer-1/off-cluster/a2acli"
-  spire:
-    socket-path: "/tmp/spire-agent/public/api.sock"
-    jwt-audiences:
-      - "slim"
-```
-
----
-
-## Human Interaction Demo
-
-<video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
-  <source src="/videos/application.mp4" type="video/mp4">
-</video>
