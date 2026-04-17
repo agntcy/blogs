@@ -206,7 +206,7 @@ Each service embeds a **Session Layer** and connects to a local **SLIM Node**, w
 
 TODO: Remove the table and do as before
 
-| **Network Security (TLS)** | **Data Security (E2Ee / MLS)** |
+| **Network Security (TLS)** | **Data Security (E2E / MLS)** |
 |---|---|
 | Secures the link | Secures the data |
 | If a node is compromised, traffic can be read | Even if a node is compromised, content stays encrypted |
@@ -444,19 +444,19 @@ In SLIM all services are identified by a name `organization/namespace/service/h(
   </thead>
   <tbody>
     <tr>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Splunk</td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>splunk/&lt;deployment-region&gt;/&lt;service-name&gt;</code></td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>splunk/eu-central-1/k8s_troubleshooting_agent</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc">Splunk</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>splunk/&lt;deployment-region&gt;/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>splunk/eu-central-1/k8s_troubleshooting_agent</code></td>
     </tr>
     <tr>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Customer (on-cluster)</td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>&lt;customer-id&gt;/&lt;cluster-id&gt;/&lt;service-name&gt;</code></td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>customer-1/on-prem-cluster/k8s-mcp-proxy</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc">Customer (on-cluster)</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>&lt;customer-id&gt;/&lt;cluster-id&gt;/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>customer-1/on-prem-cluster/k8s-mcp-proxy</code></td>
     </tr>
     <tr>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc">Customer (off-cluster)</td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>&lt;customer-id&gt;/off-cluster/&lt;service-name&gt;</code></td>
-      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #cc"><code>customer-1/off-cluster/a2acli</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc">Customer (off-cluster)</td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>&lt;customer-id&gt;/off-cluster/&lt;service-name&gt;</code></td>
+      <td style="padding:18px 12px; white-space:nowrap; border-bottom:1px solid #ccc"><code>customer-1/off-cluster/a2acli</code></td>
     </tr>
   </tbody>
 </table>
@@ -569,7 +569,7 @@ Route List: Customer services are now reachable
 
 - Humans can interact with the system at all times
 - Authentication is handled via JWT tokens (using SPIRE in this particular case)
-- The application need to know the address of the SLIM endpoint
+- The application needs to know the address of the SLIM endpoint
 
 ```yaml
 slim:
