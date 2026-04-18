@@ -20,7 +20,7 @@ style: |
 %%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
 graph LR
     subgraph PRV["Private Datacenter"]
-        S4[svc A] <--> RP[Reverse Proxy]
+        S4[svc D] <--> RP[Reverse Proxy]
     end
     subgraph PUB["Public Cloud"]
         IG[Public Ingress]
@@ -46,7 +46,7 @@ graph LR
 
 ✗ Every service needs a **dedicated public endpoint**
 
-✗ **Custom reverse proxy** to access the cluster
+✗ **Reverse proxy** requires configuration on the customer's cluster
 
 ✗ Data flows **in the clear** through middle boxes 
 
@@ -93,7 +93,7 @@ graph LR
 
 ✓ Private SLIM nodes connect **outbound** — communication is **bidirectional** once established
 
-✓ **E2E encryption** via MLS — data stays encrypted through all intermediate nodes **+TLS + GRPC**
+✓ **E2E encryption** via MLS over **gRCP/TLS** — data stays encrypted through all intermediate nodes
 
 </div>
 
@@ -141,17 +141,17 @@ graph LR
 
 **Secure Low-latency Interactive Messaging** — a communication framework that provides the secure transport layer for services across network boundaries.
 
-<div style="font-size: 13px;">
+<div style="font-size: 13px; width: fit-content; margin: 0 auto; font-size:16px;">
 
 | | |
 |---|---|
-| **Built on gRPC/HTTP2** | For easy NAT/firewall traversal |
-| **E2E Encryption** | Network layer secured through TLS, data layer encrypted E2E through MLS (RFC 9420) |
-| **Flexible communication Patterns** | Point-to-point, group channels and RPC |
-| **Distributed Architecture** | Separate Data Plane (routing), SDK (encryption + reliability), and Controller (configuration) |
-| **No Direct Exposure** | Services register with SLIM and become reachable without exposing server ports |
-| **Multi-language** | Single Rust core with bindings for Python, Go, C#, JS/TS, Kotlin, Java |
-| **Protocol Agnostic** | Transport layer for A2A, MCP, OTel, and custom protocols |
+| **gRPC / HTTP2** | Easy NAT & firewall traversal |
+| **E2E Encrypted** | TLS transport + MLS data encryption |
+| **Flexible Patterns** | Point-to-point, group channels, RPC |
+| **Distributed** | Separate Data Plane, SDK, and Controller |
+| **No Direct Exposure** | Services reachable without open ports |
+| **Multi-language** | Rust core → Python, Go, C#, JS/TS, Kotlin, Java |
+| **Protocol Agnostic** | A2A, MCP, OTel, custom protocols |
 
 </div>
 
@@ -160,7 +160,7 @@ graph LR
 ## SLIM Architecture
 <br>
 
-<div style="transform: scale(0.85); transform-origin: top left;">
+<div style="transform: scale(0.85); transform-origin: top center;">
 
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 10, 'rankSpacing': 30, 'padding': 8}}}%%
@@ -210,20 +210,10 @@ graph LR
     style ClusterB fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
 ```
 
-<div style="font-size: 12px;">
-
-| **Layer** | **Key Responsibilities** |
-|---|---|
-| Data Plane | Message forwarding, Connection management, gRPC over HTTP/2 |
-| SLIM SDK | Reliable delivery, E2E encryption |
-| Controller| Node configuration, Route management |
-
-</div>
-
-<div style="font-size: 12px;">
-
-Each service interact with the **SLIM SDK** and connects to a local **SLIM Node**, which handles cross-network delivery through the **Data Plane**.
-
+<div style="display:flex; justify-content:center; gap:70px; margin-top:40px; font-size:20px;">
+  <div style="text-align:center;"><strong>SLIM SDK</strong><br>Reliable delivery <br> E2E encryption</div>
+  <div style="text-align:center;"><strong>Data Plane</strong><br>Message forwarding <br> Connection Managent (gRCP)</div>
+  <div style="text-align:center;"><strong>Controller</strong><br>Node confiuration <br> Route management</div>
 </div>
 
 </div>
@@ -233,15 +223,7 @@ Each service interact with the **SLIM SDK** and connects to a local **SLIM Node*
 
 ## Zero Trust Data Security
 
-**Network Security + Data Security**
-
-<!--| **Network Security (TLS)** | **Data Security (E2EE / MLS)** |
-|---|---|
-| Secures the link | Secures the data |
-| If a node is compromised, traffic can be read | Even if a node is compromised, content stays encrypted |
-| Fine for single-hop, trusted infrastructure | Essential for multi-cloud, cross-org scenarios |-->
-
-<br><br><br>
+<div style="transform: scale(1.1); transform-origin: top center; margin-top:30px; margin-top:60px;">
 
 ```mermaid
 graph LR
@@ -257,9 +239,22 @@ graph LR
     style A2 fill:#90CAF9,color:#1a1a1a
 ```
 
-<br><br><br><br><br><br>
+</div>
 
-MLS: Message Layer security https://www.rfc-editor.org/rfc/rfc9420.txt
+<div style="display:flex; justify-content:center; gap:40px; margin-top:70px; font-size:16px;">
+  <div style="text-align:center; padding:15px 25px;">
+    <strong> Network Security</strong><br>
+    <strong>gRCP/TLS</strong><br>
+    Encrypts every connection<br>
+    Protects data in transit between nodes
+  </div>
+  <div style="text-align:center; padding:15px 25px;">
+    <strong> Data Security</strong><br>
+    <strong>MLS (RFC 9420)</strong><br>
+    Encrypts data end-to-end<br>
+    Content safe even if nodes are compromised
+  </div>
+</div>
 
 ---
 
