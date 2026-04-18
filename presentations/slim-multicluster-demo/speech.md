@@ -138,30 +138,36 @@ Let's move on to the demo we prepared to showcase the advantages SLIM brings.
 
 ---
 
-## Slide 10 — SLIM Multicluster Demo — Topology 
+## Slide 10 — SLIM Multicluster Demo — Functional Topology
 
-This slide shows the topology of our demo in two views. Let's focus on the
-functional topology at the top. On the left we have two components belonging
-to the customer: a **Customer Cluster** running on-premises, with a Kubernetes
-MCP Server and an Atlassian MCP Server both connected to a local SLIM Node;
-and an **IT Ops Laptop** running Copilot, extended with an agent skill that
-embeds the A2A CLI — which is what makes Copilot act as an A2A client. On the
-right is the **Cloud Cluster**, which hosts four components: a **SLIM Node**
-for message routing; a **SLIM Controller** that coordinates all SLIM Nodes and
-handles the onboarding of new clusters; a **Kubernetes Troubleshooting Agent**,
-an A2A server that receives status-check requests and embeds an MCP client to
-query the MCP servers on the customer side; and a **Health Check Job** that
-periodically asks the Kubernetes Agent for the cluster status and, if a problem
-is found, instructs it to create a Jira issue. Solid lines represent data flows,
-dashed lines represent control flows to the Controller.
-
-The bottom diagram shows the full production deployment. The key addition here
-is **SPIRE**: each cluster has a SPIRE Agent that handles workload identity and
-is responsible for generating the JWT tokens used for authentication.
+This slide shows the functional topology of our demo. On the left we have two
+components belonging to the customer: a **Customer Cluster** running
+on-premises, with a Kubernetes MCP Server and an Atlassian MCP Server both
+connected to a local SLIM Node; and an **IT Ops Laptop** running Copilot,
+extended with an agent skill that embeds the A2A CLI — which is what makes
+Copilot act as an A2A client. On the right is the **Cloud Cluster**, which
+hosts four components: a **SLIM Node** for message routing; a **SLIM
+Controller** that coordinates all SLIM Nodes and handles the onboarding of new
+clusters; a **Kubernetes Troubleshooting Agent**, an A2A server that receives
+status-check requests and embeds an MCP client to query the MCP servers on the
+customer side; and a **Health Check Job** that periodically asks the Kubernetes
+Agent for the cluster status and, if a problem is found, instructs it to create
+a Jira issue. Solid lines represent data flows, dashed lines represent control
+flows to the Controller.
 
 ---
 
-## Slide 11 — How to Configure Service Names
+## Slide 11 — SLIM Multicluster Demo — Full Deployment
+
+This diagram shows the full production deployment. The key addition here is
+**SPIRE**: each cluster has a SPIRE Agent that handles workload identity and is
+responsible for generating the JWT tokens used for authentication. The black
+links represent data connections over gRPC, while the purple links show SPIRE
+authentication flows for token provisioning.
+
+---
+
+## Slide 12 — How to Configure Service Names
 
 Every service in SLIM is identified by a name following the pattern
 `organization/namespace/service/hash-of-did-key`, as we saw earlier. In our
@@ -177,7 +183,7 @@ running on the IT Ops laptop — we use `<customer-id>/off-cluster/<service-name
 
 ---
 
-## Slide 12 — Customer Zero-Touch On-Boarding
+## Slide 13 — Customer Zero-Touch On-Boarding
 
 One of the design goals of this system is that onboarding a new customer should
 require as little operational work as possible. The customer only needs two
@@ -194,7 +200,7 @@ distributes the required routes.
 
 ---
 
-## Slide 13 — Customer On-Boarding Demo
+## Slide 14 — Customer On-Boarding Demo
 
 In this video we walk through a full customer onboarding. On this screen you
 see all the pods running on the cloud cluster: the SLIM Node, the SLIM
@@ -240,7 +246,7 @@ between the two clusters and all traffic flows over it.
 
 ---
 
-## Slide 14 — Human Interaction
+## Slide 15 — Human Interaction
 
 Using SLIM connectivity, humans can also interact with the system at any time.
 Authentication is handled via JWT tokens, as for cluster onboarding, and SPIRE
@@ -251,7 +257,7 @@ socket for token acquisition. Everything else — routing, encryption, delivery
 
 ---
 
-## Slide 15 — Human Interaction — Sequence Diagram
+## Slide 16 — Human Interaction — Sequence Diagram
 
 This diagram shows what happens during the demo I will show you in a moment. We
 integrated an A2A CLI into Copilot as an agent skill, making Copilot capable of
@@ -269,7 +275,7 @@ operator.
 
 ---
 
-## Slide 16 — Automated Health Check — Sequence Diagram
+## Slide 17 — Automated Health Check — Sequence Diagram
 
 During the demo we will deploy a pod on the customer cluster that fails to
 start because it cannot pull its image and gets stuck in `ImagePullBackOff`. In
@@ -287,7 +293,7 @@ issue has been filed.
 
 ---
 
-## Slide 17 — Human Interaction Demo
+## Slide 18 — Human Interaction Demo
 
 In this video we see the two scenarios I just described in the previous
 diagrams. The screen shows the Copilot UI, the pods running on the GLS cluster
