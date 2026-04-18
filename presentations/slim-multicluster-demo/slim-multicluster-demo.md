@@ -8,11 +8,11 @@ style: |
   h2 { font-size: 20px; margin: 0; }
 ---
 
-# Cluster Customer Remediation<br>Use Case with SLIM
+# K8s Remediation Use Case<br> Using SLIM
 
 ---
 
-## Use case
+## K8s Remediation Use Case
 
 <div style="display:flex; justify-content:center; margin-top:15px; transform:scale(2.2); transform-origin:top center">
 
@@ -54,7 +54,7 @@ graph LR
 
 ---
 
-## Use Case: How SLIM solves the problem
+## How SLIM solves the problem
 
 <div style="display:flex; justify-content:center; margin-top:15px; transform:scale(2.2); transform-origin:top center">
 
@@ -647,7 +647,7 @@ sequenceDiagram
 layout: cover
 ---
 
-# Cluster Customer Remediation<br>Use Case with SLIM
+# K8s Remediation Use Case<br> Using SLIM
 
 ---
 
