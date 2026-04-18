@@ -130,8 +130,8 @@ graph LR
 | **System/Protocol** | **Limitation** |
 |---|---|
 | HTTP/gRPC | • No E2E encryption <br> • Services must be exposed on the internet |
-| VPNs | • No per-service granularity <br> • No e2e encryption <br> • Hard to manage across orgs |
-| Reverse proxies | • Per-service exposure and configuration <br> • No e2e encryption <br> • Does not solve cross-org trust |
+| VPNs | • No E2E encryption <br> • No per-service granularity <br> • Hard to manage across orgs |
+| Reverse proxies | • No E2E encryption <br> • Complex configuration on customer cluster <br> |
 
 </div>
 
@@ -148,8 +148,8 @@ graph LR
 | **gRPC / HTTP2** | Easy NAT & firewall traversal |
 | **E2E Encrypted** | TLS transport + MLS data encryption |
 | **Flexible Patterns** | Point-to-point, group channels, RPC |
-| **Distributed** | Separate Data Plane, SDK, and Controller |
-| **No Direct Exposure** | Services reachable without open ports |
+| **Distributed** | Separate Data Plane and Controller |
+| **No Direct Exposure** | Services reachable without exposed ports |
 | **Multi-language** | Rust core → Python, Go, C#, JS/TS, Kotlin, Java |
 | **Protocol Agnostic** | A2A, MCP, OTel, custom protocols |
 
