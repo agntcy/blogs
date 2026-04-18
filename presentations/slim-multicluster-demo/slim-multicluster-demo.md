@@ -98,29 +98,6 @@ graph LR
 </div>
 
 <!--
-
-**SLIM** — Secure Low latency Interactive Messaging
-
-<div style="font-size: 11px;">
-
-| <span style="font-size: 13px; font-weight: bold;">Problem</span> | <span style="font-size: 13px; font-weight: bold;">SLIM Solution</span> |
-|---|---|
-| **Public cloud:** every new service requires a dedicated public endpoint | Single SLIM endpoint exposes all services — no per-service ingress |
-| **Private environments:** services behind firewalls are unreachable | Private SLIM nodes connect outbound to a public SLIM endpoint — no inbound exposure needed |
-| Data flows in the clear on middle boxes | E2E encryption via MLS — data stays encrypted through intermediate nodes |
-
-</div>
-
-<br>
-
-<div style="transform: scale(0.75); transform-origin: top left;">
-
-*e.g. svc A communicates with svc E through: svc A ↔ SLIM Node ↔ Public Ingress ↔ SLIM Node ↔ svc E*
-
-</div>
--->
----
-
 ## Comparison with Existing Solutions
 
 <br>
@@ -134,6 +111,8 @@ graph LR
 | Reverse proxies | • No E2E encryption <br> • Complex configuration on customer cluster <br> |
 
 </div>
+-->
+
 
 ---
 
@@ -250,7 +229,7 @@ graph LR
   </div>
   <div style="text-align:center; padding:15px 25px;">
     <strong> Data Security</strong><br>
-    <strong>MLS (RFC 9420)</strong><br>
+    <strong>Message Layer Security (MLS) Protocol </strong><br>
     Encrypts data end-to-end<br>
     Content safe even if nodes are compromised
   </div>
@@ -301,11 +280,11 @@ Services can join a shared channel and form groups:
 layout: cover
 ---
 
-# SLIM Multicluster Demo
+# K8s Remediation Use Case Demo
 
 ---
 
-## SLIM Multicluster Demo — Functional Topology
+## Demo Functional Topology
 
 <div style="transform:scale(1.1); transform-origin:top center; margin-top:50px;">
 
@@ -362,7 +341,7 @@ graph LR
 
 ---
 
-## SLIM Multicluster Demo — Full Deployment 
+## Demo Full Deployment 
 
 <div style="transform:scale(1.1); transform-origin:top center; margin-top:70px;">
 
@@ -567,7 +546,7 @@ sequenceDiagram
     end
     box rgb(232,245,233) Customer Cluster
         participant SNp as SLIM Node (on-prem)
-        participant Proxy as "MCP Proxy"
+        participant Proxy as MCP Proxy
         participant MCP as k8s MCP Server
     end
 
