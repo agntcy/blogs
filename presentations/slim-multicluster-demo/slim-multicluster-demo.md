@@ -305,17 +305,9 @@ layout: cover
 
 ---
 
-## SLIM Multicluster Demo — Topology
+## SLIM Multicluster Demo — Functional Topology
 
-<div style="display:flex; flex-direction:column; align-items:center; gap:0px">
-
-<div style="font-size:12px; align-self:flex-start">
-
-**Functional Topology** &nbsp;&nbsp;&nbsp; ── data (gRPC) &nbsp; ┄┄ control (gRPC)
-
-</div>
-
-<div style="transform:scale(2); transform-origin:top center">
+<div style="transform:scale(1.1); transform-origin:top center; margin-top:50px;">
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '16px'}, 'flowchart': {'nodeSpacing': 24, 'rankSpacing': 30, 'padding': 10}}}%%
@@ -363,16 +355,19 @@ graph LR
 
 </div>
 
-<div style="font-size:12px; align-self:flex-start; margin-top:70px">
-
-**Full Deployment**
-
+<div style="display:flex; justify-content:center; gap:30px; margin-top:50px; font-size:18px;">
+  <div>── <strong>data</strong> (gRPC)</div>
+  <div>┄┄ <strong>control</strong> (gRPC)</div>
 </div>
 
-<div style="transform:scale(2.7); transform-origin:top center">
+---
+
+## SLIM Multicluster Demo — Full Deployment 
+
+<div style="transform:scale(1.1); transform-origin:top center; margin-top:70px;">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '24px'}, 'flowchart': {'nodeSpacing': 24, 'rankSpacing': 25, 'padding': 8}}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '20px'}, 'flowchart': {'nodeSpacing': 8, 'rankSpacing': 12, 'padding': 4}}}%%
 graph LR
     subgraph Customer[Customer Cluster]
         direction LR
@@ -395,11 +390,11 @@ graph LR
     subgraph Cloud[Cloud Cluster]
         direction LR
         Ingress[nginx ingress] --- SN[Slim Node]
-        Ingress --- SS[Spire Server]
         Ingress --- SC[Controller]
         SC --- SN
         SN --- K8S["k8s troubleshooting agent\n[A2A Server]\n[MCP Client]"]
         SN --- HCJ["Health Check job\n[A2A Client]"]
+        Ingress --- SS[Spire Server]
         SS --- SA[Spire Agent]
         SA --- SC
         SA --- SN
@@ -415,10 +410,13 @@ graph LR
     linkStyle 5 stroke:#9C27B0
     linkStyle 6 stroke:#9C27B0
     linkStyle 7 stroke:#9C27B0
+    linkStyle 13 stroke:#9C27B0
+    linkStyle 14 stroke:#9C27B0
     linkStyle 15 stroke:#9C27B0
     linkStyle 16 stroke:#9C27B0
     linkStyle 17 stroke:#9C27B0
     linkStyle 18 stroke:#9C27B0
+    linkStyle 21 stroke:#9C27B0
 
     style Customer fill:#e0e0e0,stroke:#999,color:#333
     style Cloud fill:#e0e0e0,stroke:#999,color:#333
@@ -442,6 +440,9 @@ graph LR
 
 </div>
 
+<div style="display:flex; justify-content:center; gap:30px; margin-top:70px; font-size:18px;">
+  <div>── <strong>data</strong> (gRPC)</div>
+  <div><span style="color:#9C27B0;">──</span> <strong>SPIRE auth</strong> (token provisioning)</div>
 </div>
 
 ---
