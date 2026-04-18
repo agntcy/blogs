@@ -120,7 +120,7 @@ graph LR
 
 **Secure Low-latency Interactive Messaging** — a communication framework that provides the secure transport layer for services across network boundaries.
 
-<div style="font-size: 13px; width: fit-content; margin: 0 auto; font-size:16px;">
+<div style="font-size: 16px; width: fit-content; margin: 0 auto;">
 
 | | |
 |---|---|
@@ -202,7 +202,7 @@ graph LR
 
 ## Zero Trust Data Security
 
-<div style="transform: scale(1.1); transform-origin: top center; margin-top:30px; margin-top:60px;">
+<div style="transform: scale(1.1); transform-origin: top center; margin-top:60px;">
 
 ```mermaid
 graph LR
@@ -351,7 +351,7 @@ graph LR
     subgraph Customer[Customer Cluster]
         direction LR
         AMCP[Atlassian MCP] --- MP1["MCP Proxy\n[MCP Server]"]
-        KMCP[K8s MCP] --- MP1
+        KMCP[k8s MCP] --- MP1
         MP1 --- CSN[Slim Node]
         CSN --- NP[Network Proxy]
         CSA[Spire Agent] --- CSN
@@ -652,7 +652,7 @@ Link List: No connections established
 
 ## SLIM Controller Status: Before Onboarding
 
-Route List: Only Local services are available
+Route List: Only local services are available
 
 <div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
   <div style="flex:1">
