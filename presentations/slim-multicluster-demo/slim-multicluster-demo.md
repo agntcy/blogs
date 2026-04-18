@@ -93,7 +93,7 @@ graph LR
 
 ✓ Private SLIM nodes connect **outbound** — communication is **bidirectional** once established
 
-✓ **E2E encryption** via MLS over **gRCP/TLS** — data stays encrypted through all intermediate nodes
+✓ **E2E encryption** via MLS over **gRPC/TLS** — data stays encrypted through all intermediate nodes
 
 </div>
 
@@ -212,8 +212,8 @@ graph LR
 
 <div style="display:flex; justify-content:center; gap:70px; margin-top:40px; font-size:20px;">
   <div style="text-align:center;"><strong>SLIM SDK</strong><br>Reliable delivery <br> E2E encryption</div>
-  <div style="text-align:center;"><strong>Data Plane</strong><br>Message forwarding <br> Connection Managent (gRCP)</div>
-  <div style="text-align:center;"><strong>Controller</strong><br>Node confiuration <br> Route management</div>
+  <div style="text-align:center;"><strong>Data Plane</strong><br>Message forwarding <br> Connection Management (gRPC)</div>
+  <div style="text-align:center;"><strong>Controller</strong><br>Node configuration <br> Route management</div>
 </div>
 
 </div>
@@ -244,7 +244,7 @@ graph LR
 <div style="display:flex; justify-content:center; gap:40px; margin-top:70px; font-size:16px;">
   <div style="text-align:center; padding:15px 25px;">
     <strong> Network Security</strong><br>
-    <strong>gRCP/TLS</strong><br>
+    <strong>gRPC/TLS</strong><br>
     Encrypts every connection<br>
     Protects data in transit between nodes
   </div>
@@ -483,11 +483,16 @@ In SLIM all services are identified by a name `organization/namespace/service/h(
 
 ## Customer Zero-Touch Onboarding
 
-The onboarding of a new customer in the platform is fully automated
+The onboarding of a new customer to the platform is fully automated. The customer only needs:
 
-The customer only needs:
-- An authentication token
-- The public address of the controller
+<div style="display:flex; justify-content:center; gap:40px; margin-top:30px; font-size:24px;">
+  <div style="text-align:center; padding:15px 25px;">
+    <strong>🔑 Authentication Token</strong>
+  </div>
+  <div style="text-align:center; padding:15px 25px;">
+    <strong>🌐 Controller Public Address</strong>
+  </div>
+</div>
 
 ```yaml
 slim:
@@ -510,9 +515,11 @@ slim:
 
 ## Customer Onboarding Demo
 
-<video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
+<div style="display:flex; justify-content:center;">
+<video controls style="max-width: 88%; max-height: 78vh; object-fit: contain;">
   <source src="/videos/routes.mp4" type="video/mp4">
 </video>
+</div>
 
 ---
 
@@ -520,9 +527,16 @@ slim:
 
 <br>
 
-- Humans can interact with the system at all times
-- Authentication is handled via JWT tokens
-- The application needs to know the address of the SLIM endpoint
+Any human operator can connect to the platform at any time with minimal configuration:
+
+<div style="display:flex; justify-content:center; gap:40px; margin-top:15px; font-size:18px;">
+  <div style="text-align:center; padding:15px 25px;">
+    <strong>🔑 Authentication Token</strong>
+  </div>
+  <div style="text-align:center; padding:15px 25px;">
+    <strong>🌐 SLIM Public Endpoint</strong>
+  </div>
+</div>
 
 ```yaml
 slim:
@@ -538,10 +552,10 @@ slim:
 
 ## Human Interaction — Sequence Diagram
 
-<div style="transform:scale(0.9); transform-origin:top center; margin-top:15px">
+<div style="transform:scale(1.05); transform-origin:top center; margin-top:15px">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '11px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
+%%{init: {'theme': 'base', 'sequence': {'mirrorActors': false}, 'themeVariables': {'fontSize': '16px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
 sequenceDiagram
     box rgb(245,246,250) IT Ops Laptop
         actor Human as IT Ops
@@ -561,7 +575,7 @@ sequenceDiagram
     Note over Copilot: A2A client skill invoked
     Copilot->>SNc: A2A request over SLIM
     SNc->>Agent: 
-    Note over Agent: analyse request,<br/>invoke MCP tool
+    Note over Agent: analyze request,<br/>invoke MCP tool
     Agent->>SNc: MCP request over SLIM
     SNc->>SNp: route to on-prem cluster
     SNp->>Proxy: 
@@ -582,10 +596,10 @@ sequenceDiagram
 
 ## Automated Health Check — Sequence Diagram
 
-<div style="transform:scale(0.9); transform-origin:top center; margin-top:15px">
+<div style="transform:scale(1); transform-origin:top center; margin-top:15px">
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': {'fontSize': '11px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
+%%{init: {'theme': 'base', 'sequence': {'mirrorActors': false}, 'themeVariables': {'fontSize': '16px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
 sequenceDiagram
     box rgb(227,242,253) Cloud Cluster
         participant HCJ as Health Check Job
@@ -609,7 +623,7 @@ sequenceDiagram
     SNc->>SNp: route to on-prem cluster
     SNp->>Proxy: 
     Proxy->>AMCP: MCP request
-    Note over AMCP: create new issue on<br/> the customer Jira
+    Note over AMCP: create new issue on<br/>the customer's Jira
     AMCP-->>Proxy: MCP response
     Proxy-->>SNp: MCP response over SLIM
     SNp-->>SNc: route back to cloud
@@ -639,7 +653,7 @@ layout: cover
 
 ## SLIM Controller Status: Before Onboarding
 
-Node List: Only one SLIM node available
+Node List: Only one SLIM node is available
 
 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
   <div>
@@ -647,7 +661,7 @@ Node List: Only one SLIM node available
   </div>
 </div>
 
-Link List: No connection set
+Link List: No connections established
 
 <div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
   <div>
