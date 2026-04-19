@@ -56,14 +56,13 @@ graph LR
 
 ## How SLIM solves the problem
 
-<div style="display:flex; justify-content:center; margin-top:15px; transform:scale(2.2); transform-origin:top center">
+<div style="display:flex; justify-content:center; margin-top:15px; transform:scale(2.6); transform-origin:top center">
 
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
 graph LR
     subgraph PRV["Private Datacenter"]
         S4[svc D] <--> SN2[SLIM Node]
-        S5[svc E] <--> SN2
     end
     subgraph PUB["Public Cloud"]
         IG[Public Ingress] <--> SN1[SLIM Node]
@@ -80,14 +79,13 @@ graph LR
     style S2 fill:#90CAF9,color:#1a1a1a
     style S3 fill:#90CAF9,color:#1a1a1a
     style S4 fill:#90CAF9,color:#1a1a1a
-    style S5 fill:#90CAF9,color:#1a1a1a
     style PUB fill:#e0e0e0,stroke:#999,color:#333
     style PRV fill:#e0e0e0,stroke:#999,color:#333
 ```
 
 </div>
 
-<div style="margin-top:150px; font-size:14px; line-height:2; text-align:center">
+<div style="margin-top:170px; font-size:14px; line-height:2; text-align:center">
 
 ✓ **Single SLIM endpoint** exposes all services — no per-service ingress
 
@@ -118,20 +116,37 @@ graph LR
 
 ## What is SLIM
 
-**Secure Low-latency Interactive Messaging** — a communication framework that provides the secure transport layer for services across network boundaries.
+<div style="text-align:center; margin-top: 50px;">
 
-<div style="font-size: 16px; width: fit-content; margin: 0 auto;">
+**Secure Low-latency Interactive Messaging** <br> A transport for services across network boundaries.
 
-| | |
-|---|---|
-| **gRPC / HTTP2** | Easy NAT & firewall traversal |
-| **E2E Encrypted** | TLS transport + MLS data encryption |
-| **Flexible Patterns** | Point-to-point, group channels, RPC |
-| **Distributed** | Separate Data Plane and Controller |
-| **No Direct Exposure** | Services reachable without exposed ports |
-| **Multi-language** | Rust core → Python, Go, C#, JS/TS, Kotlin, Java |
-| **Protocol Agnostic** | A2A, MCP, OTel, custom protocols |
+</div>
 
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; max-width: 800px; margin: 40px auto 0; font-size: 14px;">
+  <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
+    <strong>gRPC / HTTP2</strong><br>
+    <span style="color: #666; font-size: 13px;">Easy NAT & firewall traversal</span>
+  </div>
+  <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
+    <strong>E2E Encrypted</strong><br>
+    <span style="color: #666; font-size: 13px;">TLS transport + MLS data encryption</span>
+  </div>
+  <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
+    <strong>Flexible Patterns</strong><br>
+    <span style="color: #666; font-size: 13px;">Point-to-point, group channels, RPC</span>
+  </div>
+  <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
+    <strong>No Direct Exposure</strong><br>
+    <span style="color: #666; font-size: 13px;">Services reachable without exposed ports</span>
+  </div>
+  <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
+    <strong>Multi-language</strong><br>
+    <span style="color: #666; font-size: 13px;">Rust core → Python, Go, C#, JS/TS, Kotlin, Java</span>
+  </div>
+  <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
+    <strong>Protocol Agnostic</strong><br>
+    <span style="color: #666; font-size: 13px;">A2A, MCP, OTel, custom protocols</span>
+  </div>
 </div>
 
 ---
@@ -293,7 +308,7 @@ layout: cover
 graph LR
     subgraph Left[" "]
         direction TB
-        subgraph Customer[Customer Cluster]
+        subgraph Customer["Customer Cluster (GLS)"]
             direction LR
             AMCP[Atlassian MCP Server] --> CSN[SLIM Node]
             KMCP[k8s MCP Server] --> CSN
@@ -303,7 +318,7 @@ graph LR
         end
     end
 
-    subgraph Cloud[Cloud Cluster]
+    subgraph Cloud["Cloud Cluster (AWS)"]
         direction LR
         SN[SLIM Node]
         SC[Controller]
@@ -348,7 +363,7 @@ graph LR
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {'fontSize': '20px'}, 'flowchart': {'nodeSpacing': 8, 'rankSpacing': 12, 'padding': 4}}}%%
 graph LR
-    subgraph Customer[Customer Cluster]
+    subgraph Customer["Customer Cluster (GLS)"]
         direction LR
         AMCP[Atlassian MCP] --- MP1["MCP Proxy\n[MCP Server]"]
         KMCP[k8s MCP] --- MP1
@@ -366,7 +381,7 @@ graph LR
         Copilot --- LSA
     end
 
-    subgraph Cloud[Cloud Cluster]
+    subgraph Cloud["Cloud Cluster (AWS)"]
         direction LR
         Ingress[nginx ingress] --- SN[Slim Node]
         Ingress --- SC[Controller]
@@ -540,12 +555,12 @@ sequenceDiagram
         actor Human as IT Ops
         participant Copilot as Copilot
     end
-    box rgb(227,242,253) Cloud Cluster
-        participant SNc as SLIM Node (cloud)
+    box rgb(227,242,253) Cloud Cluster - AWS
+        participant SNc as SLIM Node (cloud - AWS)
         participant Agent as k8s Agent
     end
-    box rgb(232,245,233) Customer Cluster
-        participant SNp as SLIM Node (on-prem)
+    box rgb(232,245,233) Customer Cluster - GLS
+        participant SNp as SLIM Node (on-prem - GLS)
         participant Proxy as MCP Proxy
         participant MCP as k8s MCP Server
     end
@@ -580,13 +595,13 @@ sequenceDiagram
 ```mermaid
 %%{init: {'theme': 'base', 'sequence': {'mirrorActors': false}, 'themeVariables': {'fontSize': '16px', 'actorBkg': '#F5F6FA', 'actorBorder': '#9E9E9E', 'activationBkgColor': '#E3F2FD', 'signalColor': '#333', 'signalTextColor': '#333'}}}%%
 sequenceDiagram
-    box rgb(227,242,253) Cloud Cluster
+    box rgb(227,242,253) Cloud Cluster - AWS
         participant HCJ as Health Check Job
-        participant SNc as SLIM Node (cloud)
+        participant SNc as SLIM Node (cloud - AWS)
         participant Agent as k8s Agent
     end
-    box rgb(232,245,233) Customer Cluster
-        participant SNp as SLIM Node (on-prem)
+    box rgb(232,245,233) Customer Cluster - GLS
+        participant SNp as SLIM Node (on-prem - GLS)
         participant Proxy as MCP Proxy
         participant KMCP as k8s MCP Server
         participant AMCP as Atlassian MCP Server
