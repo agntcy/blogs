@@ -154,7 +154,7 @@ graph LR
 ## SLIM Architecture
 <br>
 
-<div style="transform: scale(0.85); transform-origin: top center;">
+<div style="transform: scale(1); transform-origin: top center;">
 
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 10, 'rankSpacing': 30, 'padding': 8}}}%%
@@ -175,6 +175,7 @@ graph LR
     DPN1 <-- "gRPC/TLS" --> DPN2
     SN1 -.-> CP[Controller]
     SN2 -.-> CP
+    SLA <-. "MLS (E2E encrypted)" .-> SLB
 
     subgraph ClusterB["Cluster B"]
         direction TB
@@ -202,9 +203,10 @@ graph LR
     style DPN2 fill:#42A5F5,color:#fff
     style ClusterA fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
     style ClusterB fill:none,stroke:#888,stroke-dasharray: 5 5,color:#333
+    linkStyle 5 stroke:#E91E63,stroke-width:2px
 ```
 
-<div style="display:flex; justify-content:center; gap:70px; margin-top:40px; font-size:20px;">
+<div style="display:flex; justify-content:center; gap:70px; margin-top:25px; font-size:18px;">
   <div style="text-align:center;"><strong>SLIM SDK</strong><br>Reliable delivery <br> E2E encryption</div>
   <div style="text-align:center;"><strong>Data Plane</strong><br>Message forwarding <br> Connection Management (gRPC)</div>
   <div style="text-align:center;"><strong>Controller</strong><br>Node configuration <br> Route management</div>
@@ -212,7 +214,8 @@ graph LR
 
 </div>
 
-
+---
+hide: true
 ---
 
 ## Zero Trust Data Security
