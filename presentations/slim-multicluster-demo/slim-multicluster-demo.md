@@ -3,6 +3,7 @@ marp: true
 paginate: true
 html: true
 size: 16:9
+colorSchema: light  
 style: |
   section { font-size: 12px; padding: 5px 10px; }
   h2 { font-size: 20px; margin: 0; }
