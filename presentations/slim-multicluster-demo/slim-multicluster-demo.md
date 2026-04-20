@@ -20,30 +20,34 @@ style: |
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
 graph LR
-    subgraph PRV["Private Datacenter"]
-        S4[svc D] <--> RP[Reverse Proxy]
+    subgraph PRV["Customer Cluster"]
+        S4[svc D] <--> RP1[Reverse Proxy]
+        S5[svc E] <--> RP2[Reverse Proxy]
     end
-    subgraph PUB["Public Cloud"]
+    subgraph PUB["O11y Cloud"]
         IG[Public Ingress]
         IG <--> S1[svc A]
         IG <--> S2[svc B]
         IG <--> S3[svc C]
     end
     C((Client)) --> IG
-    RP <--> IG
+    RP1 <--> IG
+    RP2 <--> IG
     style IG fill:#E53935,color:#fff
-    style RP fill:#42A5F5,color:#fff
+    style RP1 fill:#42A5F5,color:#fff
+    style RP2 fill:#42A5F5,color:#fff
     style PUB fill:#e0e0e0,stroke:#999,color:#333
     style PRV fill:#e0e0e0,stroke:#999,color:#333
     style S1 fill:#90CAF9,color:#1a1a1a
     style S2 fill:#90CAF9,color:#1a1a1a
     style S3 fill:#90CAF9,color:#1a1a1a
     style S4 fill:#90CAF9,color:#1a1a1a
+    style S5 fill:#90CAF9,color:#1a1a1a
 ```
 
 </div>
 
-<div style="margin-top:150px; font-size:14px; line-height:2; text-align:center">
+<div style="margin-top:170px; font-size:14px; line-height:2; text-align:center">
 
 ✗ Every service needs a **dedicated public endpoint**
 
@@ -62,10 +66,11 @@ graph LR
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 15, 'rankSpacing': 30, 'padding': 3}}}%%
 graph LR
-    subgraph PRV["Private Datacenter"]
+    subgraph PRV["Customer Cluster"]
         S4[svc D] <--> SN2[SLIM Node]
+        S5[svc E] <--> SN2[SLIM Node]
     end
-    subgraph PUB["Public Cloud"]
+    subgraph PUB["O11y Cloud"]
         IG[Public Ingress] <--> SN1[SLIM Node]
         SN1 <--> S1[svc A]
         SN1 <--> S2[svc B]
@@ -80,6 +85,7 @@ graph LR
     style S2 fill:#90CAF9,color:#1a1a1a
     style S3 fill:#90CAF9,color:#1a1a1a
     style S4 fill:#90CAF9,color:#1a1a1a
+    style S5 fill:#90CAF9,color:#1a1a1a
     style PUB fill:#e0e0e0,stroke:#999,color:#333
     style PRV fill:#e0e0e0,stroke:#999,color:#333
 ```
@@ -112,7 +118,8 @@ graph LR
 </div>
 -->
 
-
+---
+hide: true
 ---
 
 ## What is SLIM
@@ -160,7 +167,7 @@ graph LR
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 10, 'rankSpacing': 30, 'padding': 8}}}%%
 graph LR
-    subgraph ClusterA["Cluster A"]
+    subgraph ClusterA["Customer Cluster"]
         direction TB
         subgraph SA["Service"]
             SLA[SLIM SDK]
@@ -178,7 +185,7 @@ graph LR
     SN2 -.-> CP
     SLA <-. "MLS (E2E encrypted)" .-> SLB
 
-    subgraph ClusterB["Cluster B"]
+    subgraph ClusterB["O11y Cluster"]
         direction TB
         subgraph SB["Service"]
             SLB[SLIM SDK]
@@ -318,11 +325,11 @@ graph LR
             KMCP[k8s MCP Server] --> CSN
         end
         subgraph Laptop[IT Ops Laptop]
-            Copilot["Copilot [A2A client]"]
+            Copilot["Copilot + Agent Skills \n [A2A Client]"]
         end
     end
 
-    subgraph Cloud["Cloud Cluster (AWS)"]
+    subgraph Cloud["O11y Cluster (AWS)"]
         direction LR
         SN[SLIM Node]
         SC[Controller]
@@ -371,7 +378,7 @@ graph LR
         direction LR
         AMCP[Atlassian MCP] --- MP1["MCP Proxy\n[MCP Server]"]
         KMCP[k8s MCP] --- MP1
-        MP1 --- CSN[Slim Node]
+        MP1 --- CSN[SLIM Node]
         CSN --- NP[Network Proxy]
         CSA[Spire Agent] --- CSN
         CSA --- NP
@@ -380,14 +387,14 @@ graph LR
 
     subgraph Laptop[IT Ops Laptop]
         direction LR
-        Copilot["Copilot\n[A2A Client]"]
+        Copilot["Copilot + Agent Skills \n [A2A Client]"]
         LSA[Spire Agent]
         Copilot --- LSA
     end
 
-    subgraph Cloud["Cloud Cluster (AWS)"]
+    subgraph Cloud["O11y Cluster (AWS)"]
         direction LR
-        Ingress[nginx ingress] --- SN[Slim Node]
+        Ingress[nginx ingress] --- SN[SLIM Node]
         Ingress --- SC[Controller]
         SC --- SN
         SN --- K8S["k8s troubleshooting agent\n[A2A Server]\n[MCP Client]"]
@@ -443,6 +450,8 @@ graph LR
   <div><span style="color:#9C27B0;">──</span> <strong>SPIRE auth</strong> (token provisioning)</div>
 </div>
 
+---
+hide: true
 ---
 
 ## How to Configure Service Names
@@ -559,18 +568,18 @@ sequenceDiagram
         actor Human as IT Ops
         participant Copilot as Copilot
     end
-    box rgb(227,242,253) Cloud Cluster - AWS
-        participant SNc as SLIM Node (cloud - AWS)
+    box rgb(227,242,253) O11y Cluster - AWS
+        participant SNc as SLIM Node (o11y cluster)
         participant Agent as k8s Agent
     end
     box rgb(232,245,233) Customer Cluster - GLS
-        participant SNp as SLIM Node (on-prem - GLS)
+        participant SNp as SLIM Node (customer cluster)
         participant Proxy as MCP Proxy
         participant MCP as k8s MCP Server
     end
 
-    Human->>Copilot: "Give me the list of pods?"
-    Note over Copilot: A2A client skill invoked
+    Human->>Copilot: "Give me the list of pods"
+    Note over Copilot: A2ACLI agent skills invoked
     Copilot->>SNc: A2A request over SLIM
     SNc->>Agent: 
     Note over Agent: analyze request,<br/>invoke MCP tool
