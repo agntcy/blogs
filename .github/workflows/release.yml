@@ -27,12 +27,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Setup Node
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.5'
+          cache: 'npm'
       - name: Setup Ruby
         uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
         with:
           ruby-version: '3.4'
           bundler-cache: true
           cache-version: 0
+      - name: Install slide build dependencies
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm ci
+      - name: Build slides
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run build:slides
       - name: Build with Jekyll
         run: bundle exec jekyll build
         env:
