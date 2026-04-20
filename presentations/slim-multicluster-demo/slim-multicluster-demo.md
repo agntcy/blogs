@@ -132,11 +132,11 @@ graph LR
     <span style="color: #666; font-size: 13px;">TLS transport + MLS data encryption</span>
   </div>
   <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
-    <strong>Flexible Patterns</strong><br>
+    <strong>Flexible Communication Patterns</strong><br>
     <span style="color: #666; font-size: 13px;">Point-to-point, group channels, RPC</span>
   </div>
   <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
-    <strong>No Direct Exposure</strong><br>
+    <strong>No Service Exposure</strong><br>
     <span style="color: #666; font-size: 13px;">Services reachable without exposed ports</span>
   </div>
   <div style="background: #f5f5f5; border-radius: 8px; padding: 15px; text-align: center;">
@@ -390,7 +390,7 @@ graph LR
         Ingress --- SC[Controller]
         SC --- SN
         SN --- K8S["k8s troubleshooting agent\n[A2A Server]\n[MCP Client]"]
-        SN --- HCJ["Health Check job\n[A2A Client]"]
+        SN --- HCJ["Health Check Job\n[A2A Client]"]
         Ingress --- SS[Spire Server]
         SS --- SA[Spire Agent]
         SA --- SC
@@ -482,7 +482,7 @@ In SLIM all services are identified by a name `organization/namespace/service/h(
 
 The onboarding of a new customer to the platform is fully automated. The customer only needs:
 
-<div style="display:flex; justify-content:center; gap:40px; margin-top:30px; font-size:24px;">
+<div style="display:flex; justify-content:center; gap:40px; margin-top:30px; font-size:20px;">
   <div style="text-align:center; padding:15px 25px;">
     <strong>🔑 Authentication Token</strong>
   </div>
@@ -526,7 +526,7 @@ slim:
 
 Any human operator can connect to the platform at any time with minimal configuration:
 
-<div style="display:flex; justify-content:center; gap:40px; margin-top:15px; font-size:18px;">
+<div style="display:flex; justify-content:center; gap:40px; margin-top:15px; font-size:20px;">
   <div style="text-align:center; padding:15px 25px;">
     <strong>🔑 Authentication Token</strong>
   </div>
@@ -589,6 +589,8 @@ sequenceDiagram
 
 </div>
 
+---
+hide: true
 ---
 
 ## Automated Health Check — Sequence Diagram
