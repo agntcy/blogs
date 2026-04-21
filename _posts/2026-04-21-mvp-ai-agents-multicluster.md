@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "SLIM MVP: Multicluster Customer Remediation with AI Agents"
-date: 2026-04-04 07:00:00 +0000
+date: 2026-04-21 07:00:00 +0000
 author: Luca Muscariello
 author_url: https://github.com/muscariello
 categories: technical
