@@ -185,24 +185,25 @@ slim:
 That simplicity shows up clearly in the controller views before and after a new
 cluster joins.
 
-<div style="display:flex; flex-wrap:wrap; gap:16px; margin: 1.5em 0;">
-  <figure style="flex:1 1 340px; margin:0;">
-    <img src="{{ '/presentations/slim-multicluster-demo/figures/nodes-before-onboarding.png' | relative_url }}" alt="Controller node list before onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
-    <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Before onboarding, only the cloud-side node is registered.</figcaption>
-  </figure>
-  <figure style="flex:1 1 340px; margin:0;">
-    <img src="{{ '/presentations/slim-multicluster-demo/figures/nodes-after-onboarding.png' | relative_url }}" alt="Controller node list after onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
-    <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">After onboarding, the customer cluster appears as a new registered node.</figcaption>
-  </figure>
-  <figure style="flex:1 1 340px; margin:0;">
-    <img src="{{ '/presentations/slim-multicluster-demo/figures/routes-before-onboarding.png' | relative_url }}" alt="Controller routes before onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
-    <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Before onboarding, only local cloud services are routable.</figcaption>
-  </figure>
-  <figure style="flex:1 1 340px; margin:0;">
-    <img src="{{ '/presentations/slim-multicluster-demo/figures/routes-after-onboarding.png' | relative_url }}" alt="Controller routes after onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
-    <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">After onboarding, customer-side MCP services become reachable through the established link.</figcaption>
-  </figure>
-</div>
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/presentations/slim-multicluster-demo/figures/nodes-before-onboarding.png' | relative_url }}" alt="Controller node list before onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Before onboarding, only the cloud-side node is registered.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/presentations/slim-multicluster-demo/figures/nodes-after-onboarding.png' | relative_url }}" alt="Controller node list after onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">After onboarding, the customer cluster appears as a new registered node.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/presentations/slim-multicluster-demo/figures/routes-before-onboarding.png' | relative_url }}" alt="Controller routes before onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Before onboarding, only local cloud services are routable.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/presentations/slim-multicluster-demo/figures/routes-after-onboarding.png' | relative_url }}" alt="Controller routes after onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">After onboarding, customer-side MCP services become reachable through the established link.</figcaption>
+</figure>
 
 The service naming convention reinforces that model. Cloud-hosted services use
 names such as `splunk/eu-central-1/k8s_troubleshooting_agent`, while
