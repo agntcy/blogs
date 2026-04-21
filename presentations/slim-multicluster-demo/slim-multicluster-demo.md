@@ -510,7 +510,7 @@ slim:
     slim/0:
       controller:
         clients:
-          - endpoint: "https://slim-control-plane-south.dev.eticloud.io:443"
+          - endpoint: "https://slim-controller-public-address:443"
             tls:
               insecure: false
               include_system_ca_certs_pool: true
@@ -526,9 +526,7 @@ slim:
 ## Customer Onboarding Demo
 
 <div style="display:flex; justify-content:center;">
-<video controls style="max-width: 88%; max-height: 78vh; object-fit: contain;">
-  <source src="/videos/routes.mp4" type="video/mp4">
-</video>
+<iframe width="800" height="450" src="https://www.youtube.com/embed/LAxtXXTakt4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
 ---
@@ -550,7 +548,7 @@ Any human operator can connect to the platform at any time with minimal configur
 
 ```yaml
 slim:
-  endpoint: "https://slim-dataplane.dev.eticloud.io"
+  endpoint: "https://slim-dataplane-public-address:443"
   local-name: "customer-1/off-cluster/a2acli"
   spire:
     socket-path: "/tmp/spire-agent/public/api.sock"
@@ -650,80 +648,26 @@ sequenceDiagram
 
 ## Human Interaction Demo
 
-<video controls style="max-width: 100%; max-height: 100%; object-fit: contain;">
-  <source src="/videos/application.mp4" type="video/mp4">
-</video>
-
-
----
-layout: cover
----
-
-# K8s Remediation Use Case<br> Using SLIM
-
----
-
-## SLIM Controller Status: Before Onboarding
-
-Node List: Only one SLIM node is available
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/nodes-before-onboarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
-Link List: No connections established
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/links-before-onboarding.png" style="width:100%; border-radius:4px">
-  </div>
+<div style="display:flex; justify-content:center; margin-top:10px;">
+<iframe width="800" height="450" src="https://www.youtube.com/embed/Y-xqqlM_JH8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
 ---
 
-## SLIM Controller Status: Before Onboarding
+## The Advantages of Using SLIM
 
-Route List: Only local services are available
-
-<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
-  <div style="flex:1">
-    <img src="./figures/routes-before-onboarding.png" style="width:98%; border-radius:4px">
+<div style="display:flex; flex-direction:column; gap:16px; max-width:850px; margin:25px auto 0; font-size:15px;">
+  <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
+    <div><strong>Single Endpoint, Many Services</strong><br><span style="color:#555;">One SLIM connection replaces per-service ingress and reverse proxies</span></div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
+    <div><strong>Reach Private Clusters Seamlessly</strong><br><span style="color:#555;">Connect to customer services with no ingress, no exposed ports — only outbound connections from the customer side</span></div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
+    <div><strong>Zero-Touch Onboarding</strong><br><span style="color:#555;">Customers need only a token and a controller address — all setup is done automatically</span></div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
+    <div><strong>Human Interaction</strong><br><span style="color:#555;">Easy to add a human to interact with the platform and the agents at any time</span></div>
   </div>
 </div>
 
----
-
-## SLIM Controller Status: After Onboarding
-
-Node List: New SLIM node registered
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/nodes-after-onboarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
-
-Link List: New connection established with remote cluster
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/links-after-onboarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
----
-
-## SLIM Controller Status: After Onboarding
-
-Route List: Customer services are now reachable
-
-<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
-  <div style="flex:1">
-    <img src="./figures/routes-after-onboarding.png" style="width:90%; border-radius:4px">
-  </div>
-</div>
-
----
