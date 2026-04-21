@@ -9,13 +9,13 @@ tags: [slim, multicluster, kubernetes, agents, a2a, mcp, spire]
 mermaid: true
 ---
 
-This post walks through a concrete multicluster customer-remediation scenario
-built on [SLIM](https://docs.agntcy.org/slim/overview/): a customer cluster
-stays private, a cloud-hosted troubleshooting agent remains reachable, and both
-humans and automation can operate across that boundary without exposing every
-service involved.
+This post walks through a multicluster customer-remediation scenario built on
+[SLIM](https://docs.agntcy.org/slim/overview/). A customer cluster stays
+private, a cloud-hosted troubleshooting agent stays reachable, and operators
+and automation work across that boundary without exposing every service
+involved.
 
-The updated demo combines [A2A](https://a2a-protocol.org/latest/) for
+The demo combines [A2A](https://a2a-protocol.org/latest/) for
 agent-to-agent interaction, [MCP](https://modelcontextprotocol.io/) for tool
 access into Kubernetes and Jira, and [SPIRE](https://spiffe.io/spire/) for
 workload identity. The result is a system where a private cluster can be
@@ -33,15 +33,6 @@ customer-managed Kubernetes cluster. Traditional approaches solve that problem
 with a mix of public ingress endpoints, reverse proxies, VPN access, and
 hand-maintained routing rules. That model is expensive to operate and expands
 the attack surface every time a new service needs to be reached.
-
-The updated slide deck sharpens this point nicely:
-
-| Approach | Operational drawback | Security drawback |
-|---|---|---|
-| HTTP or gRPC | Every service must be exposed directly | No end-to-end payload protection |
-| VPNs | Coarse-grained and hard to manage across organizations | Too much network reach for routine operations |
-| Reverse proxies | Per-service configuration and customer-side maintenance | Data is exposed in intermediate hops |
-| SLIM | One endpoint per SLIM node, outbound-only participation | MLS protects payloads end-to-end |
 
 ## How SLIM changes the model
 
@@ -92,14 +83,13 @@ graph LR
     style COPILOT fill:#cfe1fb,color:#1c1e21
 ```
 
-This architecture is what makes the demo interesting. The cloud side hosts the
-shared control plane and the troubleshooting logic. The customer side keeps its
-tools and data local. SLIM bridges the two without turning the customer cluster
-into a publicly exposed API surface.
+The cloud side hosts the shared control plane and the troubleshooting logic.
+The customer side keeps its tools and data local. SLIM bridges the two without
+turning the customer cluster into a publicly exposed API surface.
 
-## What the demo actually shows
+## What the demo shows
 
-The updated presentation material focuses on two concrete workflows.
+The demo focuses on two concrete workflows.
 
 ### 1. Human interaction over A2A and MCP
 
@@ -154,9 +144,7 @@ sequenceDiagram
 
 ## Zero-touch onboarding matters
 
-Another improvement in the updated demo is the emphasis on onboarding. Instead of framing
-the story as a generic multicluster agent fleet, the updated material shows why
-customer onboarding has to be nearly frictionless.
+Customer onboarding has to be nearly frictionless.
 
 The customer only needs:
 
@@ -182,8 +170,7 @@ slim:
                 - "slim"
 ```
 
-That simplicity shows up clearly in the controller views before and after a new
-cluster joins.
+The controller views before and after a new cluster joins illustrate this.
 
 <figure style="margin: 1.5em 0;">
   <img src="{{ '/presentations/slim-multicluster-demo/figures/nodes-before-onboarding.png' | relative_url }}" alt="Controller node list before onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
@@ -211,14 +198,12 @@ customer-side services use names such as
 `customer-1/on-prem-cluster/k8s-mcp-proxy`. That structure keeps routing and
 ownership explicit without leaking network topology into application code.
 
-## Why this is a better fit for AI-assisted operations
+## Why SLIM fits AI-assisted operations
 
-The original draft was already directionally correct: the hard part of
-multicluster agent systems is not agent logic, it is secure communication
-across messy enterprise networks.
+The hard part of multicluster agent systems is not agent logic — it is secure
+communication across messy enterprise networks.
 
-This revised version improves that story by grounding it in a real operations flow. Instead of
-describing an abstract agent fleet, the demo shows a concrete path from:
+The demo grounds that claim in a real operations flow:
 
 1. A human asking Copilot for live cluster state.
 2. An A2A request reaching a cloud-hosted troubleshooting agent.
@@ -226,7 +211,7 @@ describing an abstract agent fleet, the demo shows a concrete path from:
 4. An automated Jira issue being created when the health-check job finds a
    workload failure.
 
-That makes the value proposition much clearer.
+That makes the value proposition concrete.
 
 - SLIM gives you one transport layer for A2A, MCP, and other protocols.
 - Customer environments remain private and outbound-only.
@@ -237,8 +222,7 @@ That makes the value proposition much clearer.
 
 ## Slides and demo assets
 
-The full presentation is embedded below so the blog post carries the
-updated deck directly.
+The full presentation is embedded below.
 
 <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-bottom: 1.5em; border:1px solid #d7dbe0; border-radius:8px;">
   <iframe src="{{ '/presentations/slim-multicluster-demo/site/' | relative_url }}" title="SLIM multicluster demo slides" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" loading="lazy"></iframe>
@@ -246,16 +230,9 @@ updated deck directly.
 
 If you prefer to open the deck directly, use the [interactive Slidev version]({{ '/presentations/slim-multicluster-demo/site/' | relative_url }}).
 
-The recordings are intentionally not published from this repository anymore.
-GitHub Pages does not support serving the required large video assets from Git
-LFS, so the published post now carries the deck and screenshots only. The demo
-recordings can be linked back here once they are hosted on external object
-storage or a dedicated media platform.
-
 ## Closing thoughts
 
-The updated demo tells a stronger story than the original draft because it ties
-multicluster communication to an operational outcome: onboarding a customer
+SLIM ties multicluster communication to an operational outcome: onboarding a customer
 cluster, diagnosing issues through an agent interface, and filing remediation
 tickets automatically without dismantling the customer's network boundaries.
 
