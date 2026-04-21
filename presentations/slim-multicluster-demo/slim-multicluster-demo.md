@@ -3,6 +3,7 @@ theme: default
 title: K8s Remediation Use Case Using SLIM
 colorSchema: light
 published: false
+routerMode: hash
 ---
 
 <style>
