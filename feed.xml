@@ -1,4 +1,286 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-04-21T06:39:01+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">SLIM for Observability and Remediation: Beyond Agentic AI</title><link href="https://blogs.agntcy.org/technical/2026/04/02/transporting-opentelemetry-over-slim.html" rel="alternate" type="text/html" title="SLIM for Observability and Remediation: Beyond Agentic AI" /><published>2026-04-02T07:00:00+00:00</published><updated>2026-04-02T07:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/04/02/transporting-opentelemetry-over-slim</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/04/02/transporting-opentelemetry-over-slim.html"><![CDATA[<p><a href="https://github.com/agntcy/slim">SLIM (Secure Low-Latency Interactive Messaging)</a> was designed as the transport layer for agentic AI protocols like <a href="https://a2a-protocol.org/latest/">A2A (Agent-to-Agent)</a>. While SLIM was built to enable AI agents to communicate securely across network boundaries, its core capabilities—network traversal, end-to-end encryption, and dynamic channel management—also apply to standard distributed applications. This post explores its use for an <strong>observability and remediation</strong> use case.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-04-21T14:02:22+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">SLIM MVP: Multicluster Customer Remediation with AI Agents</title><link href="https://blogs.agntcy.org/technical/2026/04/04/mvp-ai-agents-multicluster.html" rel="alternate" type="text/html" title="SLIM MVP: Multicluster Customer Remediation with AI Agents" /><published>2026-04-04T07:00:00+00:00</published><updated>2026-04-04T07:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/04/04/mvp-ai-agents-multicluster</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/04/04/mvp-ai-agents-multicluster.html"><![CDATA[<p>This post walks through a concrete multicluster customer-remediation scenario
+built on <a href="https://docs.agntcy.org/slim/overview/">SLIM</a>: a customer cluster
+stays private, a cloud-hosted troubleshooting agent remains reachable, and both
+humans and automation can operate across that boundary without exposing every
+service involved.</p>
+
+<p>The updated demo combines <a href="https://a2a-protocol.org/latest/">A2A</a> for
+agent-to-agent interaction, <a href="https://modelcontextprotocol.io/">MCP</a> for tool
+access into Kubernetes and Jira, and <a href="https://spiffe.io/spire/">SPIRE</a> for
+workload identity. The result is a system where a private cluster can be
+onboarded with outbound connectivity only, queried from Copilot through an A2A
+skill, and monitored continuously by a health-check job that can open a Jira
+issue automatically when something breaks.</p>
+
+<h2 id="the-problem-with-cross-cluster-remediation">The problem with cross-cluster remediation</h2>
+
+<p>Customer remediation flows usually break down at the network boundary.</p>
+
+<p>In a typical deployment, some services run in a public cloud cluster while the
+systems they need to inspect or repair live inside a private datacenter or a
+customer-managed Kubernetes cluster. Traditional approaches solve that problem
+with a mix of public ingress endpoints, reverse proxies, VPN access, and
+hand-maintained routing rules. That model is expensive to operate and expands
+the attack surface every time a new service needs to be reached.</p>
+
+<p>The updated slide deck sharpens this point nicely:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Approach</th>
+      <th>Operational drawback</th>
+      <th>Security drawback</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>HTTP or gRPC</td>
+      <td>Every service must be exposed directly</td>
+      <td>No end-to-end payload protection</td>
+    </tr>
+    <tr>
+      <td>VPNs</td>
+      <td>Coarse-grained and hard to manage across organizations</td>
+      <td>Too much network reach for routine operations</td>
+    </tr>
+    <tr>
+      <td>Reverse proxies</td>
+      <td>Per-service configuration and customer-side maintenance</td>
+      <td>Data is exposed in intermediate hops</td>
+    </tr>
+    <tr>
+      <td>SLIM</td>
+      <td>One endpoint per SLIM node, outbound-only participation</td>
+      <td>MLS protects payloads end-to-end</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="how-slim-changes-the-model">How SLIM changes the model</h2>
+
+<p>SLIM moves the system from “connect to a host and port” to “talk to a named
+service over a secure overlay”.</p>
+
+<ul>
+  <li>Services connect outbound to a local SLIM node instead of listening on a
+public port.</li>
+  <li>The customer cluster only needs the address of the controller and a valid
+identity token to join the topology.</li>
+  <li>SLIM nodes forward traffic over gRPC and TLS, while MLS protects the payload
+itself end-to-end.</li>
+  <li>Agents and tools can be written in different languages and still share the
+same transport layer.</li>
+</ul>
+
+<p>At a high level, the demo topology looks like this:</p>
+
+<pre><code class="language-mermaid">graph LR
+    subgraph CUSTOMER[Customer Cluster]
+        KMCP[k8s MCP Server] --&gt; CSN[SLIM Node]
+        AMCP[Atlassian MCP Server] --&gt; CSN
+    end
+
+    subgraph CLOUD[Cloud Cluster]
+        SN[SLIM Node]
+        CTRL[SLIM Controller]
+        K8S[k8s Troubleshooting Agent\nA2A server + MCP client]
+        HCJ[Health Check Job\nA2A client]
+        SN -.-&gt; CTRL
+        K8S --&gt; SN
+        HCJ --&gt; SN
+    end
+
+    COPILOT[IT Ops Laptop / Copilot\nA2A client skill] --&gt; SN
+    CSN &lt;--&gt; SN
+    CSN -.-&gt; CTRL
+
+    style CUSTOMER fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style CLOUD fill:#eff3fc,stroke:#0251af,color:#1c1e21
+    style SN fill:#0251af,color:#f3f6fd
+    style CSN fill:#0251af,color:#f3f6fd
+    style CTRL fill:#023a7a,color:#f3f6fd
+    style K8S fill:#cfe1fb,color:#1c1e21
+    style HCJ fill:#cfe1fb,color:#1c1e21
+    style KMCP fill:#cfe1fb,color:#1c1e21
+    style AMCP fill:#cfe1fb,color:#1c1e21
+    style COPILOT fill:#cfe1fb,color:#1c1e21
+</code></pre>
+
+<p>This architecture is what makes the demo interesting. The cloud side hosts the
+shared control plane and the troubleshooting logic. The customer side keeps its
+tools and data local. SLIM bridges the two without turning the customer cluster
+into a publicly exposed API surface.</p>
+
+<h2 id="what-the-demo-actually-shows">What the demo actually shows</h2>
+
+<p>The updated presentation material focuses on two concrete workflows.</p>
+
+<h3 id="1-human-interaction-over-a2a-and-mcp">1. Human interaction over A2A and MCP</h3>
+
+<p>An IT operator uses Copilot with an A2A CLI skill to ask questions about the
+customer cluster, such as the list of pods running in a namespace or the root
+cause of a failure. The request travels over SLIM to a cloud-hosted Kubernetes
+troubleshooting agent. That agent then uses MCP, again over SLIM, to reach the
+customer-side Kubernetes MCP server and gather the data it needs before sending
+an A2A response back to the operator.</p>
+
+<h3 id="2-automated-health-checks-and-jira-issue-creation">2. Automated health checks and Jira issue creation</h3>
+
+<p>A health-check job in the cloud periodically asks the troubleshooting agent for
+the status of the customer cluster. If a pod enters an <code class="language-plaintext highlighter-rouge">ImagePullBackOff</code>
+state, the agent investigates, determines the issue, and calls the customer’s
+Atlassian MCP server to create a Jira issue automatically.</p>
+
+<p>The second flow is the most important operationally because it shows that the
+same connectivity model supports both observability and action.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant HCJ as Health Check Job
+    participant SNc as SLIM Node (cloud)
+    participant Agent as k8s Agent
+    participant SNp as SLIM Node (customer)
+    participant Proxy as MCP Proxy
+    participant KMCP as k8s MCP Server
+    participant AMCP as Atlassian MCP Server
+
+    HCJ-&gt;&gt;SNc: A2A request: cluster status
+    SNc-&gt;&gt;Agent: route request
+    Agent-&gt;&gt;SNc: MCP request for pod status
+    SNc-&gt;&gt;SNp: route to customer cluster
+    SNp-&gt;&gt;Proxy: forward request
+    Proxy-&gt;&gt;KMCP: inspect workload state
+    KMCP--&gt;&gt;Proxy: ImagePullBackOff detected
+    Proxy--&gt;&gt;SNp: MCP response
+    SNp--&gt;&gt;SNc: route response back
+    SNc--&gt;&gt;Agent: deliver result
+    Agent-&gt;&gt;SNc: MCP request to create Jira issue
+    SNc-&gt;&gt;SNp: route to customer cluster
+    SNp-&gt;&gt;Proxy: forward request
+    Proxy-&gt;&gt;AMCP: create issue in Jira
+    AMCP--&gt;&gt;Proxy: issue created
+    Proxy--&gt;&gt;SNp: MCP response
+    SNp--&gt;&gt;SNc: route response back
+    SNc--&gt;&gt;Agent: deliver confirmation
+    Agent--&gt;&gt;SNc: A2A response
+    SNc--&gt;&gt;HCJ: health check completed with remediation ticket
+</code></pre>
+
+<h2 id="zero-touch-onboarding-matters">Zero-touch onboarding matters</h2>
+
+<p>Another improvement in the updated demo is the emphasis on onboarding. Instead of framing
+the story as a generic multicluster agent fleet, the updated material shows why
+customer onboarding has to be nearly frictionless.</p>
+
+<p>The customer only needs:</p>
+
+<ol>
+  <li>The public address of the SLIM controller.</li>
+  <li>A valid authentication token, issued through SPIRE-backed identity.</li>
+</ol>
+
+<p>From there, the customer-side SLIM node connects outbound, registers with the
+controller, and receives routing configuration automatically. No VPN bootstrap,
+no manual route installation, and no per-service ingress setup.</p>
+
+<p>The configuration surface is intentionally small:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">slim</span><span class="pi">:</span>
+  <span class="na">services</span><span class="pi">:</span>
+    <span class="na">slim/0</span><span class="pi">:</span>
+      <span class="na">controller</span><span class="pi">:</span>
+        <span class="na">clients</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="na">endpoint</span><span class="pi">:</span> <span class="s2">"</span><span class="s">https://slim-control-plane.example:443"</span>
+            <span class="na">auth</span><span class="pi">:</span>
+              <span class="na">type</span><span class="pi">:</span> <span class="s">spire</span>
+              <span class="na">jwt_audiences</span><span class="pi">:</span>
+                <span class="pi">-</span> <span class="s2">"</span><span class="s">slim"</span>
+</code></pre></div></div>
+
+<p>That simplicity shows up clearly in the controller views before and after a new
+cluster joins.</p>
+
+<figure style="margin: 1.5em 0;">
+  <img src="/presentations/slim-multicluster-demo/figures/nodes-before-onboarding.png" alt="Controller node list before onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;" />
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Before onboarding, only the cloud-side node is registered.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="/presentations/slim-multicluster-demo/figures/nodes-after-onboarding.png" alt="Controller node list after onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;" />
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">After onboarding, the customer cluster appears as a new registered node.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="/presentations/slim-multicluster-demo/figures/routes-before-onboarding.png" alt="Controller routes before onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;" />
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Before onboarding, only local cloud services are routable.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="/presentations/slim-multicluster-demo/figures/routes-after-onboarding.png" alt="Controller routes after onboarding" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;" />
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">After onboarding, customer-side MCP services become reachable through the established link.</figcaption>
+</figure>
+
+<p>The service naming convention reinforces that model. Cloud-hosted services use
+names such as <code class="language-plaintext highlighter-rouge">splunk/eu-central-1/k8s_troubleshooting_agent</code>, while
+customer-side services use names such as
+<code class="language-plaintext highlighter-rouge">customer-1/on-prem-cluster/k8s-mcp-proxy</code>. That structure keeps routing and
+ownership explicit without leaking network topology into application code.</p>
+
+<h2 id="why-this-is-a-better-fit-for-ai-assisted-operations">Why this is a better fit for AI-assisted operations</h2>
+
+<p>The original draft was already directionally correct: the hard part of
+multicluster agent systems is not agent logic, it is secure communication
+across messy enterprise networks.</p>
+
+<p>This revised version improves that story by grounding it in a real operations flow. Instead of
+describing an abstract agent fleet, the demo shows a concrete path from:</p>
+
+<ol>
+  <li>A human asking Copilot for live cluster state.</li>
+  <li>An A2A request reaching a cloud-hosted troubleshooting agent.</li>
+  <li>MCP calls crossing into the private customer cluster over SLIM.</li>
+  <li>An automated Jira issue being created when the health-check job finds a
+workload failure.</li>
+</ol>
+
+<p>That makes the value proposition much clearer.</p>
+
+<ul>
+  <li>SLIM gives you one transport layer for A2A, MCP, and other protocols.</li>
+  <li>Customer environments remain private and outbound-only.</li>
+  <li>Operators and automation both use the same connectivity model.</li>
+  <li>MLS keeps payloads encrypted even when traffic traverses shared routing
+infrastructure.</li>
+  <li>SPIRE gives every participant workload identity without static secrets.</li>
+</ul>
+
+<h2 id="slides-and-demo-assets">Slides and demo assets</h2>
+
+<p>The full presentation is embedded below so the blog post carries the
+updated deck directly.</p>
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-bottom: 1.5em; border:1px solid #d7dbe0; border-radius:8px;">
+  <iframe src="/presentations/slim-multicluster-demo/site/" title="SLIM multicluster demo slides" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" loading="lazy"></iframe>
+</div>
+
+<p>If you prefer to open the deck directly, use the <a href="/presentations/slim-multicluster-demo/site/">interactive Slidev version</a>.</p>
+
+<p>The recordings are intentionally not published from this repository anymore.
+GitHub Pages does not support serving the required large video assets from Git
+LFS, so the published post now carries the deck and screenshots only. The demo
+recordings can be linked back here once they are hosted on external object
+storage or a dedicated media platform.</p>
+
+<h2 id="closing-thoughts">Closing thoughts</h2>
+
+<p>The updated demo tells a stronger story than the original draft because it ties
+multicluster communication to an operational outcome: onboarding a customer
+cluster, diagnosing issues through an agent interface, and filing remediation
+tickets automatically without dismantling the customer’s network boundaries.</p>
+
+<p>That is the core promise of SLIM in this space. It does not just make
+multicluster AI agents possible. It makes them practical to deploy in the kinds
+of private, policy-heavy environments where they are actually needed.</p>]]></content><author><name>Luca Muscariello</name></author><category term="technical" /><category term="slim" /><category term="multicluster" /><category term="kubernetes" /><category term="agents" /><category term="a2a" /><category term="mcp" /><category term="spire" /><summary type="html"><![CDATA[This post walks through a concrete multicluster customer-remediation scenario built on SLIM: a customer cluster stays private, a cloud-hosted troubleshooting agent remains reachable, and both humans and automation can operate across that boundary without exposing every service involved. The updated demo combines A2A for agent-to-agent interaction, MCP for tool access into Kubernetes and Jira, and SPIRE for workload identity. The result is a system where a private cluster can be onboarded with outbound connectivity only, queried from Copilot through an A2A skill, and monitored continuously by a health-check job that can open a Jira issue automatically when something breaks. The problem with cross-cluster remediation Customer remediation flows usually break down at the network boundary. In a typical deployment, some services run in a public cloud cluster while the systems they need to inspect or repair live inside a private datacenter or a customer-managed Kubernetes cluster. Traditional approaches solve that problem with a mix of public ingress endpoints, reverse proxies, VPN access, and hand-maintained routing rules. That model is expensive to operate and expands the attack surface every time a new service needs to be reached. The updated slide deck sharpens this point nicely: Approach Operational drawback Security drawback HTTP or gRPC Every service must be exposed directly No end-to-end payload protection VPNs Coarse-grained and hard to manage across organizations Too much network reach for routine operations Reverse proxies Per-service configuration and customer-side maintenance Data is exposed in intermediate hops SLIM One endpoint per SLIM node, outbound-only participation MLS protects payloads end-to-end How SLIM changes the model SLIM moves the system from “connect to a host and port” to “talk to a named service over a secure overlay”. Services connect outbound to a local SLIM node instead of listening on a public port. The customer cluster only needs the address of the controller and a valid identity token to join the topology. SLIM nodes forward traffic over gRPC and TLS, while MLS protects the payload itself end-to-end. Agents and tools can be written in different languages and still share the same transport layer. At a high level, the demo topology looks like this: graph LR subgraph CUSTOMER[Customer Cluster] KMCP[k8s MCP Server] --&gt; CSN[SLIM Node] AMCP[Atlassian MCP Server] --&gt; CSN end subgraph CLOUD[Cloud Cluster] SN[SLIM Node] CTRL[SLIM Controller] K8S[k8s Troubleshooting Agent\nA2A server + MCP client] HCJ[Health Check Job\nA2A client] SN -.-&gt; CTRL K8S --&gt; SN HCJ --&gt; SN end COPILOT[IT Ops Laptop / Copilot\nA2A client skill] --&gt; SN CSN &lt;--&gt; SN CSN -.-&gt; CTRL style CUSTOMER fill:#e8eefb,stroke:#0251af,color:#1c1e21 style CLOUD fill:#eff3fc,stroke:#0251af,color:#1c1e21 style SN fill:#0251af,color:#f3f6fd style CSN fill:#0251af,color:#f3f6fd style CTRL fill:#023a7a,color:#f3f6fd style K8S fill:#cfe1fb,color:#1c1e21 style HCJ fill:#cfe1fb,color:#1c1e21 style KMCP fill:#cfe1fb,color:#1c1e21 style AMCP fill:#cfe1fb,color:#1c1e21 style COPILOT fill:#cfe1fb,color:#1c1e21 This architecture is what makes the demo interesting. The cloud side hosts the shared control plane and the troubleshooting logic. The customer side keeps its tools and data local. SLIM bridges the two without turning the customer cluster into a publicly exposed API surface. What the demo actually shows The updated presentation material focuses on two concrete workflows. 1. Human interaction over A2A and MCP An IT operator uses Copilot with an A2A CLI skill to ask questions about the customer cluster, such as the list of pods running in a namespace or the root cause of a failure. The request travels over SLIM to a cloud-hosted Kubernetes troubleshooting agent. That agent then uses MCP, again over SLIM, to reach the customer-side Kubernetes MCP server and gather the data it needs before sending an A2A response back to the operator. 2. Automated health checks and Jira issue creation A health-check job in the cloud periodically asks the troubleshooting agent for the status of the customer cluster. If a pod enters an ImagePullBackOff state, the agent investigates, determines the issue, and calls the customer’s Atlassian MCP server to create a Jira issue automatically. The second flow is the most important operationally because it shows that the same connectivity model supports both observability and action. sequenceDiagram participant HCJ as Health Check Job participant SNc as SLIM Node (cloud) participant Agent as k8s Agent participant SNp as SLIM Node (customer) participant Proxy as MCP Proxy participant KMCP as k8s MCP Server participant AMCP as Atlassian MCP Server HCJ-&gt;&gt;SNc: A2A request: cluster status SNc-&gt;&gt;Agent: route request Agent-&gt;&gt;SNc: MCP request for pod status SNc-&gt;&gt;SNp: route to customer cluster SNp-&gt;&gt;Proxy: forward request Proxy-&gt;&gt;KMCP: inspect workload state KMCP--&gt;&gt;Proxy: ImagePullBackOff detected Proxy--&gt;&gt;SNp: MCP response SNp--&gt;&gt;SNc: route response back SNc--&gt;&gt;Agent: deliver result Agent-&gt;&gt;SNc: MCP request to create Jira issue SNc-&gt;&gt;SNp: route to customer cluster SNp-&gt;&gt;Proxy: forward request Proxy-&gt;&gt;AMCP: create issue in Jira AMCP--&gt;&gt;Proxy: issue created Proxy--&gt;&gt;SNp: MCP response SNp--&gt;&gt;SNc: route response back SNc--&gt;&gt;Agent: deliver confirmation Agent--&gt;&gt;SNc: A2A response SNc--&gt;&gt;HCJ: health check completed with remediation ticket Zero-touch onboarding matters Another improvement in the updated demo is the emphasis on onboarding. Instead of framing the story as a generic multicluster agent fleet, the updated material shows why customer onboarding has to be nearly frictionless. The customer only needs: The public address of the SLIM controller. A valid authentication token, issued through SPIRE-backed identity. From there, the customer-side SLIM node connects outbound, registers with the controller, and receives routing configuration automatically. No VPN bootstrap, no manual route installation, and no per-service ingress setup. The configuration surface is intentionally small: slim: services: slim/0: controller: clients: - endpoint: "https://slim-control-plane.example:443" auth: type: spire jwt_audiences: - "slim" That simplicity shows up clearly in the controller views before and after a new cluster joins. Before onboarding, only the cloud-side node is registered. After onboarding, the customer cluster appears as a new registered node. Before onboarding, only local cloud services are routable. After onboarding, customer-side MCP services become reachable through the established link. The service naming convention reinforces that model. Cloud-hosted services use names such as splunk/eu-central-1/k8s_troubleshooting_agent, while customer-side services use names such as customer-1/on-prem-cluster/k8s-mcp-proxy. That structure keeps routing and ownership explicit without leaking network topology into application code. Why this is a better fit for AI-assisted operations The original draft was already directionally correct: the hard part of multicluster agent systems is not agent logic, it is secure communication across messy enterprise networks. This revised version improves that story by grounding it in a real operations flow. Instead of describing an abstract agent fleet, the demo shows a concrete path from: A human asking Copilot for live cluster state. An A2A request reaching a cloud-hosted troubleshooting agent. MCP calls crossing into the private customer cluster over SLIM. An automated Jira issue being created when the health-check job finds a workload failure. That makes the value proposition much clearer. SLIM gives you one transport layer for A2A, MCP, and other protocols. Customer environments remain private and outbound-only. Operators and automation both use the same connectivity model. MLS keeps payloads encrypted even when traffic traverses shared routing infrastructure. SPIRE gives every participant workload identity without static secrets. Slides and demo assets The full presentation is embedded below so the blog post carries the updated deck directly. If you prefer to open the deck directly, use the interactive Slidev version. The recordings are intentionally not published from this repository anymore. GitHub Pages does not support serving the required large video assets from Git LFS, so the published post now carries the deck and screenshots only. The demo recordings can be linked back here once they are hosted on external object storage or a dedicated media platform. Closing thoughts The updated demo tells a stronger story than the original draft because it ties multicluster communication to an operational outcome: onboarding a customer cluster, diagnosing issues through an agent interface, and filing remediation tickets automatically without dismantling the customer’s network boundaries. That is the core promise of SLIM in this space. It does not just make multicluster AI agents possible. It makes them practical to deploy in the kinds of private, policy-heavy environments where they are actually needed.]]></summary></entry><entry><title type="html">SLIM for Observability and Remediation: Beyond Agentic AI</title><link href="https://blogs.agntcy.org/technical/2026/04/02/transporting-opentelemetry-over-slim.html" rel="alternate" type="text/html" title="SLIM for Observability and Remediation: Beyond Agentic AI" /><published>2026-04-02T07:00:00+00:00</published><updated>2026-04-02T07:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/04/02/transporting-opentelemetry-over-slim</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/04/02/transporting-opentelemetry-over-slim.html"><![CDATA[<p><a href="https://github.com/agntcy/slim">SLIM (Secure Low-Latency Interactive Messaging)</a> was designed as the transport layer for agentic AI protocols like <a href="https://a2a-protocol.org/latest/">A2A (Agent-to-Agent)</a>. While SLIM was built to enable AI agents to communicate securely across network boundaries, its core capabilities—network traversal, end-to-end encryption, and dynamic channel management—also apply to standard distributed applications. This post explores its use for an <strong>observability and remediation</strong> use case.</p>
 
 <p>Modern distributed systems face critical challenges when transporting telemetry data. Applications run behind firewalls, in different cloud regions, at the edge, or across organizational boundaries. Traditional observability requires exposed collector endpoints and complex firewall management. Telemetry contains sensitive information yet TLS terminates at load balancers, leaving data exposed through intermediate infrastructure. Furthermore, hardcoded endpoint configurations break as systems scale elastically across regions.</p>
 
@@ -5199,765 +5481,4 @@ uniffi-bindgen-go <span class="se">\</span>
 
 <hr />
 
-<p><em>Have questions about Rust-Go integration or UniFFI? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Sam Betts</name></author><category term="technical" /><category term="rust" /><category term="go" /><category term="uniffi" /><category term="bindings" /><category term="cgo" /><category term="interop" /><summary type="html"><![CDATA[Rust and Go are both excellent languages, but they excel in different areas. Rust provides memory safety and zero-cost abstractions, while Go offers simplicity and fast compilation. What if you could combine the strengths of both? This post explores how we use UniFFI to create seamless Rust-Go integrations for the SLIM messaging library.]]></summary></entry><entry><title type="html">Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery</title><link href="https://blogs.agntcy.org/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html" rel="alternate" type="text/html" title="Directory v1.0: Dual-Mode Authentication for Secure Agent Discovery" /><published>2026-01-22T09:00:00+00:00</published><updated>2026-01-22T09:00:00+00:00</updated><id>https://blogs.agntcy.org/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security</id><content type="html" xml:base="https://blogs.agntcy.org/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html"><![CDATA[<p>The <strong>Agent Directory</strong> is more than just a service registry—it’s a <strong>trusted gateway</strong> for discovering and verifying AI agents. With the release of <strong>v1.0</strong>, we’re introducing a robust dual-mode authentication system that combines the convenience of <strong>GitHub OAuth</strong> for human operators with the security of <strong>SPIFFE workload identity</strong> for automated services.</p>
-
-<p>This post explores the architecture, implementation, and practical usage of Directory’s new authentication system, designed for both interactive CLI users and automated workloads.</p>
-
-<!--more-->
-
-<h2 id="the-challenge-two-types-of-users">The Challenge: Two Types of Users</h2>
-
-<p>When building the Agent Directory, we encountered a fundamental question: Who should be allowed to access the system?</p>
-
-<p>The answer wasn’t simple. We had two distinct user personas with very different needs:</p>
-
-<ul>
-  <li><strong>Human Operators</strong> (developers, administrators) need interactive authentication via CLI tools with familiar OAuth flows</li>
-  <li><strong>Automated Workloads</strong> (services, agents, applications) need machine-to-machine authentication with automatic certificate rotation in Kubernetes</li>
-</ul>
-
-<p>Traditional authentication systems force you to choose one approach. We built a system that supports both.</p>
-
-<h2 id="the-solution-dual-mode-authentication">The Solution: Dual-Mode Authentication</h2>
-
-<p>Directory v1.0 introduces a <strong>dual-mode authentication architecture</strong> that seamlessly handles both human and workload authentication:</p>
-
-<pre><code class="language-mermaid">flowchart LR
-    classDef workload fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
-    classDef human fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
-    classDef gateway fill:#0251af,stroke:#f3f6fd,stroke-width:3px,color:#f3f6fd;
-    classDef api fill:#03142b,stroke:#0251af,stroke-width:3px,color:#f3f6fd;
-
-    subgraph Col1["🤖 Workload Authentication"]
-        direction TB
-        W[Agent/Service&lt;br/&gt;Kubernetes Pod]:::workload
-        SPIRE[SPIRE Agent&lt;br/&gt;Workload Identity]:::workload
-        W --&gt;|Request&lt;br/&gt;Certificate| SPIRE
-    end
-
-    subgraph Col2["🏢 Directory Service"]
-        direction TB
-        API[Directory API&lt;br/&gt;SPIFFE-only Auth]:::api
-    end
-
-    subgraph Col3["👤 Human Authentication"]
-        direction TB
-        H[Developer&lt;br/&gt;dirctl CLI]:::human
-        GH[GitHub OAuth&lt;br/&gt;Device Flow]:::human
-        Envoy[Envoy Gateway&lt;br/&gt;ext_authz + RBAC]:::gateway
-        H --&gt;|OAuth&lt;br/&gt;Token| GH
-        GH --&gt;|Validated| Envoy
-    end
-
-    SPIRE ==&gt;|mTLS +&lt;br/&gt;SPIFFE ID| API
-    Envoy ==&gt;|Authorized via&lt;br/&gt;Envoy's SPIFFE ID| API
-</code></pre>
-
-<p><strong>Key Insight:</strong> The Directory API itself has zero authentication code. It only validates SPIFFE IDs, trusting that callers have already been authenticated upstream.</p>
-
-<hr />
-
-<h1 id="part-1-authentication-for-human-operators">Part 1: Authentication for Human Operators</h1>
-
-<p>The most common way to interact with Directory is through the <code class="language-plaintext highlighter-rouge">dirctl</code> CLI. This section covers everything you need to know about authenticating as a human user using GitHub OAuth.</p>
-
-<h2 id="why-github-oauth">Why GitHub OAuth?</h2>
-
-<p>Human operators need:</p>
-<ul>
-  <li>✅ <strong>Interactive authentication</strong> - Simple browser-based login flow</li>
-  <li>✅ <strong>No cluster access required</strong> - Works from any laptop or CI/CD runner</li>
-  <li>✅ <strong>Familiar experience</strong> - Uses your existing GitHub account</li>
-  <li>✅ <strong>Organization-based access</strong> - Leverage GitHub org memberships for authorization</li>
-</ul>
-
-<p>This makes GitHub OAuth perfect for developers, administrators, and CI/CD pipelines.</p>
-
-<h2 id="how-it-works-architecture--flow">How It Works: Architecture &amp; Flow</h2>
-
-<p>For human operators using the <code class="language-plaintext highlighter-rouge">dirctl</code> CLI, we use <strong>GitHub OAuth 2.0 Device Flow</strong>. This provides a familiar authentication experience without requiring a local web server.</p>
-
-<pre><code class="language-mermaid">sequenceDiagram
-    participant User as Developer
-    participant CLI as dirctl CLI
-    participant GitHub as GitHub OAuth
-    participant Envoy as Envoy Gateway
-    participant API as Directory API
-
-    Note over User,GitHub: Authentication Phase
-    User-&gt;&gt;CLI: dirctl auth login
-    CLI-&gt;&gt;GitHub: Request Device Code
-    GitHub-&gt;&gt;CLI: Device Code + URL
-    CLI-&gt;&gt;User: Display: Visit URL&lt;br/&gt;Enter Code: ABC-123
-
-    User-&gt;&gt;GitHub: Opens Browser&lt;br/&gt;Enters Device Code
-    GitHub-&gt;&gt;User: Authorize dirctl?
-    User-&gt;&gt;GitHub: Yes, Authorize
-
-    CLI-&gt;&gt;GitHub: Poll for Token
-    GitHub-&gt;&gt;CLI: Access Token
-
-    Note over User,API: API Call Phase
-    User-&gt;&gt;CLI: dirctl routing list
-    CLI-&gt;&gt;Envoy: gRPC Call + Bearer Token
-    Envoy-&gt;&gt;Envoy: Validate Token&lt;br/&gt;Check RBAC Rules
-    Envoy-&gt;&gt;API: Forward Request&lt;br/&gt;(as Envoy's SPIFFE ID)
-    API-&gt;&gt;Envoy: Response
-    Envoy-&gt;&gt;CLI: Response
-    CLI-&gt;&gt;User: Display Results
-</code></pre>
-
-<p><strong>How it works:</strong></p>
-
-<ol>
-  <li><strong>Device Flow Initiation</strong>: CLI requests a device code from GitHub</li>
-  <li><strong>User Authorization</strong>: User visits GitHub and authorizes the application</li>
-  <li><strong>Token Issuance</strong>: CLI receives an OAuth access token</li>
-  <li><strong>Envoy Gateway</strong>: Token is sent to Envoy, which validates it and enforces RBAC</li>
-  <li><strong>SPIFFE Impersonation</strong>: Envoy calls the API using its own SPIFFE ID</li>
-</ol>
-
-<p><strong>Key Advantage:</strong> The Directory API never sees user tokens - it only sees Envoy’s trusted SPIFFE ID.</p>
-
-<h2 id="the-envoy-gateway-policy-enforcement-point">The Envoy Gateway: Policy Enforcement Point</h2>
-
-<p>The Envoy gateway is the linchpin of the human authentication flow. It handles:</p>
-
-<ol>
-  <li><strong>Token Validation</strong> - Verifies GitHub OAuth tokens</li>
-  <li><strong>Authorization</strong> - Enforces role-based access control (RBAC)</li>
-  <li><strong>Protocol Translation</strong> - Converts OAuth → SPIFFE</li>
-</ol>
-
-<pre><code class="language-mermaid">flowchart LR
-    classDef input fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
-    classDef process fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
-    classDef output fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
-
-    User[User Request&lt;br/&gt;Bearer: gho_xxx]:::input
-    
-    subgraph Envoy["Envoy Gateway"]
-        ExtAuthz[ext_authz Filter&lt;br/&gt;Validate Token]:::process
-        RBAC[RBAC Filter&lt;br/&gt;Check Permissions]:::process
-        Router[Router&lt;br/&gt;Forward Request]:::process
-    end
-    
-    API[Directory API&lt;br/&gt;Accepts: SPIFFE ID]:::output
-    
-    User --&gt; ExtAuthz
-    ExtAuthz --&gt;|Valid User| RBAC
-    RBAC --&gt;|Authorized| Router
-    Router --&gt;|mTLS + Envoy SPIFFE ID| API
-    
-    ExtAuthz -.-&gt;|Invalid Token| Reject[401 Unauthorized]
-    RBAC -.-&gt;|Forbidden| Reject2[403 Forbidden]
-</code></pre>
-
-<p><strong>Envoy Configuration Highlights:</strong></p>
-
-<ul>
-  <li><strong>Custom <code class="language-plaintext highlighter-rouge">ext_authz</code> Service</strong>: Validates GitHub tokens and extracts user identity</li>
-  <li><strong>Casbin-Based RBAC</strong>: Policy-driven authorization with role assignments for users and organizations</li>
-  <li><strong>Fine-Grained Permissions</strong>: Control access per API method (e.g., allow read but deny write operations)</li>
-  <li><strong>SPIFFE Integration</strong>: Uses its own workload identity to call the Directory API</li>
-</ul>
-
-<h2 id="hands-on-github-authentication">Hands-On: GitHub Authentication</h2>
-
-<p>Now that we understand the architecture, let’s walk through GitHub authentication with practical examples using the Agntcy-hosted testbed environment.</p>
-
-<h3 id="prerequisites">Prerequisites</h3>
-
-<ol>
-  <li><strong>CLI Tool</strong>: <code class="language-plaintext highlighter-rouge">dirctl</code> installed (<a href="https://github.com/agntcy/dir#installation">Installation Guide</a>)</li>
-  <li>
-    <p><strong>Authorization</strong>: Your GitHub username or organization must be in the production environment’s allowed list. In case you are not:</p>
-
-    <ul>
-      <li>Contact your Directory administrator if you don’t have access</li>
-      <li>See the <a href="#authorization-who-can-access-what">Authorization section</a> for details on allow lists</li>
-    </ul>
-  </li>
-</ol>
-
-<h3 id="testbed-environment">Testbed Environment</h3>
-
-<p>Agntcy hosts a <strong>public testbed environment</strong> where you can experiment with Directory authentication without needing your own infrastructure. This environment is ideal for learning, testing, and prototyping.</p>
-
-<p><strong>Testbed Endpoints:</strong></p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Service</th>
-      <th>URL</th>
-      <th>Purpose</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>GitHub OAuth Gateway</strong></td>
-      <td><code class="language-plaintext highlighter-rouge">https://prod.gateway.ads.outshift.io:443</code></td>
-      <td>Human authentication via GitHub OAuth (public access)</td>
-    </tr>
-  </tbody>
-</table>
-
-<p><strong>Authentication Support:</strong></p>
-<ul>
-  <li>✅ <strong>GitHub OAuth</strong>: Authenticate interactively using your GitHub account - <strong>Available for all testbed users</strong></li>
-  <li>✅ <strong>Public Access</strong>: No VPN required - accessible from anywhere</li>
-  <li>⚠️ <strong>Authorization Required</strong>: Your GitHub username or organization must be in the allowed list</li>
-  <li>❌ <strong>SPIFFE mTLS</strong>: Not available for public testbed users (requires your own SPIRE infrastructure)</li>
-</ul>
-
-<p><strong>Use Cases:</strong></p>
-<ul>
-  <li><strong>Testing</strong>: Validate your integration before deploying to your own environment</li>
-  <li><strong>Learning</strong>: Understand how Directory authentication works in practice</li>
-  <li><strong>Development</strong>: Build and test applications that use Directory APIs</li>
-  <li><strong>Demos</strong>: Showcase Directory capabilities to stakeholders</li>
-</ul>
-
-<h3 id="step-by-step-guide">Step-by-Step Guide</h3>
-
-<p>Perfect for developers who want quick, interactive access without cluster credentials.</p>
-
-<p><strong>Step 1: Configure Environment</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="o">=</span><span class="s2">"prod.gateway.ads.outshift.io:443"</span>
-<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_AUTH_MODE</span><span class="o">=</span><span class="s2">"github"</span>
-</code></pre></div></div>
-
-<p><strong>Step 2: Authenticate with GitHub</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl auth login
-</code></pre></div></div>
-
-<p>You’ll see:</p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>╔════════════════════════════════════════════════════════════╗
-║          GitHub OAuth Authentication (Device Flow)         ║
-╚════════════════════════════════════════════════════════════╝
-
-🔐 To authenticate, please follow these steps:
-
-  1. Visit: https://github.com/login/device
-  2. Enter code: AEC4-D40B
-
-💡 You can complete this on any device (phone, laptop, etc.)
-⏱️  Code expires in 15 minutes
-
-Waiting for authorization...
-</code></pre></div></div>
-
-<p>Open your browser, visit the URL, and enter the code. After authorizing, you’ll see:</p>
-
-<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>✓ Authorization complete!
-
-Fetching user information...
-✓ Authenticated as: yourusername (Your Name)
-Fetching organization memberships...
-✓ Organizations: your-org, another-org
-✓ Token cached for future use
-  Cache location: ~/.config/dirctl/auth-token.json
-
-╔════════════════════════════════════════════════════════════╗
-║              Authentication Complete! ✓                    ║
-╚════════════════════════════════════════════════════════════╝
-
-You can now use 'dirctl' commands with --auth-mode=github
-</code></pre></div></div>
-
-<p><strong>Step 3: Use the CLI</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Get info about a record</span>
-dirctl info baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq
-
-<span class="c"># Pull a specific record</span>
-dirctl pull baeareiesad3lyuacjirp6gxudrzheltwbodtsg7ieqpox36w5j637rchwq <span class="nt">-o</span> json
-
-<span class="c"># Check authentication status</span>
-dirctl auth status
-</code></pre></div></div>
-
-<p><strong>Token Caching:</strong> Your OAuth token is securely cached at <code class="language-plaintext highlighter-rouge">~/.config/dirctl/auth-token.json</code>. Subsequent commands automatically use the cached token until it expires (default: 8 hours).</p>
-
-<p><strong>Step 4: Check Authorization Logs (Self-Hosted Only)</strong></p>
-
-<p>If you’re running your own Directory deployment and have cluster access, you can verify that requests are being authorized:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Replace with your namespace and label selectors</span>
-kubectl logs <span class="nt">-n</span> &lt;your-namespace&gt; <span class="nt">-l</span> <span class="nv">app</span><span class="o">=</span>envoy-authz-authz <span class="nt">--tail</span><span class="o">=</span>50 | <span class="nb">grep </span>yourusername
-</code></pre></div></div>
-
-<p><strong>Note:</strong> This step is not available for public testbed users as it requires Kubernetes cluster access.</p>
-
-<h2 id="authorization-role-based-access-control-rbac">Authorization: Role-Based Access Control (RBAC)</h2>
-
-<p>Now that you’ve successfully authenticated, the next critical question is: what can you actually do? Authentication proves <strong>who you are</strong>, but authorization determines <strong>what you can access</strong>.</p>
-
-<p>The Envoy gateway enforces authorization using a role-based access control (RBAC) system powered by <a href="https://casbin.org">Casbin</a>, configured in the Helm chart:</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Helm values for Envoy gateway</span>
-<span class="na">authServer</span><span class="pi">:</span>
-  <span class="na">authorization</span><span class="pi">:</span>
-    <span class="c1"># Default role for any authenticated user (empty = deny by default)</span>
-    <span class="na">defaultRole</span><span class="pi">:</span> <span class="s2">"</span><span class="s">reader"</span>
-    
-    <span class="c1"># Explicitly deny specific users (highest priority)</span>
-    <span class="na">userDenyList</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s2">"</span><span class="s">github:malicious-user"</span>
-    
-    <span class="c1"># Role definitions</span>
-    <span class="na">roles</span><span class="pi">:</span>
-      <span class="c1"># Admin role - full access to all API methods</span>
-      <span class="na">admin</span><span class="pi">:</span>
-        <span class="na">allowedMethods</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">*"</span>  <span class="c1"># Wildcard = all Directory API methods</span>
-        <span class="na">users</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">github:alexdemo2026"</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">github:saradev2026"</span>
-        <span class="na">orgs</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">agntcy"</span>  <span class="c1"># All members of "agntcy" org get admin access</span>
-      
-      <span class="c1"># Reader role - read-only access</span>
-      <span class="na">reader</span><span class="pi">:</span>
-        <span class="na">allowedMethods</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.store.v1.StoreService/Pull"</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.store.v1.StoreService/Lookup"</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.routing.v1.RoutingService/Search"</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.routing.v1.RoutingService/List"</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.search.v1.SearchService/SearchCIDs"</span>
-          <span class="c1"># ... more read-only methods</span>
-        <span class="na">users</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">github:mikeprod2026"</span>
-        <span class="na">orgs</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">contributors"</span>
-</code></pre></div></div>
-
-<p><strong>Authorization Logic (Precedence Order):</strong></p>
-<ol>
-  <li><strong>Deny List</strong> (highest priority) - Blocks access even if user has a role</li>
-  <li><strong>User Role</strong> - Direct user-to-role assignment (e.g., specific users in <code class="language-plaintext highlighter-rouge">admin.users</code>)</li>
-  <li><strong>Organization Role</strong> - Org-to-role assignment (e.g., all members of <code class="language-plaintext highlighter-rouge">agntcy</code> org)</li>
-  <li><strong>Default Role</strong> - Fallback for any authenticated user not explicitly assigned</li>
-  <li><strong>Deny by Default</strong> - If no role matches and no default role is set</li>
-</ol>
-
-<p><strong>Key Features:</strong></p>
-<ul>
-  <li><strong>Policy-Driven</strong>: Authorization rules defined in YAML, no code changes needed</li>
-  <li><strong>Fine-Grained</strong>: Control access per API method (e.g., allow <code class="language-plaintext highlighter-rouge">Pull</code> but deny <code class="language-plaintext highlighter-rouge">Push</code>)</li>
-  <li><strong>Flexible Wildcards</strong>: Use <code class="language-plaintext highlighter-rouge">"*"</code> for full access or specify individual methods</li>
-  <li><strong>Org-Based Assignment</strong>: Leverage GitHub organization membership for role assignment</li>
-</ul>
-
-<h2 id="security--best-practices">Security &amp; Best Practices</h2>
-
-<p>Understanding how to use authentication is important, but implementing it securely is critical. Let’s examine key security practices for managing GitHub tokens and integrating with CI/CD pipelines.</p>
-
-<h3 id="token-security">Token Security</h3>
-
-<p><strong>GitHub OAuth Tokens:</strong></p>
-<ul>
-  <li>Tokens are stored with <strong>0600 permissions</strong> (owner read/write only)</li>
-  <li>Tokens expire after <strong>8 hours</strong> (configurable)</li>
-  <li>Token cache location: <code class="language-plaintext highlighter-rouge">~/.config/dirctl/auth-token.json</code></li>
-  <li><strong>Never commit tokens to version control</strong></li>
-  <li>Use environment variables or secrets management for automation</li>
-</ul>
-
-<h3 id="cicd-integration">CI/CD Integration</h3>
-
-<p>For CI/CD pipelines, you’ll need to provide authentication credentials programmatically. Personal Access Tokens (PATs) are the recommended approach for automated workflows.</p>
-
-<h4 id="personal-access-token-setup">Personal Access Token Setup</h4>
-
-<p>Create and configure a PAT for CI/CD authentication:</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># GitHub Actions example using PAT</span>
-<span class="na">name</span><span class="pi">:</span> <span class="s">Deploy Agent</span>
-<span class="na">on</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">push</span><span class="pi">]</span>
-
-<span class="na">jobs</span><span class="pi">:</span>
-  <span class="na">deploy</span><span class="pi">:</span>
-    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
-    <span class="na">steps</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Checkout code</span>
-        <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v3</span>
-      
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Authenticate with Directory</span>
-        <span class="na">env</span><span class="pi">:</span>
-          <span class="na">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="pi">:</span> <span class="s2">"</span><span class="s">prod.gateway.ads.outshift.io:443"</span>
-          <span class="na">DIRECTORY_CLIENT_AUTH_MODE</span><span class="pi">:</span> <span class="s2">"</span><span class="s">github"</span>
-          <span class="na">DIRECTORY_CLIENT_GITHUB_TOKEN</span><span class="pi">:</span> <span class="s">$</span>
-        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
-          <span class="s">dirctl auth login</span>
-          <span class="s">dirctl auth status</span>
-      
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Push agent card</span>
-        <span class="na">env</span><span class="pi">:</span>
-          <span class="na">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="pi">:</span> <span class="s2">"</span><span class="s">prod.gateway.ads.outshift.io:443"</span>
-          <span class="na">DIRECTORY_CLIENT_AUTH_MODE</span><span class="pi">:</span> <span class="s2">"</span><span class="s">github"</span>
-        <span class="na">run</span><span class="pi">:</span> <span class="pi">|</span>
-          <span class="s">dirctl push ./agent-card.json</span>
-</code></pre></div></div>
-
-<p><strong>Setup Steps:</strong></p>
-
-<ol>
-  <li><strong>Create a GitHub Personal Access Token:</strong>
-    <ul>
-      <li>Go to: https://github.com/settings/tokens/new</li>
-      <li>Select scopes: <code class="language-plaintext highlighter-rouge">user:email</code> and <code class="language-plaintext highlighter-rouge">read:org</code></li>
-      <li>Generate token and copy it immediately</li>
-    </ul>
-  </li>
-  <li><strong>Store as repository secret:</strong>
-    <ul>
-      <li>Go to your repository settings: <code class="language-plaintext highlighter-rouge">https://github.com/&lt;org&gt;/&lt;repo&gt;/settings/secrets/actions</code></li>
-      <li>Click “New repository secret”</li>
-      <li>Name: <code class="language-plaintext highlighter-rouge">DIRECTORY_GITHUB_PAT</code></li>
-      <li>Value: Paste your token</li>
-    </ul>
-  </li>
-  <li><strong>Configure RBAC authorization:</strong>
-    <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">authServer</span><span class="pi">:</span>
-  <span class="na">authorization</span><span class="pi">:</span>
-    <span class="na">roles</span><span class="pi">:</span>
-      <span class="na">writer</span><span class="pi">:</span>  <span class="c1"># Or any role with required permissions</span>
-        <span class="na">allowedMethods</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.store.v1.StoreService/Push"</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">/agntcy.dir.store.v1.StoreService/Pull"</span>
-        <span class="na">users</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">github:your-username"</span>  <span class="c1"># Add your GitHub username</span>
-        <span class="na">orgs</span><span class="pi">:</span>
-          <span class="pi">-</span> <span class="s2">"</span><span class="s">your-org"</span>  <span class="c1"># Or authorize entire organization</span>
-</code></pre></div>    </div>
-  </li>
-</ol>
-
-<p><strong>Best Practices:</strong></p>
-<ul>
-  <li>✅ Store PATs in repository secrets (never commit to code)</li>
-  <li>✅ Use dedicated service accounts for automation</li>
-  <li>✅ Rotate PATs regularly (e.g., quarterly)</li>
-  <li>✅ Scope tokens to minimum required permissions</li>
-  <li>✅ Ensure your user/org is assigned to an appropriate RBAC role</li>
-</ul>
-
-<p><strong>Security Notes:</strong></p>
-<ul>
-  <li>PATs should be treated as sensitive credentials and never committed to version control</li>
-  <li>Use GitHub’s repository secrets or organization secrets for secure storage</li>
-  <li>Consider using different PATs for different environments (dev, staging, prod)</li>
-  <li>Audit PAT usage regularly through GitHub’s security logs</li>
-</ul>
-
-<hr />
-
-<h1 id="part-2-authentication-for-automated-workloads">Part 2: Authentication for Automated Workloads</h1>
-
-<p>While GitHub OAuth is perfect for humans, automated services and agents running in Kubernetes need a different approach. This section covers SPIFFE-based workload identity for machine-to-machine authentication.</p>
-
-<h2 id="why-spiffe">Why SPIFFE?</h2>
-
-<p>Automated workloads need:</p>
-<ul>
-  <li>✅ <strong>No human intervention</strong> - Fully automated certificate lifecycle</li>
-  <li>✅ <strong>Strong cryptographic identity</strong> - Workload-to-workload mTLS</li>
-  <li>✅ <strong>Automatic rotation</strong> - Certificates renew without restarts</li>
-  <li>✅ <strong>Kubernetes-native</strong> - Identity tied to pods, namespaces, and service accounts</li>
-</ul>
-
-<p>This makes SPIFFE perfect for production services, agents, and microservices running in Kubernetes clusters.</p>
-
-<h2 id="how-it-works-architecture--flow-1">How It Works: Architecture &amp; Flow</h2>
-
-<p><strong>SPIFFE</strong> (Secure Production Identity Framework For Everyone) provides workload identity through <strong>mTLS certificates</strong>. This is ideal for service-to-service communication within Kubernetes.</p>
-
-<pre><code class="language-mermaid">sequenceDiagram
-    participant Service as Agent/Service
-    participant Agent as SPIRE Agent
-    participant API as Directory API
-
-    Note over Service,Agent: Startup Phase
-    Service-&gt;&gt;Agent: Request SPIFFE Certificate
-    Agent-&gt;&gt;Agent: Verify Pod Identity&lt;br/&gt;(ServiceAccount, Labels, etc.)
-    Agent-&gt;&gt;Service: Issue X.509-SVID Certificate&lt;br/&gt;(spiffe://prod.ads.outshift.io/my-agent)
-
-    Note over Service,API: API Call Phase
-    Service-&gt;&gt;API: gRPC Call + mTLS Certificate
-    API-&gt;&gt;API: Validate SPIFFE ID
-    alt Authorized Workload
-        API-&gt;&gt;Service: 200 OK + Data
-    else Unauthorized
-        API-&gt;&gt;Service: 403 Forbidden
-    end
-</code></pre>
-
-<p><strong>How it works:</strong></p>
-
-<ol>
-  <li><strong>Workload Registration</strong>: Services are registered in SPIRE with their intended SPIFFE ID</li>
-  <li><strong>Certificate Issuance</strong>: SPIRE Agent validates the workload and issues a short-lived X.509 certificate</li>
-  <li><strong>mTLS Communication</strong>: The service uses this certificate for mutual TLS with the Directory API</li>
-  <li><strong>Automatic Rotation</strong>: Certificates rotate automatically (typically every 1 hour)</li>
-</ol>
-
-<p><strong>Security Benefits:</strong></p>
-<ul>
-  <li>✅ <strong>No secrets to manage</strong> - No passwords, API keys, or tokens</li>
-  <li>✅ <strong>Automatic expiration</strong> - Certificates rotate without human intervention</li>
-  <li>✅ <strong>Strong identity binding</strong> - Identity tied to Kubernetes resources</li>
-  <li>✅ <strong>Zero-trust security</strong> - Every call is cryptographically authenticated</li>
-</ul>
-
-<h2 id="hands-on-spiffe-authentication">Hands-On: SPIFFE Authentication</h2>
-
-<p><strong>Note:</strong> SPIFFE authentication is not available for the public testbed environment. This option is for organizations running their own Directory deployment with SPIRE infrastructure.</p>
-
-<p>Ideal for services running within your own Kubernetes cluster that need programmatic access. This method works best in environments where the <strong>SPIRE Agent</strong> is deployed as a DaemonSet, allowing workloads to automatically obtain their identity certificates via the Workload API.</p>
-
-<h3 id="two-approaches">Two Approaches</h3>
-
-<ol>
-  <li><strong>Production Workloads (Recommended)</strong>: Use SPIRE Agent + Workload API for fully automated certificate management</li>
-  <li><strong>Local Development/Testing</strong>: Manually export certificates from SPIRE Server for experimentation on your laptop</li>
-</ol>
-
-<p>The manual export approach is only for demonstration and experimenting in your local environment. It allows you to test SPIFFE authentication without needing the full SPIRE infrastructure on your machine. Production workloads should always use the SPIRE Agent for automatic, zero-touch certificate management.</p>
-
-<h3 id="manual-certificate-export-local-testing-only">Manual Certificate Export (Local Testing Only)</h3>
-
-<p>When you want to test Directory authentication from your laptop without SPIRE Agent, you can manually mint a certificate from your own SPIRE server (requires cluster access and administrative permissions):</p>
-
-<p><strong>Step 1: Mint SPIFFE Certificate</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Replace with your own SPIRE server pod name and namespace</span>
-kubectl <span class="nb">exec</span> <span class="nt">-n</span> &lt;your-spire-namespace&gt; &lt;your-spire-server-pod&gt; <span class="se">\</span>
-  <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
-  /opt/spire/bin/spire-server x509 mint <span class="se">\</span>
-  <span class="nt">-dns</span> &lt;your-directory-api-address&gt; <span class="se">\</span>
-  <span class="nt">-spiffeID</span> spiffe://&lt;your-trust-domain&gt;/demo-client <span class="se">\</span>
-  <span class="nt">-ttl</span> 1h <span class="se">\</span>
-  <span class="nt">-output</span> json <span class="o">&gt;</span> spiffe-local.json
-</code></pre></div></div>
-
-<p><strong>Example for your own deployment:</strong></p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">exec</span> <span class="nt">-n</span> my-spire spire-server-0 <span class="se">\</span>
-  <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
-  /opt/spire/bin/spire-server x509 mint <span class="se">\</span>
-  <span class="nt">-dns</span> directory.mycompany.com <span class="se">\</span>
-  <span class="nt">-spiffeID</span> spiffe://mycompany.com/demo-client <span class="se">\</span>
-  <span class="nt">-ttl</span> 1h <span class="se">\</span>
-  <span class="nt">-output</span> json <span class="o">&gt;</span> spiffe-local.json
-</code></pre></div></div>
-
-<p><strong>Step 2: Configure Environment</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Use your own Directory deployment endpoints</span>
-<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="o">=</span><span class="s2">"&lt;your-directory-api&gt;:443"</span>
-<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_AUTH_MODE</span><span class="o">=</span><span class="s2">"token"</span>
-<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SPIFFE_TOKEN</span><span class="o">=</span><span class="s2">"spiffe-local.json"</span>
-</code></pre></div></div>
-
-<p><strong>Step 3: Use the CLI</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl info &lt;cid&gt;
-dirctl pull &lt;cid&gt; <span class="nt">-o</span> json
-</code></pre></div></div>
-
-<h3 id="production-deployment-recommended">Production Deployment (Recommended)</h3>
-
-<p>The manual certificate export approach above is useful for testing and debugging, but production workloads should use the SPIRE Workload API to automatically obtain and rotate certificates. This requires the SPIRE Agent to be running on the same node as your workload (typically deployed as a Kubernetes DaemonSet).</p>
-
-<p><strong>Key Benefits of SPIRE Agent Integration:</strong></p>
-<ul>
-  <li>✅ <strong>Zero manual steps</strong> - Certificates are obtained automatically via the Workload API</li>
-  <li>✅ <strong>Automatic rotation</strong> - Certificates renew before expiration without restarts</li>
-  <li>✅ <strong>No exported files</strong> - No need to manage <code class="language-plaintext highlighter-rouge">spiffe-local.json</code> files</li>
-  <li>✅ <strong>Production-ready</strong> - The recommended approach for all Kubernetes workloads</li>
-  <li>✅ <strong>Just works</strong> - Your service discovers the SPIRE Agent via the standard Unix domain socket</li>
-</ul>
-
-<p><strong>When to Use Manual Certificate Export:</strong></p>
-<ul>
-  <li>Testing/debugging from your laptop (outside the cluster)</li>
-  <li>CI/CD runners without SPIRE Agent deployed</li>
-  <li>One-time administrative tasks</li>
-  <li>Development environments without full SPIRE infrastructure</li>
-</ul>
-
-<p>For implementation details, see the <a href="https://github.com/agntcy/dir/tree/main/client">Directory Go client documentation</a> and <a href="https://spiffe.io/docs/latest/spire-about/spire-concepts/#workload-api">SPIRE Workload API guide</a>.</p>
-
-<h2 id="authorization-workload-identity-allow-lists">Authorization: Workload Identity Allow Lists</h2>
-
-<p>The Directory API maintains an allow list of trusted SPIFFE IDs:</p>
-
-<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// Directory API configuration (in your self-hosted deployment)</span>
-<span class="n">authorizedIDs</span> <span class="o">:=</span> <span class="p">[]</span><span class="n">spiffeid</span><span class="o">.</span><span class="n">ID</span><span class="p">{</span>
-    <span class="n">spiffeid</span><span class="o">.</span><span class="n">RequireFromString</span><span class="p">(</span><span class="s">"spiffe://mycompany.com/envoy"</span><span class="p">),</span>
-    <span class="n">spiffeid</span><span class="o">.</span><span class="n">RequireFromString</span><span class="p">(</span><span class="s">"spiffe://mycompany.com/agent-service"</span><span class="p">),</span>
-    <span class="n">spiffeid</span><span class="o">.</span><span class="n">RequireFromString</span><span class="p">(</span><span class="s">"spiffe://mycompany.com/indexer"</span><span class="p">),</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p><strong>Authorization Logic:</strong></p>
-<ol>
-  <li>Extract SPIFFE ID from client certificate</li>
-  <li>Check against authorized ID list</li>
-  <li>Deny by default if not found</li>
-</ol>
-
-<p><strong>Why This Matters:</strong></p>
-<ul>
-  <li>✅ <strong>Least Privilege</strong> - Only explicitly authorized workloads can access the API</li>
-  <li>✅ <strong>Defense in Depth</strong> - Even if an attacker compromises a pod, they can’t access the Directory without the correct SPIFFE ID</li>
-  <li>✅ <strong>Audit Trail</strong> - Every request is logged with the authenticated SPIFFE ID</li>
-</ul>
-
-<h2 id="security--best-practices-1">Security &amp; Best Practices</h2>
-
-<p><strong>SPIFFE Certificate Security:</strong></p>
-<ul>
-  <li>Certificates are short-lived, typically one hour</li>
-  <li>Certificates auto-rotate before expiration</li>
-  <li>Certificates are cryptographically bound to workload identity</li>
-  <li>No manual rotation required</li>
-  <li><strong>No secrets stored</strong> - All key material is ephemeral</li>
-</ul>
-
-<p><strong>Production Best Practices:</strong></p>
-<ul>
-  <li>Deploy SPIRE Agent as a DaemonSet in all nodes</li>
-  <li>Use pod selectors for fine-grained workload registration</li>
-  <li>Monitor certificate expiry and rotation</li>
-  <li>Implement proper SPIRE Server high availability</li>
-  <li>Use SPIRE’s federation features for multi-cluster scenarios</li>
-</ul>
-
-<hr />
-
-<h1 id="part-3-choosing-the-right-method">Part 3: Choosing the Right Method</h1>
-
-<h2 id="comparison-when-to-use-each-method">Comparison: When to Use Each Method</h2>
-
-<p>With both authentication methods available, you might wonder which one to choose. The answer depends on your use case, environment, and operational requirements. Here’s a comprehensive comparison to help you decide:</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Criteria</th>
-      <th>GitHub OAuth</th>
-      <th>SPIFFE (mTLS)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>Use Case</strong></td>
-      <td>Human operators</td>
-      <td>Automated workloads</td>
-    </tr>
-    <tr>
-      <td><strong>Testbed Support</strong></td>
-      <td>✅ Available</td>
-      <td>❌ Not available</td>
-    </tr>
-    <tr>
-      <td><strong>Self-Hosted Support</strong></td>
-      <td>✅ Available</td>
-      <td>✅ Available</td>
-    </tr>
-    <tr>
-      <td><strong>Environment</strong></td>
-      <td>CLI, laptops, CI/CD</td>
-      <td>Kubernetes clusters with SPIRE</td>
-    </tr>
-    <tr>
-      <td><strong>Setup Complexity</strong></td>
-      <td>Low (just GitHub account)</td>
-      <td>Medium (requires SPIRE infrastructure)</td>
-    </tr>
-    <tr>
-      <td><strong>Security Model</strong></td>
-      <td>User identity</td>
-      <td>Workload identity</td>
-    </tr>
-    <tr>
-      <td><strong>Token Lifetime</strong></td>
-      <td>Medium (8 hours)</td>
-      <td>Short (1 hour)</td>
-    </tr>
-    <tr>
-      <td><strong>Rotation</strong></td>
-      <td>Manual (re-login)</td>
-      <td>Automatic (with SPIRE Agent)</td>
-    </tr>
-    <tr>
-      <td><strong>Production Workflow</strong></td>
-      <td>Login once per 8 hours</td>
-      <td>Fully automated via Workload API</td>
-    </tr>
-    <tr>
-      <td><strong>Local Testing</strong></td>
-      <td>Same as production</td>
-      <td>Manual cert export (demo/experimentation)</td>
-    </tr>
-    <tr>
-      <td><strong>Cluster Access</strong></td>
-      <td>Not required</td>
-      <td>Required for setup</td>
-    </tr>
-    <tr>
-      <td><strong>Best For</strong></td>
-      <td>Development, testing, demos</td>
-      <td>Production services in self-hosted</td>
-    </tr>
-  </tbody>
-</table>
-
-<p><strong>Rule of Thumb:</strong></p>
-<ul>
-  <li><strong>For Agntcy Testbed</strong>: Use GitHub OAuth (only authentication method available for public testbed)</li>
-  <li><strong>For Human Users (any environment)</strong>: Use GitHub OAuth for CLI interactions, development, and CI/CD</li>
-  <li><strong>For Self-Hosted Production Workloads</strong>: Use <strong>SPIFFE with SPIRE Agent</strong> for Kubernetes services (fully automated, zero manual steps)</li>
-  <li><strong>For Local Development/Testing</strong>: Use <strong>SPIFFE manual cert export</strong> for experimentation with your own infrastructure (demo purposes only)</li>
-</ul>
-
-<h2 id="whats-next">What’s Next?</h2>
-
-<p>Directory v1.0 provides a solid foundation for secure agent discovery with <strong>fine-grained RBAC</strong> already implemented. The authentication story continues to evolve with these planned enhancements:</p>
-
-<ul>
-  <li><strong>OIDC Provider Support</strong>: Integration with enterprise identity providers (Okta, Azure AD, Zitadel)</li>
-  <li><strong>Enhanced RBAC</strong>: Per-resource permissions (e.g., read/write access to specific CIDs or namespaces)</li>
-  <li><strong>Audit Logging</strong>: Comprehensive access logs for compliance and security monitoring</li>
-  <li><strong>Multi-Tenancy</strong>: Namespace-based isolation for multi-organization deployments</li>
-  <li><strong>Dynamic Policy Updates</strong>: Hot-reload RBAC policies without service restarts</li>
-</ul>
-
-<h2 id="conclusion">Conclusion</h2>
-
-<p>Directory v1.0’s dual-mode authentication architecture demonstrates that <strong>security doesn’t have to compromise usability</strong>. By combining GitHub OAuth, SPIFFE workload identity, and Casbin-based RBAC, we’ve created a system that’s:</p>
-
-<ul>
-  <li>✅ <strong>Developer-friendly</strong> - Familiar OAuth flows, cached tokens, simple CLI</li>
-  <li>✅ <strong>Secure by default</strong> - Zero-trust, mutual TLS, automatic rotation, fine-grained permissions</li>
-  <li>✅ <strong>Production-ready</strong> - Battle-tested in real-world environments with policy-driven authorization</li>
-  <li>✅ <strong>Flexible</strong> - Supports both human operators and automated workloads with customizable roles</li>
-</ul>
-
-<p>Whether you’re building AI agents, deploying microservices, or managing a service mesh, the Agent Directory provides the trusted foundation for secure service discovery with enterprise-grade access control.</p>
-
-<h2 id="-references">📚 References</h2>
-
-<ul>
-  <li><a href="https://github.com/agntcy/dir">Directory GitHub Repository</a></li>
-  <li><a href="https://spiffe.io">SPIFFE/SPIRE Documentation</a></li>
-  <li><a href="https://datatracker.ietf.org/doc/html/rfc8628">OAuth 2.0 Device Flow (RFC 8628)</a></li>
-  <li><a href="https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/ext_authz_filter">Envoy External Authorization</a></li>
-  <li><a href="https://docs.github.com/en/developers/apps/building-oauth-apps">GitHub OAuth Apps</a></li>
-  <li><a href="https://casbin.org">Casbin - Authorization Library</a></li>
-</ul>]]></content><author><name>Tibor Kircsi</name></author><category term="security" /><category term="authentication" /><category term="directory" /><category term="spiffe" /><category term="oauth" /><category term="github" /><category term="envoy" /><category term="mTLS" /><category term="zero-trust" /><summary type="html"><![CDATA[The Agent Directory is more than just a service registry—it’s a trusted gateway for discovering and verifying AI agents. With the release of v1.0, we’re introducing a robust dual-mode authentication system that combines the convenience of GitHub OAuth for human operators with the security of SPIFFE workload identity for automated services. This post explores the architecture, implementation, and practical usage of Directory’s new authentication system, designed for both interactive CLI users and automated workloads.]]></summary></entry></feed>
+<p><em>Have questions about Rust-Go integration or UniFFI? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Sam Betts</name></author><category term="technical" /><category term="rust" /><category term="go" /><category term="uniffi" /><category term="bindings" /><category term="cgo" /><category term="interop" /><summary type="html"><![CDATA[Rust and Go are both excellent languages, but they excel in different areas. Rust provides memory safety and zero-cost abstractions, while Go offers simplicity and fast compilation. What if you could combine the strengths of both? This post explores how we use UniFFI to create seamless Rust-Go integrations for the SLIM messaging library.]]></summary></entry></feed>
