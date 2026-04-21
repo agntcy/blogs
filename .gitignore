@@ -4,5 +4,9 @@ _site
 .jekyll-cache
 .bundle/
 .task/
+node_modules/
 vendor/
 .DS_Store
+presentations/*/*.html
+presentations/*/site/
+slides_ed25519*

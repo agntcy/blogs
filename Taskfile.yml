@@ -18,13 +18,22 @@ tasks:
     desc: Build content website
     deps:
       - deps
+      - build:slides
     cmds:
       - bundle exec jekyll build
+
+  build:slides:
+    desc: Build slide decks under presentations
+    deps:
+      - deps:slides
+    cmds:
+      - node scripts/build-presentations.mjs
 
   run:
     desc: Run content website in live editing mode
     deps:
       - deps
+      - build:slides
     cmds:
       - bundle exec jekyll serve --livereload --host 0.0.0.0
 
@@ -32,6 +41,7 @@ tasks:
     desc: Run content website in production mode (enables analytics)
     deps:
       - deps
+      - build:slides
     cmds:
       - JEKYLL_ENV=production bundle exec jekyll serve --livereload --host 0.0.0.0
 
@@ -47,3 +57,8 @@ tasks:
       - .bundle/config
     cmds:
       - bundle install
+
+  deps:slides:
+    desc: Install slide build dependencies
+    cmds:
+      - if [ -f package-lock.json ]; then npm ci; else npm install; fi

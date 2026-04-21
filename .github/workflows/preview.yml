@@ -6,6 +6,10 @@ on:
     types: [opened, synchronize, reopened]
     paths:
       - "_posts/**"
+      - "presentations/**"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/**"
 
 permissions:
   contents: write
@@ -49,6 +53,21 @@ jobs:
           ruby-version: '3.4'
           bundler-cache: true
           cache-version: 0
+
+      - name: Setup Node
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.5'
+          cache: 'npm'
+
+      - name: Install slide build dependencies
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm ci
+
+      - name: Build slides
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run build:slides
 
       - name: Build with Jekyll
         run: bundle exec jekyll build --baseurl "/drafts/${{ steps.branch.outputs.safe }}"
