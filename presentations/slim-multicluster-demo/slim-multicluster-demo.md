@@ -661,7 +661,7 @@ sequenceDiagram
     <div><strong>Single Endpoint, Many Services</strong><br><span style="color:#555;">One SLIM connection replaces per-service ingress and reverse proxies</span></div>
   </div>
   <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
-    <div><strong>Reach Private Clusters Seamlessly</strong><br><span style="color:#555;">Connect to customer services with no ingress, no exposed ports — only outbound connections from the customer side</span></div>
+    <div><strong>Private Cluster Connectivity</strong><br><span style="color:#555;">A single outbound connection unlocks bidirectional communication across clusters</span></div>
   </div>
   <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
     <div><strong>Zero-Touch Onboarding</strong><br><span style="color:#555;">Customers need only a token and a controller address — all setup is done automatically</span></div>
