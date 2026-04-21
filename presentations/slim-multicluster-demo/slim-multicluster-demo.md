@@ -167,42 +167,45 @@ hide: true
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 10, 'rankSpacing': 30, 'padding': 8}}}%%
 graph LR
-    subgraph ClusterA["Customer Cluster"]
+    subgraph ClusterA["Network"]
         direction TB
-        subgraph SA["Service"]
-            SLA[SLIM SDK]
-            DPA[Data Plane]
-            SLA <--> DPA
+        subgraph SA["Service Or Agent"]
+            AL["App Logic"]
+            subgraph SDKA["SLIM SDK"]
+                DPA[Data Plane]
+            end
+            AL <--> SDKA
         end
-        subgraph SN1["SLIM Node 1"]
+        subgraph SN1["SLIM Node"]
             DPN1[Data Plane]
         end
         DPA <-- "gRPC/TLS" --> DPN1
     end
 
-    DPN1 <-- "gRPC/TLS" --> DPN2
-    SN1 -.-> CP[Controller]
-    SN2 -.-> CP
-    SLA <-. "MLS (E2E encrypted)" .-> SLB
-
-    subgraph ClusterB["O11y Cluster"]
+    subgraph ClusterB["Network"]
         direction TB
-        subgraph SB["Service"]
-            SLB[SLIM SDK]
-            DPB[Data Plane]
-            SLB <--> DPB
+        subgraph SB["Service Or Agent"]
+            BL["App Logic"]
+            subgraph SDKB["SLIM SDK"]
+                DPB[Data Plane]
+            end
+            BL <--> SDKB
         end
-        subgraph SN2["SLIM Node 2"]
+        subgraph SN2["SLIM Node"]
             DPN2[Data Plane]
         end
         DPB <-- "gRPC/TLS" --> DPN2
     end
 
+    DPN1 <-- "gRPC/TLS" --> DPN2
+    DPB <-. "MLS (E2E encrypted)" .-> DPA
+    SN1 & SN2 -.-> CP[Controller]
+
     style CP fill:#0D47A1,color:#fff
     style SA fill:#90CAF9,color:#1a1a1a
     style SB fill:#90CAF9,color:#1a1a1a
-    style SLA fill:#1565C0,color:#fff
-    style SLB fill:#1565C0,color:#fff
+    style SDKA fill:#1565C0,color:#fff
+    style SDKB fill:#1565C0,color:#fff
     style DPA fill:#42A5F5,color:#fff
     style DPB fill:#42A5F5,color:#fff
     style SN1 fill:#1565C0,color:#fff
@@ -214,12 +217,12 @@ graph LR
     linkStyle 5 stroke:#E91E63,stroke-width:2px
 ```
 
+</div>
+
 <div style="display:flex; justify-content:center; gap:70px; margin-top:25px; font-size:18px;">
   <div style="text-align:center;"><strong>SLIM SDK</strong><br>Reliable delivery <br> E2E encryption</div>
   <div style="text-align:center;"><strong>Data Plane</strong><br>Message forwarding <br> Connection Management (gRPC)</div>
   <div style="text-align:center;"><strong>Controller</strong><br>Node configuration <br> Route management</div>
-</div>
-
 </div>
 
 ---
