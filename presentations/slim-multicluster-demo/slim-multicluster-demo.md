@@ -174,42 +174,45 @@ hide: true
 ```mermaid
 %%{init: {'flowchart': {'nodeSpacing': 10, 'rankSpacing': 30, 'padding': 8}}}%%
 graph LR
-    subgraph ClusterA["Customer Cluster"]
+    subgraph ClusterA["Network"]
         direction TB
-        subgraph SA["Service"]
-            SLA[SLIM SDK]
-            DPA[Data Plane]
-            SLA <--> DPA
+        subgraph SA["Service Or Agent"]
+            AL["App Logic"]
+            subgraph SDKA["SLIM SDK"]
+                DPA[Data Plane]
+            end
+            AL <--> SDKA
         end
-        subgraph SN1["SLIM Node 1"]
+        subgraph SN1["SLIM Node"]
             DPN1[Data Plane]
         end
         DPA <-- "gRPC/TLS" --> DPN1
     end
 
-    DPN1 <-- "gRPC/TLS" --> DPN2
-    SN1 -.-> CP[Controller]
-    SN2 -.-> CP
-    SLA <-. "MLS (E2E encrypted)" .-> SLB
-
-    subgraph ClusterB["O11y Cluster"]
+    subgraph ClusterB["Network"]
         direction TB
-        subgraph SB["Service"]
-            SLB[SLIM SDK]
-            DPB[Data Plane]
-            SLB <--> DPB
+        subgraph SB["Service Or Agent"]
+            BL["App Logic"]
+            subgraph SDKB["SLIM SDK"]
+                DPB[Data Plane]
+            end
+            BL <--> SDKB
         end
-        subgraph SN2["SLIM Node 2"]
+        subgraph SN2["SLIM Node"]
             DPN2[Data Plane]
         end
         DPB <-- "gRPC/TLS" --> DPN2
     end
 
+    DPN1 <-- "gRPC/TLS" --> DPN2
+    DPB <-. "MLS (E2E encrypted)" .-> DPA
+    SN1 & SN2 -.-> CP[Controller]
+
     style CP fill:#0D47A1,color:#fff
     style SA fill:#90CAF9,color:#1a1a1a
     style SB fill:#90CAF9,color:#1a1a1a
-    style SLA fill:#1565C0,color:#fff
-    style SLB fill:#1565C0,color:#fff
+    style SDKA fill:#1565C0,color:#fff
+    style SDKB fill:#1565C0,color:#fff
     style DPA fill:#42A5F5,color:#fff
     style DPB fill:#42A5F5,color:#fff
     style SN1 fill:#1565C0,color:#fff
@@ -221,12 +224,12 @@ graph LR
     linkStyle 5 stroke:#E91E63,stroke-width:2px
 ```
 
+</div>
+
 <div style="display:flex; justify-content:center; gap:70px; margin-top:25px; font-size:18px;">
   <div style="text-align:center;"><strong>SLIM SDK</strong><br>Reliable delivery <br> E2E encryption</div>
   <div style="text-align:center;"><strong>Data Plane</strong><br>Message forwarding <br> Connection Management (gRPC)</div>
   <div style="text-align:center;"><strong>Controller</strong><br>Node configuration <br> Route management</div>
-</div>
-
 </div>
 
 ---
@@ -278,7 +281,7 @@ SLIM natively supports the following interaction patterns between services.
 graph TB
     subgraph RPCM[RPC Multicast]
         direction TB
-    rm1((Client)) -- "requests" --> rch{"o/n/rpc-channel"}
+        rm1((Client)) -- "requests" --> rch{{o/n/rpc-channel}}
         rch -- "responses" --> rm1
         rm2((Server 1)) -- "responses" --> rch
         rm3((Server 2)) -- "responses" --> rch
@@ -292,7 +295,7 @@ graph TB
 
     subgraph GRP[Group]
         direction TB
-    g1((Service 1)) --> ch{"o/n/channel/0xffff"}
+        g1((Service 1)) --> ch{{o/n/channel/0xffff}}
         g2((Service 2)) --> ch
         g3((Service 3)) --> ch
     end
@@ -514,7 +517,7 @@ slim:
     slim/0:
       controller:
         clients:
-          - endpoint: "https://slim-control-plane-south.dev.eticloud.io:443"
+          - endpoint: "https://slim-controller-public-address:443"
             tls:
               insecure: false
               include_system_ca_certs_pool: true
@@ -529,20 +532,8 @@ slim:
 
 ## Customer Onboarding Demo
 
-<div style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:16px; align-items:start; margin-top:18px;">
-  <div>
-    <div style="font-size:14px; margin-bottom:8px; text-align:center;"><strong>Before onboarding</strong></div>
-    <img src="./figures/routes-before-onboarding.png" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
-  </div>
-  <div>
-    <div style="font-size:14px; margin-bottom:8px; text-align:center;"><strong>After onboarding</strong></div>
-    <img src="./figures/routes-after-onboarding.png" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
-  </div>
-</div>
-
-<div style="margin-top:18px; font-size:16px; text-align:center;">
-  Route propagation is visible directly in the controller once the customer
-  SLIM node joins with outbound-only connectivity.
+<div style="display:flex; justify-content:center;">
+<iframe width="800" height="450" src="https://www.youtube.com/embed/LAxtXXTakt4" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
 ---
@@ -564,7 +555,7 @@ Any human operator can connect to the platform at any time with minimal configur
 
 ```yaml
 slim:
-  endpoint: "https://slim-dataplane.dev.eticloud.io"
+  endpoint: "https://slim-dataplane-public-address.io"
   local-name: "customer-1/off-cluster/a2acli"
   spire:
     socket-path: "/tmp/spire-agent/public/api.sock"
@@ -664,89 +655,25 @@ sequenceDiagram
 
 ## Human Interaction Demo
 
-<div style="margin-top:30px; font-size:20px; line-height:1.8;">
-
-1. Copilot submits an A2A request to the cloud troubleshooting agent.
-2. The agent queries customer-side MCP services over SLIM.
-3. The same path can be reused by the health-check job for automated remediation.
-
+<div style="display:flex; justify-content:center; margin-top:10px;">
+<iframe width="800" height="450" src="https://www.youtube.com/embed/Y-xqqlM_JH8" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 </div>
 
-<div style="margin-top:28px; padding:18px 22px; border:1px solid #d7dbe0; border-radius:8px; background:#f8fafc; font-size:16px;">
-  Demo recordings are hosted separately from the published deck so the GitHub
-  Pages site does not depend on large Git LFS media assets.
-</div>
-
-
----
-layout: cover
 ---
 
-# K8s Remediation Use Case<br> Using SLIM
+## The Advantages of Using SLIM
 
----
-
-## SLIM Controller Status: Before Onboarding
-
-Node List: Only one SLIM node is available
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/nodes-before-onboarding.png" style="width:100%; border-radius:4px">
+<div style="display:flex; flex-direction:column; gap:16px; max-width:850px; margin:25px auto 0; font-size:15px;">
+  <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
+    <div><strong>Single Endpoint, Many Services</strong><br><span style="color:#555;">One SLIM connection replaces per-service ingress and reverse proxies</span></div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
+    <div><strong>Private Cluster Connectivity</strong><br><span style="color:#555;">A single outbound connection unlocks bidirectional communication across clusters</span></div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
+    <div><strong>Zero-Touch Onboarding</strong><br><span style="color:#555;">Customers need only a token and a controller address — all setup is done automatically</span></div>
+  </div>
+  <div style="display:flex; align-items:center; gap:14px; background:#f5f5f5; border-radius:6px; padding:14px 18px;">
+    <div><strong>Human Interaction</strong><br><span style="color:#555;">Easy to add a human to interact with the platform and the agents at any time</span></div>
   </div>
 </div>
-
-Link List: No connections established
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/links-before-onboarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
----
-
-## SLIM Controller Status: Before Onboarding
-
-Route List: Only local services are available
-
-<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
-  <div style="flex:1">
-    <img src="./figures/routes-before-onboarding.png" style="width:98%; border-radius:4px">
-  </div>
-</div>
-
----
-
-## SLIM Controller Status: After Onboarding
-
-Node List: New SLIM node registered
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/nodes-after-onboarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
-
-Link List: New connection established with remote cluster
-
-<div style="display:flex; flex-direction:column; gap:10px; margin-top:8px">
-  <div>
-    <img src="./figures/links-after-onboarding.png" style="width:100%; border-radius:4px">
-  </div>
-</div>
-
----
-
-## SLIM Controller Status: After Onboarding
-
-Route List: Customer services are now reachable
-
-<div style="display:flex; gap:10px; align-items:flex-start; margin-top:8px">
-  <div style="flex:1">
-    <img src="./figures/routes-after-onboarding.png" style="width:90%; border-radius:4px">
-  </div>
-</div>
-
----

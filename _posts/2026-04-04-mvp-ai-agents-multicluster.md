@@ -23,10 +23,6 @@ onboarded with outbound connectivity only, queried from Copilot through an A2A
 skill, and monitored continuously by a health-check job that can open a Jira
 issue automatically when something breaks.
 
-<!--more-->
-
-> Related issue: [#1372 — Epic: SLIM multicluster autoconfig installation for server fleets](https://github.com/agntcy/slim/issues/1372)
-
 ## The problem with cross-cluster remediation
 
 Customer remediation flows usually break down at the network boundary.
