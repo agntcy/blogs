@@ -207,7 +207,7 @@ For day-to-day use, keep the local context explicit with `auth_mode: insecure` a
 
 ## What is oidc-gateway?
 
-`oidc-gateway` is the edge component that lets users and automation access Directory from outside the cluster using standards-based identity.
+`oidc-gateway` is the edge component that enables users and automation access Directory from outside the cluster using standards-based identity.
 
 In a production-style deployment, the Directory backend can keep its internal trust model focused on SPIFFE/SPIRE while external callers authenticate through OIDC, JWT, or mTLS at the gateway. The gateway verifies the credential, asks an authorization service whether the principal is allowed, and forwards only authorized requests to Directory.
 
