@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Switching Between Local and Hosted Directory with dirctl Contexts | AGNTCY Blogs</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Switching Between Local and Hosted Directory with dirctl Contexts" />
+<meta name="author" content="Tibor Kircsi" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="When you work with Agent Directory, you often move between two worlds. On your laptop, you want a fast local Directory server where you can test records, validate metadata, and iterate without needing a cluster. When you are ready to search, publish, or interact with a shared environment, you want the hosted Directory testbed with real authentication at the edge. dirctl context makes that switch explicit. Instead of remembering a different --server-addr, --auth-mode, OIDC issuer, or TLS setting for every command, you can name each Directory target once and then move between them safely." />
+<meta property="og:description" content="When you work with Agent Directory, you often move between two worlds. On your laptop, you want a fast local Directory server where you can test records, validate metadata, and iterate without needing a cluster. When you are ready to search, publish, or interact with a shared environment, you want the hosted Directory testbed with real authentication at the edge. dirctl context makes that switch explicit. Instead of remembering a different --server-addr, --auth-mode, OIDC issuer, or TLS setting for every command, you can name each Directory target once and then move between them safely." />
+<link rel="canonical" href="https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html" />
+<meta property="og:site_name" content="AGNTCY Blogs" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-05-13T09:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Switching Between Local and Hosted Directory with dirctl Contexts" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Tibor Kircsi"},"dateModified":"2026-05-13T09:00:00+00:00","datePublished":"2026-05-13T09:00:00+00:00","description":"When you work with Agent Directory, you often move between two worlds. On your laptop, you want a fast local Directory server where you can test records, validate metadata, and iterate without needing a cluster. When you are ready to search, publish, or interact with a shared environment, you want the hosted Directory testbed with real authentication at the edge. dirctl context makes that switch explicit. Instead of remembering a different --server-addr, --auth-mode, OIDC issuer, or TLS setting for every command, you can name each Directory target once and then move between them safely.","headline":"Switching Between Local and Hosted Directory with dirctl Contexts","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/docs-dir-cli-context/assets/images/logo-light.svg"},"name":"Tibor Kircsi"},"url":"https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="icon" type="image/x-icon" href="/drafts/docs-dir-cli-context/assets/images/favicon.ico">
+  <link rel="stylesheet" href="/drafts/docs-dir-cli-context/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/drafts/docs-dir-cli-context/feed.xml" title="AGNTCY Blogs" /><script>
+    // Set theme immediately to prevent flash of wrong theme
+    (function() {
+      const theme = localStorage.getItem('theme-preference') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+</head>
+
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><div class="site-branding">
+      <a class="site-logo-link" rel="author" href="/drafts/docs-dir-cli-context/"><img class="site-logo logo-light" src="/drafts/docs-dir-cli-context/assets/images/logo-light.svg" alt="AGNTCY"><img class="site-logo logo-dark" src="/drafts/docs-dir-cli-context/assets/images/logo-dark.svg" alt="AGNTCY"></a>
+      <span class="site-title-text">Blogs</span>
+    </div><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/drafts/docs-dir-cli-context/archive/">Archive</a><a class="page-link" href="/drafts/docs-dir-cli-context/about/">About</a><button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+        </div>
+      </nav></div>
+</header>
+
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Switching Between Local and Hosted Directory with dirctl Contexts</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-05-13T09:00:00+00:00" itemprop="datePublished">
+        May 13, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/tkircsi" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Tibor Kircsi</a></span></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>When you work with <a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a>, you often move between two worlds.</p>
+
+<p>On your laptop, you want a fast local Directory server where you can test records, validate metadata, and iterate without needing a cluster. When you are ready to search, publish, or interact with a shared environment, you want the hosted Directory testbed with real authentication at the edge.</p>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl context</code> makes that switch explicit. Instead of remembering a different <code class="language-plaintext highlighter-rouge">--server-addr</code>, <code class="language-plaintext highlighter-rouge">--auth-mode</code>, OIDC issuer, or TLS setting for every command, you can name each Directory target once and then move between them safely.</p>
+
+<!--more-->
+
+<p><strong>TL;DR:</strong> Run a local Directory daemon on <code class="language-plaintext highlighter-rouge">localhost:8888</code>, create a <code class="language-plaintext highlighter-rouge">dirctl</code> config with <code class="language-plaintext highlighter-rouge">local</code> and <code class="language-plaintext highlighter-rouge">prod</code> contexts, authenticate to the hosted testbed with OIDC, and show the active Directory context in your zsh or powerlevel10k prompt.</p>
+
+<h3 id="what-youll-learn">What You’ll Learn</h3>
+
+<p>In this post, you’ll learn:</p>
+
+<ul>
+  <li>How to run a local Directory server with <code class="language-plaintext highlighter-rouge">dirctl daemon</code></li>
+  <li>How to create a reusable <code class="language-plaintext highlighter-rouge">dirctl</code> client config</li>
+  <li>How to switch between local and hosted Directory contexts</li>
+  <li>How OIDC authentication works for the hosted testbed</li>
+  <li>What <code class="language-plaintext highlighter-rouge">oidc-gateway</code> does in a production-style deployment</li>
+  <li>How to show the active Directory context in zsh and powerlevel10k</li>
+</ul>
+
+<h2 id="the-workflow-one-cli-two-directories">The Workflow: One CLI, Two Directories</h2>
+
+<p>A typical developer workflow looks like this:</p>
+
+<ol>
+  <li>Start a local Directory server on your laptop.</li>
+  <li>Push, pull, search, and validate records locally.</li>
+  <li>Switch to the hosted testbed.</li>
+  <li>Authenticate with OIDC.</li>
+  <li>Run the same <code class="language-plaintext highlighter-rouge">dirctl</code> commands against the remote Directory.</li>
+</ol>
+
+<p>The commands are familiar in both places. The target and authentication are different.</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    developer["Developer laptop"]
+    dirctl["dirctl"]
+    localDaemon["Local Directory daemon"]
+    oidcGateway["oidc-gateway"]
+    prodDirectory["Hosted Directory"]
+    idp["OIDC provider"]
+
+    developer --&gt; dirctl
+    dirctl --&gt;|"local context"| localDaemon
+    dirctl --&gt;|"prod context + OIDC token"| oidcGateway
+    idp --&gt;|"issuer metadata and JWKS"| oidcGateway
+    oidcGateway --&gt;|"authorized request"| prodDirectory
+</code></pre>
+
+<p>Without contexts, you can still pass flags manually:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--server-addr</span> localhost:8888 search <span class="nt">--name</span> <span class="s2">"*"</span>
+
+dirctl <span class="nt">--server-addr</span> prod.gateway.ads.outshift.io:443 <span class="se">\</span>
+  <span class="nt">--auth-mode</span> oidc <span class="se">\</span>
+  <span class="nt">--oidc-issuer</span> https://prod.idp.ads.outshift.io <span class="se">\</span>
+  <span class="nt">--oidc-client-id</span> dirctl <span class="se">\</span>
+  search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
+</code></pre></div></div>
+
+<p>That works, but it does not scale well once you have a local daemon, a staging Directory, a hosted testbed, and maybe a partner environment. Contexts give each target a short name.</p>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl context</code> is available starting with <code class="language-plaintext highlighter-rouge">dirctl</code> v1.4.0, which is planned for an upcoming release. If your local CLI does not recognize the <code class="language-plaintext highlighter-rouge">context</code> command yet, upgrade to v1.4.0 or newer when it is available.</p>
+
+<h2 id="step-1-run-a-local-directory-server">Step 1: Run a Local Directory Server</h2>
+
+<p>For local development, the fastest path is the built-in daemon:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl daemon start
+</code></pre></div></div>
+
+<p>The daemon runs a self-contained Directory server in one process. It starts the gRPC API on <code class="language-plaintext highlighter-rouge">localhost:8888</code>, uses SQLite for persistence, and stores records in a local filesystem OCI store. By default, its state lives under:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/.agntcy/dir/
+</code></pre></div></div>
+
+<p>In another terminal, point <code class="language-plaintext highlighter-rouge">dirctl</code> at the local daemon:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--server-addr</span> localhost:8888 search <span class="nt">--name</span> <span class="s2">"*"</span>
+</code></pre></div></div>
+
+<p>This local mode is useful for quick experiments because it does not require Docker, Kubernetes, PostgreSQL, or an external registry. For a deeper comparison between the local daemon and Docker Compose deployment modes, see the <a href="https://docs.agntcy.org/dir/dir-deployment-local/">Local Deployment guide</a>.</p>
+
+<h2 id="step-2-create-a-dirctl-client-config">Step 2: Create a dirctl Client Config</h2>
+
+<p>Now let’s stop passing the server address every time.</p>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl</code> looks for reusable client contexts in:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/.config/dirctl/config.yaml
+</code></pre></div></div>
+
+<p>Create the directory and config file:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/.config/dirctl
+<span class="nv">$EDITOR</span> ~/.config/dirctl/config.yaml
+</code></pre></div></div>
+
+<p>Start with two contexts: one for the local daemon and one for the hosted testbed.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">current_context</span><span class="pi">:</span> <span class="s">local</span>
+<span class="na">contexts</span><span class="pi">:</span>
+  <span class="na">local</span><span class="pi">:</span>
+    <span class="na">server_address</span><span class="pi">:</span> <span class="s">localhost:8888</span>
+    <span class="na">auth_mode</span><span class="pi">:</span> <span class="s">insecure</span>
+  <span class="na">prod</span><span class="pi">:</span>
+    <span class="na">server_address</span><span class="pi">:</span> <span class="s">prod.gateway.ads.outshift.io:443</span>
+    <span class="na">auth_mode</span><span class="pi">:</span> <span class="s">oidc</span>
+    <span class="na">oidc_issuer</span><span class="pi">:</span> <span class="s">https://prod.idp.ads.outshift.io</span>
+    <span class="na">oidc_client_id</span><span class="pi">:</span> <span class="s">dirctl</span>
+</code></pre></div></div>
+
+<p>The shape is intentionally small:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">current_context</code> is the default context used by <code class="language-plaintext highlighter-rouge">dirctl</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">contexts</code> contains named client configurations.</li>
+  <li><code class="language-plaintext highlighter-rouge">server_address</code> is the Directory endpoint for that context.</li>
+  <li><code class="language-plaintext highlighter-rouge">auth_mode</code> tells <code class="language-plaintext highlighter-rouge">dirctl</code> how to authenticate.</li>
+  <li><code class="language-plaintext highlighter-rouge">oidc_issuer</code> and <code class="language-plaintext highlighter-rouge">oidc_client_id</code> are used by <code class="language-plaintext highlighter-rouge">dirctl auth login</code> for OIDC-backed environments.</li>
+</ul>
+
+<p>Keep this file focused on configuration, not credentials. Do not paste bearer tokens into the file for normal interactive use. <code class="language-plaintext highlighter-rouge">dirctl auth login</code> stores the cached login token separately, and automation should prefer short-lived tokens from its identity provider.</p>
+
+<h2 id="step-3-use-dirctl-context">Step 3: Use dirctl context</h2>
+
+<p>Once the config exists, inspect it:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context list
+dirctl context current
+dirctl context show
+dirctl context validate
+</code></pre></div></div>
+
+<p>The most important command is <code class="language-plaintext highlighter-rouge">set</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set </span>prod
+</code></pre></div></div>
+
+<p>After that, ordinary commands use the <code class="language-plaintext highlighter-rouge">prod</code> context by default:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
+</code></pre></div></div>
+
+<p>You can switch back to your local daemon just as easily:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set local
+</span>dirctl search <span class="nt">--name</span> <span class="s2">"*"</span>
+</code></pre></div></div>
+
+<p>For one command only, use <code class="language-plaintext highlighter-rouge">--context</code>. This is handy when you want to query another Directory without changing your default:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--context</span> <span class="nb">local </span>search <span class="nt">--name</span> <span class="s2">"*"</span>
+dirctl <span class="nt">--context</span> prod search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
+</code></pre></div></div>
+
+<p>Use <code class="language-plaintext highlighter-rouge">dirctl context show</code> when you want to confirm what will be used. Sensitive values are redacted in the output, so it is safe to copy into a support thread when debugging configuration issues.</p>
+
+<h2 id="step-4-authenticate-to-the-hosted-testbed">Step 4: Authenticate to the Hosted Testbed</h2>
+
+<p>The local daemon is intentionally simple. It usually runs with <code class="language-plaintext highlighter-rouge">auth_mode: insecure</code> because it is bound to your laptop and used for development.</p>
+
+<p>The hosted testbed is different. It sits behind an authentication gateway and expects an authenticated identity. For a human operator, the normal flow is:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set </span>prod
+dirctl auth login
+dirctl auth status
+dirctl search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl auth login</code> starts the OIDC login flow for the active context. Depending on the environment, it can use a browser-based flow, a no-browser flow, or a device flow. Once complete, <code class="language-plaintext highlighter-rouge">dirctl</code> can reuse the cached token for later commands.</p>
+
+<p>Directory supports several authentication modes:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Mode</th>
+      <th>Best for</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>empty / auto</td>
+      <td>Let <code class="language-plaintext highlighter-rouge">dirctl</code> try SPIFFE, then cached OIDC, then local insecure mode</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">oidc</code></td>
+      <td>Human login, CI workload identity, and external automation with bearer tokens</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">x509</code></td>
+      <td>SPIFFE X.509-SVID clients using mTLS</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">jwt</code></td>
+      <td>SPIFFE JWT-SVID or compatible JWT-based service identity</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tls</code></td>
+      <td>Custom PKI and mTLS setups</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">insecure</code> / <code class="language-plaintext highlighter-rouge">none</code></td>
+      <td>Local development and testing only</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>For day-to-day use, keep the local context explicit with <code class="language-plaintext highlighter-rouge">auth_mode: insecure</code> and the hosted context explicit with <code class="language-plaintext highlighter-rouge">auth_mode: oidc</code>. That makes the intent obvious when you run <code class="language-plaintext highlighter-rouge">dirctl context show</code>.</p>
+
+<h2 id="what-is-oidc-gateway">What is oidc-gateway?</h2>
+
+<p><code class="language-plaintext highlighter-rouge">oidc-gateway</code> is the edge component that lets users and automation access Directory from outside the cluster using standards-based identity.</p>
+
+<p>In a production-style deployment, the Directory backend can keep its internal trust model focused on SPIFFE/SPIRE while external callers authenticate through OIDC, JWT, or mTLS at the gateway. The gateway verifies the credential, asks an authorization service whether the principal is allowed, and forwards only authorized requests to Directory.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant User as User or automation
+    participant CLI as dirctl
+    participant IdP as OIDC provider
+    participant Gateway as oidc-gateway
+    participant Authz as ext_authz policy
+    participant Directory as Directory API
+
+    User-&gt;&gt;CLI: dirctl auth login
+    CLI-&gt;&gt;IdP: OIDC login
+    IdP--&gt;&gt;CLI: Short-lived token
+    CLI-&gt;&gt;Gateway: Directory request + bearer token
+    Gateway-&gt;&gt;Gateway: Validate JWT
+    Gateway-&gt;&gt;Authz: Check principal and action
+    Authz--&gt;&gt;Gateway: Allow
+    Gateway-&gt;&gt;Directory: Forward authorized request
+    Directory--&gt;&gt;Gateway: Response
+    Gateway--&gt;&gt;CLI: Response
+</code></pre>
+
+<p>This separation matters. The CLI gets a familiar login experience, operators can integrate with their existing identity provider, and backend services do not need to grow one-off authentication paths for every external client.</p>
+
+<p>With recent <code class="language-plaintext highlighter-rouge">oidc-gateway</code> deployments, operators may expose two hostnames:</p>
+
+<ul>
+  <li>An OIDC/JWT hostname for <code class="language-plaintext highlighter-rouge">auth_mode: oidc</code>, cached OIDC login, pre-issued JWTs, and CI workload identity.</li>
+  <li>An mTLS hostname for <code class="language-plaintext highlighter-rouge">auth_mode: x509</code> or <code class="language-plaintext highlighter-rouge">auth_mode: tls</code>, where the gateway validates the client certificate.</li>
+</ul>
+
+<p>Use the endpoint that matches the credential you send. If you use the OIDC context above, point it at the OIDC/JWT hostname. For operator-level setup, see <a href="https://docs.agntcy.org/dir/directory-oidc-authentication/">OIDC Authentication for Directory</a>.</p>
+
+<h2 id="step-5-show-the-directory-context-in-zsh">Step 5: Show the Directory Context in zsh</h2>
+
+<p>Contexts reduce typing, but they also introduce a new question: which Directory am I pointing at right now?</p>
+
+<p>If you use zsh, you can add a small helper that prints the active <code class="language-plaintext highlighter-rouge">dirctl</code> context. It fails quietly when <code class="language-plaintext highlighter-rouge">dirctl</code> is unavailable or no context is configured.</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function </span>dirctl_context_prompt<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span>ctx
+  <span class="nv">ctx</span><span class="o">=</span><span class="si">$(</span>dirctl context current <span class="nt">--quiet</span> 2&gt;/dev/null<span class="si">)</span> <span class="o">||</span> <span class="k">return</span>
+  <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$ctx</span><span class="s2">"</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> print <span class="nt">-r</span> <span class="nt">--</span> <span class="s2">"dir:</span><span class="nv">$ctx</span><span class="s2">"</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>You can try it directly:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl_context_prompt
+</code></pre></div></div>
+
+<p>If your current context is <code class="language-plaintext highlighter-rouge">prod</code>, it prints:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dir:prod
+</code></pre></div></div>
+
+<p>For a simple custom prompt, you can wire it into <code class="language-plaintext highlighter-rouge">PROMPT</code>:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>setopt PROMPT_SUBST
+<span class="nv">PROMPT</span><span class="o">=</span><span class="s1">'$(dirctl_context_prompt) %~ %# '</span>
+</code></pre></div></div>
+
+<p>That is enough to make the active Directory visible before every command.</p>
+
+<h2 id="powerlevel10k-integration">Powerlevel10k Integration</h2>
+
+<p>If you use <a href="https://github.com/romkatv/powerlevel10k">powerlevel10k</a>, define a custom prompt segment in <code class="language-plaintext highlighter-rouge">~/.p10k.zsh</code>:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function </span>prompt_dirctl_context<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span>ctx
+  <span class="nv">ctx</span><span class="o">=</span><span class="si">$(</span>dirctl context current <span class="nt">--quiet</span> 2&gt;/dev/null<span class="si">)</span> <span class="o">||</span> <span class="k">return</span>
+  <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$ctx</span><span class="s2">"</span> <span class="o">]]</span> <span class="o">||</span> <span class="k">return
+
+  </span>p10k segment <span class="nt">-f</span> 39 <span class="nt">-i</span> <span class="s1">'DIR'</span> <span class="nt">-t</span> <span class="s2">"</span><span class="nv">$ctx</span><span class="s2">"</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Then add <code class="language-plaintext highlighter-rouge">dirctl_context</code> to one of your prompt element arrays:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">typeset</span> <span class="nt">-g</span> <span class="nv">POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS</span><span class="o">=(</span>
+  dirctl_context
+  status
+  command_execution_time
+  <span class="nb">time</span>
+<span class="o">)</span>
+</code></pre></div></div>
+
+<p>Now your prompt shows the active Directory context next to your other session state. When the prompt says <code class="language-plaintext highlighter-rouge">prod</code>, you know commands are going to the hosted testbed. When it says <code class="language-plaintext highlighter-rouge">local</code>, you know you are working against your daemon.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3 id="dirctl-context-current---quiet-prints-nothing"><code class="language-plaintext highlighter-rouge">dirctl context current --quiet</code> prints nothing</h3>
+
+<p>No <code class="language-plaintext highlighter-rouge">current_context</code> is set, or the config file does not exist yet. Create <code class="language-plaintext highlighter-rouge">~/.config/dirctl/config.yaml</code>, then run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set local</span>
+</code></pre></div></div>
+
+<h3 id="dirctl-context-validate-reports-an-unknown-field"><code class="language-plaintext highlighter-rouge">dirctl context validate</code> reports an unknown field</h3>
+
+<p>The client config parser validates known fields. Check for typos such as <code class="language-plaintext highlighter-rouge">server-addr</code> instead of <code class="language-plaintext highlighter-rouge">server_address</code>, or <code class="language-plaintext highlighter-rouge">authMode</code> instead of <code class="language-plaintext highlighter-rouge">auth_mode</code>.</p>
+
+<h3 id="server_address-is-required"><code class="language-plaintext highlighter-rouge">server_address is required</code></h3>
+
+<p>Every usable context needs a <code class="language-plaintext highlighter-rouge">server_address</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">contexts</span><span class="pi">:</span>
+  <span class="na">local</span><span class="pi">:</span>
+    <span class="na">server_address</span><span class="pi">:</span> <span class="s">localhost:8888</span>
+</code></pre></div></div>
+
+<h3 id="the-local-context-cannot-connect">The local context cannot connect</h3>
+
+<p>Make sure the daemon is running:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl daemon start
+</code></pre></div></div>
+
+<p>Then test the local context:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--context</span> <span class="nb">local </span>search <span class="nt">--name</span> <span class="s2">"*"</span>
+</code></pre></div></div>
+
+<h3 id="the-prod-context-says-you-are-not-authenticated">The prod context says you are not authenticated</h3>
+
+<p>Log in again:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set </span>prod
+dirctl auth login
+dirctl auth status
+</code></pre></div></div>
+
+<p>If login succeeds but API calls still fail, confirm that your user or organization is allowed by the hosted environment’s policy.</p>
+
+<h3 id="oidc-and-mtls-endpoints-are-easy-to-mix-up">OIDC and mTLS endpoints are easy to mix up</h3>
+
+<p>If your context uses <code class="language-plaintext highlighter-rouge">auth_mode: oidc</code>, use the OIDC/JWT gateway hostname. If your context uses <code class="language-plaintext highlighter-rouge">auth_mode: x509</code> or <code class="language-plaintext highlighter-rouge">auth_mode: tls</code>, use the mTLS gateway hostname.</p>
+
+<h2 id="wrap-up">Wrap-up</h2>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl context</code> is a small feature with a big impact on day-to-day Directory usage.</p>
+
+<p>You can keep a local daemon for fast iteration, use the hosted testbed with OIDC when you need a shared Directory, and make the active target visible in your shell prompt. The result is less flag juggling, fewer accidental commands against the wrong environment, and a smoother path from local development to authenticated Directory access.</p>
+
+<p>For deeper reference material, continue with the <a href="https://docs.agntcy.org/dir/directory-cli/">Directory CLI guide</a>, the <a href="https://docs.agntcy.org/dir/dir-deployment-local/">Local Deployment guide</a>, and <a href="https://docs.agntcy.org/dir/directory-oidc-authentication/">OIDC Authentication for Directory</a>.</p>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"></div>
+    <div class="post-nav-next"></div>
+  </nav>
+
+  <a class="u-url" href="/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html" hidden></a>
+</article>
+
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/drafts/docs-dir-cli-context/"></data>
+
+  <div class="wrapper">
+    <div class="footer-col-wrapper">
+
+      <div class="footer-col">
+        <h2 class="footer-heading">AGNTCY Blogs</h2>
+        <p class="footer-copyright">Copyright © AGNTCY a Series of LF Projects, LLC</p>
+      </div>
+
+      <div class="footer-col">
+        <ul class="social-media-list"><li>
+            <a href="https://github.com/agntcy">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-dir-cli-context/assets/minima-social-icons.svg#github"></use></svg>
+              <span class="username">GitHub</span>
+            </a>
+          </li><li>
+            <a href="https://www.linkedin.com/company/agntcyproject">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-dir-cli-context/assets/minima-social-icons.svg#linkedin"></use></svg>
+              <span class="username">LinkedIn</span>
+            </a>
+          </li><li>
+            <a href="https://www.youtube.com/@agntcy-lf">
+              <svg class="svg-icon"><use xlink:href="/drafts/docs-dir-cli-context/assets/minima-social-icons.svg#youtube"></use></svg>
+              <span class="username">YouTube</span>
+            </a>
+          </li><li>
+            <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">
+              <svg class="svg-icon" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M3.362 10.11c0 .926-.756 1.681-1.681 1.681S0 11.036 0 10.111c0-.926.756-1.681 1.681-1.681h1.681v1.68zm.846 0c0-.926.756-1.681 1.681-1.681s1.681.756 1.681 1.681v4.21c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681v-4.21zM5.89 3.362c-.926 0-1.681-.756-1.681-1.681S4.964 0 5.89 0s1.681.756 1.681 1.681v1.681H5.89zm0 .846c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681H1.68C.756 7.57 0 6.814 0 5.889s.756-1.681 1.681-1.681h4.21zm6.749 1.681c0-.926.756-1.681 1.681-1.681S16 4.964 16 5.889s-.756 1.681-1.681 1.681h-1.681V5.89zm-.846 0c0 .926-.756 1.681-1.681 1.681s-1.681-.756-1.681-1.681V1.68C8.43.756 9.186 0 10.111 0s1.681.756 1.681 1.681v4.21zm-1.681 6.749c.926 0 1.681.756 1.681 1.681S11.036 16 10.111 16s-1.681-.756-1.681-1.681v-1.681h1.681zm0-.846c-.926 0-1.681-.756-1.681-1.681s.756-1.681 1.681-1.681h4.21c.926 0 1.681.756 1.681 1.681s-.756 1.681-1.681 1.681h-4.21z"/>
+              </svg>
+              <span class="username">Slack</span>
+            </a>
+          </li></ul>
+      </div>
+
+      <div class="footer-col">
+        <p class="footer-description">Building infrastructure for the Internet of Agents</p>
+      </div>
+
+    </div>
+  </div>
+
+</footer>
+<script src="/drafts/docs-dir-cli-context/assets/js/theme-toggle.js"></script>
+    <script src="/drafts/docs-dir-cli-context/assets/js/code-copy.js"></script>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      async function renderMermaid() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+        // Agntcy color scheme for mermaid
+        const agntcyTheme = {
+          startOnLoad: false,
+          theme: 'base',
+          themeVariables: isDark ? {
+            // Dark mode - agntcy slate theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#e3e3e3',
+            secondaryColor: '#002a4d',
+            tertiaryColor: '#03142b',
+            background: '#03142b',
+            mainBkg: '#03142b',
+            secondBkg: '#002a4d',
+            textColor: '#e3e3e3',
+            nodeBorder: '#0251af',
+            clusterBkg: '#002a4d',
+            clusterBorder: '#0251af',
+            titleColor: '#fbaf46',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#e3e3e3',
+            signalColor: '#e3e3e3',
+            signalTextColor: '#e3e3e3',
+            labelBoxBkgColor: '#002a4d',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#e3e3e3',
+            loopTextColor: '#e3e3e3',
+            noteBkgColor: '#002a4d',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#e3e3e3',
+            activationBkgColor: '#002a4d',
+            activationBorderColor: '#fbaf46',
+            sequenceNumberColor: '#03142b'
+          } : {
+            // Light mode - agntcy blue theme
+            primaryColor: '#0251af',
+            primaryTextColor: '#f3f6fd',
+            primaryBorderColor: '#0251af',
+            lineColor: '#1c1e21',
+            secondaryColor: '#e8eefb',
+            tertiaryColor: '#eff3fc',
+            background: '#eff3fc',
+            mainBkg: '#eff3fc',
+            secondBkg: '#e8eefb',
+            textColor: '#1c1e21',
+            nodeBorder: '#0251af',
+            clusterBkg: '#e8eefb',
+            clusterBorder: '#0251af',
+            titleColor: '#0251af',
+            actorBkg: '#0251af',
+            actorBorder: '#0251af',
+            actorTextColor: '#f3f6fd',
+            actorLineColor: '#1c1e21',
+            signalColor: '#1c1e21',
+            signalTextColor: '#1c1e21',
+            labelBoxBkgColor: '#e8eefb',
+            labelBoxBorderColor: '#0251af',
+            labelTextColor: '#1c1e21',
+            loopTextColor: '#1c1e21',
+            noteBkgColor: '#e8eefb',
+            noteBorderColor: '#0251af',
+            noteTextColor: '#1c1e21',
+            activationBkgColor: '#e8eefb',
+            activationBorderColor: '#0251af',
+            sequenceNumberColor: '#f3f6fd'
+          }
+        };
+
+        mermaid.initialize(agntcyTheme);
+        await mermaid.run();
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+          // Find all code blocks with language-mermaid
+          const elements = document.querySelectorAll('.language-mermaid');
+
+          // Transform them into div.mermaid
+          elements.forEach(element => {
+              let graphDefinition = element.textContent;
+              let container = element;
+
+              // Handle <pre><code class="language-mermaid"> structure (Kramdown default)
+              if (element.tagName.toLowerCase() === 'code' && element.parentElement && element.parentElement.tagName.toLowerCase() === 'pre') {
+                  container = element.parentElement;
+              }
+              // Handle <div class="language-mermaid"><pre><code> structure
+              else if (element.tagName.toLowerCase() === 'div') {
+                   const code = element.querySelector('code');
+                   if (code) graphDefinition = code.textContent;
+              }
+
+              const newDiv = document.createElement('div');
+              newDiv.className = 'mermaid';
+              newDiv.setAttribute('data-original-code', graphDefinition);
+              newDiv.textContent = graphDefinition;
+
+              container.replaceWith(newDiv);
+          });
+
+          // Initial Render
+          await renderMermaid();
+
+          // Watch for theme changes
+          const observer = new MutationObserver(async (mutations) => {
+              for (const mutation of mutations) {
+                  if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+                      // Reset diagrams to original code
+                      document.querySelectorAll('.mermaid').forEach(div => {
+                          const original = div.getAttribute('data-original-code');
+                          if (original) {
+                              div.removeAttribute('data-processed');
+                              div.innerHTML = '';
+                              div.textContent = original;
+                          }
+                      });
+                      // Re-render
+                      await renderMermaid();
+                  }
+              }
+          });
+
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      });
+    </script>
+    <style>
+    #cookie-notice {
+        padding: 2rem 2rem;
+        display: none;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: #1a1a1a;
+        color: #ffffff;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.5);
+        z-index: 9999;
+        border-top: 3px solid #4a90e2;
+    }
+    #cookie-notice span {
+        font-size: 1.1rem;
+        font-weight: 500;
+        display: block;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    #cookie-notice a {
+        display: inline-block;
+        cursor: pointer;
+        padding: 0.875rem 2.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: #4a90e2;
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    #cookie-notice a:hover {
+        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4);
+    }
+    @media (max-width: 767px) {
+        #cookie-notice {
+            padding: 1.5rem 1rem;
+        }
+        #cookie-notice span {
+            font-size: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        #cookie-notice a {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+<div id="cookie-notice"><span>We would like to use third party cookies and scripts to improve the functionality of this website.</span><a id="cookie-notice-accept" class="btn btn-primary">Approve</a></div>
+<script>
+    function createCookie(name,value,days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + value + expires + "; path=/";
+    }
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
+    function loadGoogleAnalytics() {
+        
+        // Load Google Analytics V4
+        var script = document.createElement('script');
+        script.async = true;
+        script.src = "https://www.googletagmanager.com/gtag/js?id=G-3D9938KZCN";
+        document.head.appendChild(script);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-3D9938KZCN');
+        
+    }
+
+    if(readCookie('cookie-notice-dismissed')=='true') {
+        loadGoogleAnalytics();
+    } else {
+        document.getElementById('cookie-notice').style.display = 'block';
+    }
+
+    document.getElementById('cookie-notice-accept').addEventListener("click",function() {
+        createCookie('cookie-notice-dismissed','true',31);
+        document.getElementById('cookie-notice').style.display = 'none';
+        location.reload();
+    });
+
+</script>
+
+  </body>
+
+</html>
+
