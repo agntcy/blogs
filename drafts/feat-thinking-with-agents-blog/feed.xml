@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/" rel="alternate" type="text/html" /><updated>2026-05-18T10:55:53+00:00</updated><id>https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Now you’re thinking with Agents</title><link href="https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/technical/agents/a2a/2026/05/18/thinking-with-agents.html" rel="alternate" type="text/html" title="Now you’re thinking with Agents" /><published>2026-05-18T09:00:00+00:00</published><updated>2026-05-18T09:00:00+00:00</updated><id>https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/technical/agents/a2a/2026/05/18/thinking-with-agents</id><content type="html" xml:base="https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/technical/agents/a2a/2026/05/18/thinking-with-agents.html"><![CDATA[<p>There is a moment in Portal when the game clicks. You stop trying to find a way
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/" rel="alternate" type="text/html" /><updated>2026-05-18T17:59:30+00:00</updated><id>https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Now you’re thinking with Agents</title><link href="https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/technical/agents/a2a/2026/05/18/thinking-with-agents.html" rel="alternate" type="text/html" title="Now you’re thinking with Agents" /><published>2026-05-18T09:00:00+00:00</published><updated>2026-05-18T09:00:00+00:00</updated><id>https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/technical/agents/a2a/2026/05/18/thinking-with-agents</id><content type="html" xml:base="https://blogs.agntcy.org/drafts/feat-thinking-with-agents-blog/technical/agents/a2a/2026/05/18/thinking-with-agents.html"><![CDATA[<p>There is a moment in Portal when the game clicks. You stop trying to find a way
 around the obstacle and you realise you can just connect two surfaces with a
 portal and walk straight through. The puzzle hasn’t changed, but your perception
 of the solution has — and that makes all the difference.</p>
@@ -209,7 +209,7 @@ configuration.</p>
 
 <h2 id="what-makes-this-practical">What makes this practical</h2>
 
-<p>Two things enable this pattern at scale:</p>
+<p>Three things enable this pattern at scale:</p>
 
 <p><strong><a href="https://a2a-protocol.org/latest/">A2A</a></strong> provides the standard protocol for
 agent-to-agent communication. Instead of inventing a bespoke API for each remote
@@ -226,6 +226,15 @@ There is no need for publicly routable addresses, inbound firewall rules, or
 VPN tunnels. SLIM also handles end-to-end MLS encryption and per-message
 acknowledgment, so the reliability and confidentiality properties hold regardless
 of what network sits between the agents.</p>
+
+<p><strong><a href="https://agentskills.io">AgentSkills</a></strong> provides the capability layer. Rather
+than building a bespoke agent binary for each environment from scratch, you
+compose a generic agent runtime with a set of skills tailored to what that
+environment needs — a Kubernetes skill set for cluster agents, a system
+administration skill set for VM agents, and so on. The same runtime ships
+everywhere; only the skills differ. This makes the remote agents cheap to
+produce, easy to update, and straightforward to reason about: each agent does
+exactly what its skill manifest describes, nothing more.</p>
 
 <h2 id="the-properties-that-fall-out">The properties that fall out</h2>
 
