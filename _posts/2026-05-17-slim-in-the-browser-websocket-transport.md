@@ -2,8 +2,8 @@
 layout: post
 title: "SLIM in the Browser: WebAssembly Bindings and a WebSocket Transport"
 date: 2026-05-17 07:00:00 +0000
-author: Your Name
-author_url: https://github.com/your-handle
+author: Amit Kumar
+author_url: https://github.com/hackeramitkumar
 categories: technical
 tags: [slim, browser, webassembly, wasm, websocket, transport, agents]
 ---
@@ -153,7 +153,7 @@ What this is showing:
 
 - **One** SLIM data plane in Docker, with two listeners enabled in a
   single YAML config — gRPC on `:46357`, WebSocket on `:46367`.
-- **Seven participants** sharing one multicast channel named
+- **Seven participants** sharing one single multicast channel named
   `agntcy/demo/chat`:
   - Two native Python listeners over **gRPC**.
   - Two native Python listeners over **WebSocket** (same Python SDK,
@@ -176,11 +176,18 @@ browser, never in plaintext on the wire or on the node.
 
 ### Watch the demo
 
-<!-- Replace the src below with the final video URL once it is uploaded. -->
-<video controls width="100%" preload="metadata">
-  <source src="/assets/videos/slim-websocket-browser-demo.mp4" type="video/mp4" />
-  Your browser does not support the video tag.
-</video>
+<div class="video-embed" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;">
+  <iframe
+    src="https://www.youtube.com/embed/IhQrhSs6izk"
+    title="SLIM in the Browser — WebSocket + WebAssembly demo"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen
+    style="position:absolute;top:0;left:0;width:100%;height:100%;">
+  </iframe>
+</div>
+
+Watch on YouTube: [youtube.com/watch?v=IhQrhSs6izk](https://www.youtube.com/watch?v=IhQrhSs6izk)
 
 The recording walks through the full flow: bringing up the gateway,
 starting the four native Python listeners one by one, opening the
