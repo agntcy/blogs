@@ -225,7 +225,7 @@ configuration.
 
 ## What makes this practical
 
-Two things enable this pattern at scale:
+Three things enable this pattern at scale:
 
 **[A2A](https://a2a-protocol.org/latest/)** provides the standard protocol for
 agent-to-agent communication. Instead of inventing a bespoke API for each remote
@@ -242,6 +242,15 @@ There is no need for publicly routable addresses, inbound firewall rules, or
 VPN tunnels. SLIM also handles end-to-end MLS encryption and per-message
 acknowledgment, so the reliability and confidentiality properties hold regardless
 of what network sits between the agents.
+
+**[AgentSkills](https://agentskills.io)** provides the capability layer. Rather
+than building a bespoke agent binary for each environment from scratch, you
+compose a generic agent runtime with a set of skills tailored to what that
+environment needs — a Kubernetes skill set for cluster agents, a system
+administration skill set for VM agents, and so on. The same runtime ships
+everywhere; only the skills differ. This makes the remote agents cheap to
+produce, easy to update, and straightforward to reason about: each agent does
+exactly what its skill manifest describes, nothing more.
 
 ## The properties that fall out
 
