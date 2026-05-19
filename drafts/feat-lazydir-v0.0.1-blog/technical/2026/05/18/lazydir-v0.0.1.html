@@ -208,27 +208,12 @@ Pre-built binaries for Linux, macOS, and Windows (amd64/arm64) are also availabl
 <h2 id="whats-next">What’s Next</h2>
 
 <p>The first release covers read-only browsing.
-The roadmap is focused on making lazydir a complete management interface for directory nodes.</p>
-
-<p><strong>CRUD operations</strong> — Adding, editing, deleting, and exporting records directly from the TUI
-(<a href="https://github.com/agntcy/lazydir/issues/13">#13</a>).
-Each operation is bound to a dedicated keybinding (<code class="language-plaintext highlighter-rouge">a</code> to add, <code class="language-plaintext highlighter-rouge">c</code> to change, <code class="language-plaintext highlighter-rouge">d</code> to delete, <code class="language-plaintext highlighter-rouge">e</code> to export) with
-appropriate UI flows for input, confirmation, and feedback.</p>
-
-<p><strong>Network discovery</strong> — A toggle in the connections panel that switches between local-only and local+network mode
-(<a href="https://github.com/agntcy/lazydir/issues/19">#19</a>).
-When network mode is active, all announced records from the DHT routing cache are preloaded and browsable alongside
-local records.
-Remote records appear in a distinct color and can be pulled into the local node with <code class="language-plaintext highlighter-rouge">p</code>.</p>
-
-<p><strong>Collapsible JSON</strong> — The preview panel will render JSON collapsed to top-level fields by default
-(<a href="https://github.com/agntcy/lazydir/issues/18">#18</a>), with triangle indicators to expand and collapse nested objects.
-This will make navigation of large, deeply-nested records significantly more manageable.</p>
-
-<p><strong>Cross-node copy-paste</strong> — A cherry-pick workflow for transferring records between directory nodes that are not in a
-federation (<a href="https://github.com/agntcy/lazydir/issues/20">#20</a>).
-Records are selected on a source node with <code class="language-plaintext highlighter-rouge">Shift+C</code>, the user switches to a target node in the connections panel, and
-pastes with <code class="language-plaintext highlighter-rouge">Shift+V</code>.</p>
+Upcoming work is focused on CRUD operations for managing records directly from the TUI, searching across the network to
+discover records announced by remote nodes, and copy-pasting records between directory nodes that are not in a
+federation.
+Some of these ideas already come from early user feedback, which has been valuable in shaping the roadmap.
+If you have suggestions or feature requests, please open an issue on the
+<a href="https://github.com/agntcy/lazydir/issues">GitHub project</a> — contributions and ideas are welcome.</p>
 
 <h2 id="references">References</h2>
 
