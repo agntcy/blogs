@@ -1,4 +1,167 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-05-20T07:14:35+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">SLIM MVP: Multicluster Customer Remediation with AI Agents</title><link href="https://blogs.agntcy.org/technical/2026/04/21/mvp-ai-agents-multicluster.html" rel="alternate" type="text/html" title="SLIM MVP: Multicluster Customer Remediation with AI Agents" /><published>2026-04-21T07:00:00+00:00</published><updated>2026-04-21T07:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/04/21/mvp-ai-agents-multicluster</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/04/21/mvp-ai-agents-multicluster.html"><![CDATA[<p>This post walks through a multicluster customer-remediation scenario built on
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-05-20T13:19:54+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">lazydir: A Terminal UI for Browsing Agent Directory</title><link href="https://blogs.agntcy.org/technical/2026/05/20/lazydir-v0.0.1.html" rel="alternate" type="text/html" title="lazydir: A Terminal UI for Browsing Agent Directory" /><published>2026-05-20T07:00:00+00:00</published><updated>2026-05-20T07:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/05/20/lazydir-v0.0.1</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/05/20/lazydir-v0.0.1.html"><![CDATA[<p>The tooling around <a href="https://github.com/agntcy/dir">Agent Directory</a> has evolved through several layers.
+The <code class="language-plaintext highlighter-rouge">dirctl</code> CLI provides full programmatic control, and the
+<a href="https://blogs.agntcy.org/technical/2026/02/19/directory-mcp-server.html">Directory MCP server</a> enables natural-language
+interaction with directory nodes from within AI-powered IDEs.
+These tools serve their respective workflows well, but neither is optimized for the common task of simply exploring what
+a directory node contains — browsing records, narrowing results through filters, and inspecting individual entries.</p>
+
+<p><a href="https://github.com/agntcy/lazydir">lazydir</a> addresses this gap.
+It is a keyboard-driven terminal user interface (TUI) for Agent Directory, inspired by
+<a href="https://github.com/jesseduffield/lazygit">lazygit</a> and <a href="https://github.com/jesseduffield/lazydocker">lazydocker</a>.
+This post describes the motivation behind lazydir, the capabilities included in the first release, how to install and
+configure it, and the direction of upcoming development.</p>
+
+<!--more-->
+
+<h2 id="the-problem-browsing-a-directory-node-is-a-multi-step-process">The Problem: Browsing a Directory Node Is a Multi-Step Process</h2>
+
+<p>Discovering the contents of a directory node through <code class="language-plaintext highlighter-rouge">dirctl</code> requires constructing search queries, interpreting JSON
+output, and often piping results through <code class="language-plaintext highlighter-rouge">jq</code> to extract the relevant fields.
+Finding agents with a specific skill requires knowing the exact taxonomy name.
+Comparing records across different filter criteria involves running multiple commands and cross-referencing the results
+manually.</p>
+
+<p>The MCP server improves this workflow considerably.
+A developer can describe what they are looking for in natural language, and the AI assistant translates that into the
+appropriate tool calls.
+This approach works well for exploratory tasks and for workflows that combine discovery with other IDE activities.
+However, each query still requires a round-trip through the assistant, and the interaction model is conversational
+rather than navigational.</p>
+
+<p>What was missing was a way to directly observe a directory node’s contents — to switch between filter categories, scan
+through matching records, and inspect their details in a continuous flow.
+The same pattern that lazygit provides for navigating a git repository without repeatedly typing <code class="language-plaintext highlighter-rouge">git log</code>, <code class="language-plaintext highlighter-rouge">git diff</code>,
+and <code class="language-plaintext highlighter-rouge">git show</code>.</p>
+
+<h2 id="lazydir-v001">lazydir v0.0.1</h2>
+
+<p>lazydir presents the contents of a directory node in four navigable panels:
+connections, filters, records, and a live preview.</p>
+
+<div style="text-align: center; margin: 10px 0px;">
+  <img src="/assets/figures/lazydir1.png" alt="Lazydir" />
+</div>
+
+<p>The interface is keyboard-driven.
+Panels are cycled with <code class="language-plaintext highlighter-rouge">tab</code>, items are navigated with arrow keys (Vim-style <code class="language-plaintext highlighter-rouge">j</code>/<code class="language-plaintext highlighter-rouge">k</code> and <code class="language-plaintext highlighter-rouge">h</code>/<code class="language-plaintext highlighter-rouge">l</code> are also supported),
+and details are expanded with <code class="language-plaintext highlighter-rouge">enter</code> or <code class="language-plaintext highlighter-rouge">i</code>.
+Mouse clicks are supported as well for panel selection and item navigation.
+The full set of available keybindings is accessible at any time by pressing <code class="language-plaintext highlighter-rouge">?</code>.
+No prior knowledge of <code class="language-plaintext highlighter-rouge">dirctl</code> commands is required.</p>
+
+<h3 id="connections-panel">Connections Panel</h3>
+
+<p>The top-left panel displays the live health status of the Directory and OASF endpoints.
+Pressing <code class="language-plaintext highlighter-rouge">c</code> (or <code class="language-plaintext highlighter-rouge">enter</code>) on either row opens a selection popup listing all servers of that type defined in the
+configuration file.
+The same popup also offers a “Custom…” option for entering a new address directly, without modifying any
+configuration.
+Connection details are viewable with <code class="language-plaintext highlighter-rouge">i</code>.
+For servers that require authentication, lazydir supports OIDC device-flow login, displaying the authorization URL and
+code inline within the TUI.</p>
+
+<h3 id="filters-panel">Filters Panel</h3>
+
+<p>The middle-left panel lists collapsible filter categories:
+Skills, Domains, Modules, OASF version, Version, Author, and Trusted/Verified.
+Toggling any option with <code class="language-plaintext highlighter-rouge">enter</code> or <code class="language-plaintext highlighter-rouge">space</code> updates the records panel instantly.
+Most filters are applied client-side from a local cache, so the response is immediate — only the Trusted/Verified filter
+requires a server round-trip.
+A search across all categories is available with <code class="language-plaintext highlighter-rouge">/</code>, and pressing <code class="language-plaintext highlighter-rouge">i</code> on any skill, domain or module opens the OASF
+class hierarchy and its description.</p>
+
+<h3 id="records-panel">Records Panel</h3>
+
+<p>The bottom-left panel presents the filtered list of records.
+Records with multiple versions are grouped under collapsible headers.
+A live name filter is available with <code class="language-plaintext highlighter-rouge">/</code>, a record info popup (showing CID, annotations, schema version, and created-at
+timestamp) can be opened with <code class="language-plaintext highlighter-rouge">i</code>, and the CID or full JSON can be copied to the clipboard with <code class="language-plaintext highlighter-rouge">y</code>.</p>
+
+<h3 id="preview-panel">Preview Panel</h3>
+
+<p>The right-hand panel renders the selected record’s JSON with syntax highlighting via
+<a href="https://github.com/alecthomas/chroma">Chroma</a>.
+When focused, the content is fully scrollable.</p>
+
+<h3 id="configuration-and-theming">Configuration and Theming</h3>
+
+<p>lazydir reads an optional configuration file from <code class="language-plaintext highlighter-rouge">~/.config/lazydir/config.yml</code>.
+The recommended approach for working with multiple directory nodes is to list the frequently used servers in this file.
+All defined servers appear in the in-app server selection popup, with the first entry used as the default connection.
+Environment variable overrides (<code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_SERVER_ADDRESS</code>, <code class="language-plaintext highlighter-rouge">OASF_SERVER_ADDRESS</code>) are also supported.</p>
+
+<p>The configuration file additionally supports color theme customization (10 abstract color slots accepting named colors,
+256-color indices, and hex true-color values), GUI tuning parameters (scroll step, panel split ratio, input debounce
+delay, popup dimming), and stream batch sizing for record loading.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">server</span><span class="pi">:</span>
+  <span class="na">directoryServers</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">address</span><span class="pi">:</span> <span class="s2">"</span><span class="s">localhost:8888"</span>
+    <span class="pi">-</span> <span class="na">address</span><span class="pi">:</span> <span class="s2">"</span><span class="s">prod.gateway.ads.outshift.io:443"</span>
+      <span class="na">oidcIssuer</span><span class="pi">:</span> <span class="s2">"</span><span class="s">https://auth.example.com"</span>
+      <span class="na">oidcClientID</span><span class="pi">:</span> <span class="s2">"</span><span class="s">lazydir"</span>
+  <span class="na">oasfServers</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="s2">"</span><span class="s">https://schema.oasf.outshift.com"</span>
+
+<span class="na">gui</span><span class="pi">:</span>
+  <span class="na">theme</span><span class="pi">:</span>
+    <span class="na">activeBorderColor</span><span class="pi">:</span> <span class="s2">"</span><span class="s">green"</span>
+    <span class="na">selectedRowBgColor</span><span class="pi">:</span> <span class="s2">"</span><span class="s">8"</span>
+  <span class="na">splitRatio</span><span class="pi">:</span> <span class="m">0.33</span>
+</code></pre></div></div>
+
+<h2 id="getting-started">Getting Started</h2>
+
+<p>A running Directory server is required.
+The quickest way to start one locally is:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl daemon start
+</code></pre></div></div>
+
+<p>Install lazydir via Homebrew or Go:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Homebrew</span>
+brew tap agntcy/lazydir https://github.com/agntcy/lazydir
+brew <span class="nb">install </span>lazydir
+
+<span class="c"># Or via Go</span>
+go <span class="nb">install </span>github.com/agntcy/lazydir@latest
+</code></pre></div></div>
+
+<p>Then launch:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lazydir
+</code></pre></div></div>
+
+<p>The TUI connects to the configured directory, streams in the available records, and is ready for browsing.
+Pre-built binaries for Linux, macOS, and Windows (amd64/arm64) are also available on the
+<a href="https://github.com/agntcy/lazydir/releases">GitHub Releases</a> page.</p>
+
+<h2 id="whats-next">What’s Next</h2>
+
+<p>The first release covers read-only browsing.
+Upcoming work is focused on CRUD operations for managing records directly from the TUI, searching across the network to
+discover records announced by remote nodes, and copy-pasting records between directory nodes that are not in a
+federation.
+Some of these ideas already come from early user feedback, which has been valuable in shaping the roadmap.
+If you have suggestions or feature requests, please open an issue on the
+<a href="https://github.com/agntcy/lazydir/issues">GitHub project</a> — contributions and ideas are welcome.</p>
+
+<h2 id="references">References</h2>
+
+<ul>
+  <li><a href="https://github.com/agntcy/lazydir">lazydir on GitHub</a></li>
+  <li><a href="https://github.com/agntcy/dir">Agent Directory</a></li>
+  <li><a href="https://docs.agntcy.org/dir/overview/">Directory Documentation</a></li>
+  <li><a href="https://blogs.agntcy.org/technical/2026/02/19/directory-mcp-server.html">Directory MCP Server</a></li>
+  <li><a href="https://github.com/agntcy/oasf">OASF (Open Agentic Schema Framework)</a></li>
+</ul>
+
+<hr />
+
+<p><em>Have questions about lazydir?
+Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check
+out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Andras Jaky</name></author><category term="technical" /><category term="dir" /><category term="tui" /><category term="go" /><category term="developer-experience" /><category term="agent-directory" /><summary type="html"><![CDATA[The tooling around Agent Directory has evolved through several layers. The dirctl CLI provides full programmatic control, and the Directory MCP server enables natural-language interaction with directory nodes from within AI-powered IDEs. These tools serve their respective workflows well, but neither is optimized for the common task of simply exploring what a directory node contains — browsing records, narrowing results through filters, and inspecting individual entries. lazydir addresses this gap. It is a keyboard-driven terminal user interface (TUI) for Agent Directory, inspired by lazygit and lazydocker. This post describes the motivation behind lazydir, the capabilities included in the first release, how to install and configure it, and the direction of upcoming development.]]></summary></entry><entry><title type="html">SLIM MVP: Multicluster Customer Remediation with AI Agents</title><link href="https://blogs.agntcy.org/technical/2026/04/21/mvp-ai-agents-multicluster.html" rel="alternate" type="text/html" title="SLIM MVP: Multicluster Customer Remediation with AI Agents" /><published>2026-04-21T07:00:00+00:00</published><updated>2026-04-21T07:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/04/21/mvp-ai-agents-multicluster</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/04/21/mvp-ai-agents-multicluster.html"><![CDATA[<p>This post walks through a multicluster customer-remediation scenario built on
 <a href="https://docs.agntcy.org/slim/overview/">SLIM</a>. A customer cluster stays
 private, a cloud-hosted troubleshooting agent stays reachable, and operators
 and automation work across that boundary without exposing every service
@@ -4877,560 +5040,4 @@ possible.</p>
 <hr />
 
 <p><em>SLIM is developed by AGNTCY Contributors and released under the Apache 2.0
-License.</em></p>]]></content><author><name>Mauro Sardara</name></author><category term="technical" /><category term="slim" /><category term="rust" /><category term="messaging" /><category term="groups" /><category term="grpc" /><summary type="html"><![CDATA[The AI landscape is rapidly evolving from isolated models to interconnected networks of intelligent agents. As AI systems become more sophisticated, they need to communicate, collaborate, and coordinate in real-time. Protocols like A2A (Agent-to-Agent) define what agents say to each other: standardized messages, task delegation, and coordination semantics. But A2A needs a robust transport layer that defines how agents securely exchange these messages across network boundaries. Existing messaging frameworks weren’t designed for the unique demands of agentic AI. They either sacrifice security for performance, lack proper group communication primitives, or can’t scale to support distributed multi-agent systems. Others rely on centralized brokers that can’t be safely exposed across network boundaries, limiting agents to run only where the broker is deployed. Enter SLIM (Secure Low-Latency Interactive Messaging), a next-generation communication framework that provides the secure, scalable transport layer for agentic AI protocols like A2A. SLIM handles the “piping”: secure connections, message routing, group communication, and end-to-end encryption, so protocol implementations can focus on agent semantics, not infrastructure. The Problem: Agent Protocols Need Secure Transport Modern AI applications are increasingly agentic. They don’t just respond to prompts, they take action, use tools, coordinate with other agents, and make autonomous decisions. The A2A protocol has emerged as a standard for defining how agents communicate: specifying message formats, task delegation patterns, and coordination semantics. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go) that implement these agent-level semantics. However, A2A and similar agent protocols need a robust transport layer beneath them. Whether you’re building: Multi-agent AI systems where specialized agents collaborate to solve complex problems. AI-powered workflows that orchestrate between LLMs, tools, and data sources. Real-time agent collaboration where agents need to share context and coordinate actions. Distributed AI services that span data centers, edge devices, and browsers. You need a messaging infrastructure that can handle: Real-time, low-latency communication — AI agents can’t wait seconds for responses. End-to-end security — Agent communications must remain confidential even through untrusted infrastructure. Flexible communication patterns — From point-to-point tool calls to group coordination. Scale — Supporting thousands of concurrent agents across distributed environments. Protocol flexibility — Supporting A2A, MCP, and custom agent protocols Simplicity — Developers shouldn’t need to be cryptography or distributed systems experts. Flexible deployment — Agents should be reachable without requiring direct server exposure. Traditional messaging systems fall short. MQTT and AMQP weren’t designed for interactive AI workflows. gRPC provides excellent RPC semantics but lacks group capabilities and end-to-end encryption. Message queues add latency and complexity. Rolling your own solution means reinventing security, scaling, and reliability. A critical networking challenge also emerges: when A2A runs on direct HTTP/gRPC connections, servers must be continuously exposed and directly reachable. However, A2A can instead use SLIM as its transport layer. SLIM’s registration-based model allows agents to register with the SLIM network and become reachable by peers without exposing server ports. While SLIM routing nodes themselves need to be exposed, agent endpoints can run behind NATs and firewalls while remaining fully accessible, significantly simplifying deployment. SLIM was built to solve exactly these challenges. It provides the secure, scalable “piping” that agent protocols like A2A need to operate across network boundaries. What is SLIM? SLIM is a secure, scalable, and developer-friendly messaging framework that provides the transport layer for agent communication protocols like A2A. While A2A defines what agents say (message formats, task semantics, coordination patterns), SLIM defines how these messages are securely delivered across distributed networks. At its core, SLIM combines: gRPC’s performance and reliability — Built on HTTP/2 for efficient, multiplexed transport. Messaging capabilities — Native support for channels and group communication. End-to-end encryption — Using Message Layer Security (MLS) protocol. Native RPC support — SRPC (SLIM RPC) for request-response patterns alongside messaging. Distributed architecture — Separate control and data planes for scalability and management. Protocol flexibility — Transport layer for A2A, MCP, and custom agent protocols. SLIM enables AI agents to communicate securely whether they’re running in a data center, in a browser, on mobile devices, or across organizational boundaries, all while maintaining sub-second latencies and strong security guarantees. Key Strengths and Capabilities The strengths and capabilities of SLIM are: Scalable Distributed Architecture End-to-End Security by Design Two Powerful Session Types Intelligent Routing and Naming Low Latency Architecture Developer-Friendly APIs Native RPC Support with SRPC Scalable Distributed Architecture SLIM is architected with three main components that cleanly separate concerns: The Data Plane The data plane’s sole purpose is to route messages across SLIM nodes. It handles: Efficient message forwarding based on hierarchical names. Connection management between SLIM nodes. Network topology and routing table maintenance. Transport optimization without needing to inspect message contents. The data plane operates purely on message metadata, forwarding packets without understanding application-level sessions or encryption. The Session Layer The session layer sits on top of the data plane and handles the complex requirements of secure agent communication: Reliable delivery: automatic retries, acknowledgments, and ordering guarantees. Encryption: end-to-end encryption using the Message Layer Security (MLS) protocol. Session management: group creation, invites, membership changes, and state synchronization. While the session layer is required for applications to achieve secure, reliable communication, it is not used by SLIM nodes themselves—they only need the data plane. The Control Plane The control plane manages the distributed network of SLIM nodes: Configuration management for routing nodes. Monitoring and telemetry collection (planned for future releases). Network orchestration and service discovery. Administrative operations across the SLIM infrastructure. Architecture Diagram The following diagram illustrates how these components are distributed across applications and intermediate routing nodes: graph TB subgraph "Application Node (Agent A)" A1[Session Layer 1] A2[Session Layer 2] A3[Data Plane Client] A1 -.-&gt;|encrypted messages| A3 A2 -.-&gt;|encrypted messages| A3 end subgraph "Intermediate SLIM Node 1" I1[Data Plane] end subgraph "Intermediate SLIM Node 2" I2[Data Plane] end subgraph "Application Node (Agent B)" B1[Session Layer 1] B2[Session Layer 2] B3[Data Plane Client] B1 -.-&gt;|encrypted messages| B3 B2 -.-&gt;|encrypted messages| B3 end subgraph "Control Plane" CP[Configuration &amp; Monitoring] end A3 -.-&gt;|encrypted messages| I1 I1 -.-&gt;|route| I2 I2 -.-&gt;|encrypted messages| B3 CP -.-&gt;|manages| I1 CP -.-&gt;|manages| I2 style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style CP fill:#7f8c8d,stroke:#5a6970,stroke-width:2px,color:#fff Distributed Artifacts This architecture dictates how SLIM is distributed: Pure Data Plane We distribute the slim binary and Docker images as pure data-plane artifacts. Since SLIM routing nodes only forward messages and don’t participate in application sessions, they don’t need the session layer. This keeps the infrastructure lightweight, fast, and simple to deploy. Language Bindings We distribute libraries (Python, Go, etc.) that include both the data plane client and the session layer on top. Applications use these bindings to get the full stack: secure, reliable, encrypted communication with automatic session management. This separation means you can run a global network of SLIM routing nodes without any application logic, while your agents use the rich, full-featured language bindings for their communication needs. The control plane manages the routing infrastructure independently, ensuring the network operates efficiently. End-to-End Security by Design SLIM leverages the Message Layer Security (MLS) protocol (RFC 9420) to provide end-to-end encryption for all agent communications. Unlike TLS, which only secures point-to-point connections, MLS ensures that messages remain encrypted even when passing through intermediate nodes or experiencing TLS termination along the path. This means: Messages are confidential. Only authorized group members can decrypt content. Authentication is built-in. Cryptographic identities verify agent authenticity. Zero-trust architecture. You don’t need to trust intermediate infrastructure Group security. Add or remove agents from secure groups without rekeying everything. For AI applications, this is crucial. Your agent conversations, tool outputs, and coordination messages stay private even when traversing cloud infrastructure you don’t control. Two Powerful Session Types SLIM provides two session abstractions that map perfectly to agentic AI patterns: point-to-point and group sessions. Point-to-Point Sessions Perfect for tool invocations and direct agent-to-agent communication: # Discover and connect to a specific service instance session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.POINT_TO_POINT, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create session and wait for establishment session_context = await app.create_session_async(session_config, remote_name) await session_context.completion.wait_async() session = session_context.session # Send a request await session.publish_async( b"execute_tool: search(query='AI agents')", None, None ) # Get the response received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) result = received_msg.payload The session automatically: Discovers an available service instance. Establishes a secure MLS group (if enabled). Binds all subsequent communication to that instance. Provides reliable delivery with automatic retries. Group Sessions Ideal for multi-agent coordination, broadcast updates, and collaborative workflows: # Create a coordination channel session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.GROUP, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create group session and wait for establishment session_context = await app.create_session_async(session_config, channel_name) await session_context.completion.wait_async() session = session_context.session # Invite other agents to join handle = await session.invite_async(agent_name) await handle.wait_async() # Broadcast to all participants await session.publish_async( b"task_update: analysis complete", None, None ) Group sessions support: Many-to-many communication: all messages delivered to all participants. Dynamic membership: add or remove agents on the fly. Moderation: channel creators control membership. Secure group state: MLS ensures all members share cryptographic context. Intelligent Routing and Naming SLIM uses a hierarchical naming system based on Decentralized Identifiers (DIDs) that enables both human-readable names and secure, globally unique identifiers: organization/namespace/service/instance For example: agntcy/production/search-agent/a3f9k2 This structure supports: Anycast routing: send to org/ns/service and reach any available instance. Unicast routing: target a specific instance with the full four-part name. Service discovery: find agents by their organizational and service identifiers. Scalable forwarding: hierarchical names aggregate efficiently in routing tables. No more hardcoded endpoints or complex service registries. SLIM’s naming system just works. Low Latency Architecture SLIM is optimized for interactive AI workloads where every millisecond counts: Multiplexed streams: multiple logical streams over single connections. Efficient message routing: intelligent forwarding tables minimize hops. Zero-copy operations: where possible, avoid unnecessary data copying. Async-first design: non-blocking I/O throughout the stack. HTTP/2 transport: proven, efficient binary protocol. Real-world deployments show sub-second end-to-end latencies even with MLS encryption enabled. Developer-Friendly APIs SLIM provides high-quality bindings for multiple languages that abstract complexity. Here’s an example in Python: import slim_bindings import datetime # Initialize the global service service = slim_bindings.get_global_service() # Create a SLIM instance with shared secret auth local_name = slim_bindings.Name("org", "namespace", "my-agent") app = service.create_app_with_secret( local_name, "my-shared-secret" ) # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( "http://127.0.0.1:46357" ) conn_id = await service.connect_async(client_config) # Subscribe to receive messages await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Receive and reply to messages received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload await session.publish_async(b"response", None, None) No need to manage MLS groups manually, handle connection pooling, or worry about encryption keys — SLIM’s session layer handles it all. Native RPC Support with SRPC Many agent-facing protocols (like A2A and MCP) are RPC-oriented. SLIM includes SRPC (SLIM RPC), which provides gRPC-like streaming RPC semantics directly over the SLIM transport. SRPC supports all four gRPC patterns: Unary → Unary — Simple request-response Unary → Stream — Server streaming responses Stream → Unary — Client streaming requests Stream → Stream — Bidirectional streaming Define services with Protocol Buffers: service AgentService { rpc ExecuteTool(ToolRequest) returns (ToolResponse); rpc StreamResults(Query) returns (stream Result); rpc CollectInputs(stream Input) returns (Summary); rpc Coordinate(stream Message) returns (stream Message); } The SLIM RPC compiler generates language-specific stubs that work seamlessly with SLIM’s secure messaging layer. You get familiar RPC semantics with SLIM’s security and group communication benefits. We are also studying how to extend these RPC interaction patterns to support group communication scenarios, enabling multi-agent RPC workflows. Single Implementation, Multiple Languages SLIM is implemented in Rust, providing a high-performance, memory-safe core that powers all language bindings. This approach ensures: Consistent behavior: all language bindings use the same battle-tested implementation. Performance: Rust’s zero-cost abstractions deliver native speed across all platforms. Security: Memory safety guarantees prevent entire classes of vulnerabilities. Maintainability: Bug fixes and improvements benefit all language ecosystems simultaneously. Currently Available: Python. Full-featured bindings with async/await support Go. Native Go bindings for seamless integration (see our technical blog posts on integrating Rust and Go with UniFFI and distributing C artifacts for Go modules) Coming Soon: C#. For .NET and Unity applications. JavaScript/TypeScript. Browser and Node.js support. Kotlin. Android and JVM applications. This multi-language strategy means you can build heterogeneous agent systems where different components use their most appropriate language, all communicating seamlessly through SLIM’s unified protocol. One of the key reasons SLIM provides multiple language bindings is to support agent communication protocols like A2A across different programming ecosystems. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go), and SLIM’s language bindings enable these A2A SDKs to communicate securely. An A2A Python agent can securely communicate with an A2A Java agent, with SLIM handling the underlying transport transparently. Real-World Use Cases SLIM + A2A: Agent-to-Agent Communication SLIM and A2A are designed to work together: A2A SDKs (Python, JavaScript, Java, C#, Go) implement agent-level semantics — task delegation, message formats, coordination patterns. SLIM bindings provide the secure transport, handling connection management, routing, encryption, and delivery guarantees. Currently, A2A sits on top of SLIM RPC (SRPC), enabling secure point-to-point agent interactions. We provide slim-a2a-python, a Python A2A SDK implementation built on SLIMRPC that enables developers to build A2A-compliant agents with SLIM as the transport layer. We are actively working to add A2A SDK support for the remaining SLIM language bindings (Go, C#, JavaScript/TypeScript, Kotlin). Looking ahead, A2A is evolving to support bidirectional streaming for real-time, interactive agent conversations and group communication for multi-agent coordination and collaboration. SLIM naturally provides both capabilities at the transport level through SRPC and MLS-based end-to-end encryption for groups, which many pub-sub systems lack. This positions SLIM as an ideal transport foundation for A2A’s continued evolution toward richer, more secure agent communication patterns. The following diagram illustrates how A2A and SLIM capabilities combine: graph LR subgraph Protocol["Protocol Layer (Application Semantics)"] direction TB A1["A2A Go SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"] B1["A2A C# SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"] C1["A2A Python SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"] end subgraph Transport["Transport Layer (SLIM)"] direction TB subgraph Endpoints["Agent Endpoints"] A2["SLIM Go Bindings&lt;br/&gt;SRPC + Session + Data Plane"] B2["SLIM C# Bindings&lt;br/&gt;SRPC + Session + Data Plane"] C2["SLIM Python Bindings&lt;br/&gt;SRPC + Session + Data Plane"] end subgraph Network["SLIM Network Infrastructure"] SN1[SLIM Node 1&lt;br/&gt;Data Plane] SN2[SLIM Node 2&lt;br/&gt;Data Plane] end end A1 --&gt;|uses| A2 B1 --&gt;|uses| B2 C1 --&gt;|uses| C2 A2 -.-&gt;|"SRPC (P2P)&lt;br/&gt;encrypted via MLS"| SN1 B2 -.-&gt;|"SRPC (P2P)&lt;br/&gt;encrypted via MLS"| SN1 C2 -.-&gt;|"SRPC (Groups)&lt;br/&gt;encrypted via MLS"| SN2 SN1 -.-&gt;|routes| SN2 SN2 -.-&gt;|routes| SN1 style Protocol fill:#e8f4f8,stroke:#2980b9,stroke-width:3px style Transport fill:#fef5e7,stroke:#f39c12,stroke-width:3px style Endpoints fill:#fff,stroke:#95a5a6,stroke-width:2px style Network fill:#fff,stroke:#95a5a6,stroke-width:2px style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style C1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style B2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style C2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style SN1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style SN2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff Architecture Overview: Protocol Layer (blue, left): A2A SDKs implement agent-level semantics — defining what agents say through standardized task delegation, message formats, and coordination patterns. Transport Layer (green/orange, right): SLIM provides the secure infrastructure for how messages are delivered: SLIM Bindings (green): Include SRPC for RPC semantics, Session Layer for reliability and encryption, and Data Plane client for connectivity. SLIM Network (orange): Pure data plane nodes route encrypted messages without understanding agent semantics. Communication Patterns: Current: A2A uses SRPC for point-to-point (P2P) agent interactions with MLS encryption. Future: SLIM naturally provides SRPC group capabilities and MLS-based group encryption, ready to support A2A’s evolution toward groups and bidirectional streaming. SLIM also provides the transport layer for other agent communication protocols: MCP (Model Context Protocol) for context sharing between agents and tools. Custom protocols for domain-specific agent interactions. For more information about A2A, see the official A2A documentation. Getting Started Installation Install the SLIM node: # Docker docker pull ghcr.io/agntcy/slim:v1.0.0 # Cargo cargo install agntcy-slim # Helm (Kubernetes) helm pull oci://ghcr.io/agntcy/slim/helm/slim --version v1.0.0 Install Python bindings: pip install slim-bindings Quick Example Create your first SLIM agent in minutes: import asyncio import slim_bindings import datetime async def main(): # Initialize the global service service = slim_bindings.get_global_service() # Create app with shared secret authentication local_name = slim_bindings.Name("org", "namespace", "agent") app = service.create_app_with_secret(local_name, "my-shared-secret") # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( "http://127.0.0.1:46357" ) conn_id = await service.connect_async(client_config) # Subscribe to local name await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Handle messages while True: received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload print(f"Received: {payload.decode()}") await session.publish_async(b"Acknowledged: " + payload, None, None) asyncio.run(main()) The Road Ahead SLIM is being actively developed as an open-source project under the Apache 2.0 license. The protocol specification has been submitted as an Internet-Draft to the IETF, reflecting its ambition to become a standard for agentic AI communication. Current capabilities include: Rust core with multi-language bindings (Python, Go, and more coming) MLS-based end-to-end encryption Point-to-point and group sessions SRPC for RPC patterns Control plane for management Kubernetes deployment support The community is working on: Additional language bindings (C#, JavaScript/TypeScript, Kotlin) Enhanced monitoring and observability Integration with popular AI frameworks Extended A2A support for groups and bidirectional streaming Reference implementations of MCP over SLIM Performance optimizations Why SLIM Matters As AI systems evolve from monolithic models to distributed networks of specialized agents, the communication infrastructure becomes critical. SLIM provides a foundation that: Ensures security: end-to-end encryption without complexity. Scales with demand: from prototype to production. Simplifies development: intuitive APIs for complex capabilities. Future-proofs architecture: standards-based, extensible design. Whether you’re building a multi-agent AI system, an agentic workflow platform, or the next generation of AI applications, SLIM provides the messaging infrastructure you need. Get Involved SLIM is open source and welcomes contributions: GitHub Documentation Specification You can find comprehensive Python and Go examples in the GitHub repository. Join the community building the communication layer for agentic AI. Try SLIM in your next project with our language binding examples, contribute to the codebase, or share your use cases. The future of AI is collaborative, distributed, and secure. SLIM makes it possible. SLIM is developed by AGNTCY Contributors and released under the Apache 2.0 License.]]></summary></entry><entry><title type="html">Integrating Rust and Go with UniFFI: A Complete Guide</title><link href="https://blogs.agntcy.org/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html" rel="alternate" type="text/html" title="Integrating Rust and Go with UniFFI: A Complete Guide" /><published>2026-01-27T15:50:00+00:00</published><updated>2026-01-27T15:50:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/01/27/integrating-rust-and-go-with-uniffi</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html"><![CDATA[<p>Rust and Go are both excellent languages, but they excel in different areas. Rust provides memory safety and zero-cost abstractions, while Go offers simplicity and fast compilation. What if you could combine the strengths of both? This post explores how we use UniFFI to create seamless Rust-Go integrations for the SLIM messaging library.</p>
-
-<!--more-->
-
-<h2 id="why-integrate-rust-and-go">Why Integrate Rust and Go?</h2>
-
-<p>Before diving into the technical details, let’s understand when and why you might want to integrate Rust with Go:</p>
-
-<p><strong>Rust’s Strengths:</strong></p>
-<ul>
-  <li>Memory safety without garbage collection</li>
-  <li>Zero-cost abstractions</li>
-  <li>Excellent cryptography libraries</li>
-  <li>Strong type system with powerful error handling</li>
-  <li>Performance-critical operations</li>
-</ul>
-
-<p><strong>Go’s Strengths:</strong></p>
-<ul>
-  <li>Simple, readable syntax</li>
-  <li>Fast compilation times</li>
-  <li>Excellent concurrency model</li>
-  <li>Great standard library for networking and HTTP</li>
-  <li>Easy deployment (single binary)</li>
-</ul>
-
-<p><strong>When to Integrate:</strong></p>
-<ul>
-  <li>You have performance-critical code that benefits from Rust’s zero-cost abstractions</li>
-  <li>You need cryptographic operations best handled by Rust’s mature ecosystem</li>
-  <li>You want Go’s deployment simplicity but need Rust’s safety guarantees</li>
-  <li>You’re building a library that needs to support multiple languages</li>
-</ul>
-
-<h2 id="the-challenge-foreign-function-interface-ffi">The Challenge: Foreign Function Interface (FFI)</h2>
-
-<p>Calling Rust from Go requires crossing the FFI boundary through C. The traditional approach involves:</p>
-
-<ol>
-  <li>Writing a C-compatible API in Rust using <code class="language-plaintext highlighter-rouge">extern "C"</code></li>
-  <li>Creating C header files manually</li>
-  <li>Writing Go code with CGO to call the C functions</li>
-  <li>Manual memory management at the boundary</li>
-  <li>Custom error handling and type conversions</li>
-</ol>
-
-<p>This is tedious, error-prone, and requires maintaining three separate codebases (Rust, C headers, and Go bindings).</p>
-
-<h2 id="enter-uniffi-automated-binding-generation">Enter UniFFI: Automated Binding Generation</h2>
-
-<p><a href="https://mozilla.github.io/uniffi-rs/">UniFFI</a> (Unified Foreign Function Interface) is Mozilla’s solution to this problem. Instead of manually writing FFI code, you:</p>
-
-<ol>
-  <li>Write your Rust library with normal Rust types</li>
-  <li>Define an interface using UniFFI’s macro system</li>
-  <li>UniFFI automatically generates:
-    <ul>
-      <li>C-compatible FFI layer</li>
-      <li>C header files</li>
-      <li>Language bindings (Go, Python, Swift, Kotlin, etc.)</li>
-    </ul>
-  </li>
-</ol>
-
-<p>For Go specifically, we use <a href="https://github.com/NordSecurity/uniffi-bindgen-go">uniffi-bindgen-go</a>, a Go binding generator maintained by NordSecurity.</p>
-
-<h2 id="our-implementation-slim-go-bindings">Our Implementation: SLIM Go Bindings</h2>
-
-<p>Let’s walk through how we integrated Rust and Go for the <a href="https://github.com/agntcy/slim">SLIM messaging library</a>.</p>
-
-<h3 id="step-1-define-the-rust-api">Step 1: Define the Rust API</h3>
-
-<p>First, we write our Rust library with normal Rust types and use UniFFI macros to expose the API:</p>
-
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// src/lib.rs</span>
-<span class="k">use</span> <span class="n">uniffi</span><span class="p">;</span>
-
-<span class="nd">#[uniffi::export]</span>
-<span class="k">pub</span> <span class="k">fn</span> <span class="nf">create_identity</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">String</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="n">Identity</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
-    <span class="c1">// Implementation using normal Rust code</span>
-    <span class="nn">Identity</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-<span class="p">}</span>
-
-<span class="nd">#[derive(uniffi::Object)]</span>
-<span class="k">pub</span> <span class="k">struct</span> <span class="n">Identity</span> <span class="p">{</span>
-    <span class="n">inner</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">IdentityInner</span><span class="o">&gt;</span><span class="p">,</span>
-<span class="p">}</span>
-
-<span class="nd">#[uniffi::export]</span>
-<span class="k">impl</span> <span class="n">Identity</span> <span class="p">{</span>
-    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">public_key</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span> <span class="p">{</span>
-        <span class="k">self</span><span class="py">.inner.public_key</span><span class="nf">.clone</span><span class="p">()</span>
-    <span class="p">}</span>
-    
-    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">sign</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
-        <span class="k">self</span><span class="py">.inner</span><span class="nf">.sign</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="p">)</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-<span class="nd">#[derive(uniffi::Error)]</span>
-<span class="k">pub</span> <span class="k">enum</span> <span class="n">SlimError</span> <span class="p">{</span>
-    <span class="n">InvalidInput</span> <span class="p">{</span> <span class="n">message</span><span class="p">:</span> <span class="nb">String</span> <span class="p">},</span>
-    <span class="n">CryptoError</span> <span class="p">{</span> <span class="n">message</span><span class="p">:</span> <span class="nb">String</span> <span class="p">},</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p><strong>Key Points:</strong></p>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">#[uniffi::export]</code> marks functions for export</li>
-  <li><code class="language-plaintext highlighter-rouge">#[derive(uniffi::Object)]</code> for complex types that need methods</li>
-  <li><code class="language-plaintext highlighter-rouge">#[derive(uniffi::Error)]</code> for error enums</li>
-  <li>Use standard Rust types like <code class="language-plaintext highlighter-rouge">String</code>, <code class="language-plaintext highlighter-rouge">Vec&lt;u8&gt;</code>, <code class="language-plaintext highlighter-rouge">Result</code></li>
-  <li>UniFFI reads the Rust macros directly—no separate <code class="language-plaintext highlighter-rouge">.udl</code> file needed!</li>
-</ul>
-
-<h3 id="step-2-configure-the-rust-crate-to-use-uniffi">Step 2: Configure the Rust Crate to Use UniFFI</h3>
-
-<p>Add UniFFI to your <code class="language-plaintext highlighter-rouge">Cargo.toml</code> with the CLI feature:</p>
-
-<div class="language-toml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[lib]</span>
-<span class="py">crate-type</span> <span class="p">=</span> <span class="nn">["staticlib"]</span>
-<span class="py">name</span> <span class="p">=</span> <span class="s">"slim_bindings"</span>
-
-<span class="nn">[dependencies]</span>
-<span class="nn">uniffi</span> <span class="o">=</span> <span class="p">{</span> <span class="py">version</span> <span class="p">=</span> <span class="s">"0.28.3"</span><span class="p">,</span> <span class="py">features</span> <span class="p">=</span> <span class="nn">["cli"]</span> <span class="p">}</span>
-
-<span class="nn">[dev-dependencies]</span>
-<span class="nn">uniffi</span> <span class="o">=</span> <span class="p">{</span> <span class="py">version</span> <span class="p">=</span> <span class="s">"0.28.3"</span><span class="p">,</span> <span class="py">features</span> <span class="p">=</span> <span class="nn">["build"]</span> <span class="p">}</span>
-</code></pre></div></div>
-
-<p><strong>Important:</strong> We use <code class="language-plaintext highlighter-rouge">crate-type = ["staticlib"]</code> to produce a static library (<code class="language-plaintext highlighter-rouge">.a</code> archive) rather than a dynamic library. This allows the Go compiler to statically link the native code into the final binary, ensuring there are no external runtime dependencies.</p>
-
-<p>Then add the scaffolding macro to your <code class="language-plaintext highlighter-rouge">lib.rs</code>:</p>
-
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// src/lib.rs</span>
-<span class="nn">uniffi</span><span class="p">::</span><span class="nd">setup_scaffolding!</span><span class="p">();</span>
-</code></pre></div></div>
-
-<p>The <code class="language-plaintext highlighter-rouge">setup_scaffolding!()</code> macro generates all the FFI glue code at compile time—no build script needed when using proc-macros!</p>
-
-<h3 id="step-3-build-the-rust-library">Step 3: Build the Rust Library</h3>
-
-<p>Compile the Rust library to produce the static archive:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Build in release mode for optimal performance</span>
-cargo build <span class="nt">--release</span>
-</code></pre></div></div>
-
-<p>This produces <code class="language-plaintext highlighter-rouge">target/release/libslim_bindings.a</code> - a static library archive that can be linked directly into Go binaries. Static linking means:</p>
-<ul>
-  <li><strong>At build time</strong>: The Go compiler embeds the native code into your binary</li>
-  <li><strong>At runtime</strong>: No external <code class="language-plaintext highlighter-rouge">.so</code>, <code class="language-plaintext highlighter-rouge">.dylib</code>, or <code class="language-plaintext highlighter-rouge">.dll</code> files are needed</li>
-  <li><strong>For end users</strong>: Just distribute a single, self-contained executable</li>
-</ul>
-
-<h3 id="step-4-generate-go-bindings">Step 4: Generate Go Bindings</h3>
-
-<p>Use <code class="language-plaintext highlighter-rouge">uniffi-bindgen-go</code> to generate the Go code:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install uniffi-bindgen-go</span>
-cargo <span class="nb">install </span>uniffi-bindgen-go
-
-<span class="c"># Generate Go bindings</span>
-uniffi-bindgen-go <span class="se">\</span>
-  <span class="nt">--library</span> target/release/libslim_bindings.a <span class="se">\</span>
-  <span class="nt">--out-dir</span> ./bindings/go
-</code></pre></div></div>
-
-<p>UniFFI reads the macros directly from your Rust code to generate the bindings—no separate definition file required!</p>
-
-<p>This generates two files:</p>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">slim_bindings.go</code> - Go wrapper code</li>
-  <li><code class="language-plaintext highlighter-rouge">slim_bindings.h</code> - C header file</li>
-</ul>
-
-<h3 id="step-5-distribution-strategy">Step 5: Distribution Strategy</h3>
-
-<p>Now that you have the static library (<code class="language-plaintext highlighter-rouge">.a</code> file) and Go bindings, you need to distribute them to developers. This presents a challenge:</p>
-
-<ul>
-  <li>The static library is ~150 MB per platform</li>
-  <li>GitHub has a 100 MB file size limit (without Git LFS)</li>
-  <li><code class="language-plaintext highlighter-rouge">go get</code> doesn’t support Git LFS</li>
-  <li><code class="language-plaintext highlighter-rouge">go get</code> has a hard-coded 500 MB size limit</li>
-</ul>
-
-<p><strong>Solution:</strong> Use GitHub Releases to host the pre-compiled static libraries, and provide a setup tool that downloads the appropriate library for the developer’s platform.</p>
-
-<p>We cover this approach in detail in our blog post: <a href="/2026/01/16/distributing-c-artifacts-for-go-modules.html">Distributing C Artifacts for Go Modules</a></p>
-
-<p>Key points:</p>
-<ul>
-  <li>Host static libraries on GitHub Releases (not in the Git repository)</li>
-  <li>Provide a lightweight setup tool developers run once</li>
-  <li>Cache libraries in <code class="language-plaintext highlighter-rouge">$GOPATH/.cgo-cache/</code> for CGO to find</li>
-  <li>Configure CGO linker flags to reference the cached library</li>
-</ul>
-
-<h3 id="step-6-using-the-go-bindings">Step 6: Using the Go Bindings</h3>
-
-<p>The generated Go code provides an idiomatic Go API. Here’s a complete example showing SLIM message encryption:</p>
-
-<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">package</span> <span class="n">main</span>
-
-<span class="k">import</span> <span class="p">(</span>
-    <span class="s">"fmt"</span>
-    <span class="n">slim</span> <span class="s">"github.com/agntcy/slim-bindings-go"</span>
-<span class="p">)</span>
-
-<span class="k">func</span> <span class="n">main</span><span class="p">()</span> <span class="p">{</span>
-    <span class="c">// Create two identities</span>
-    <span class="n">alice</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">slim</span><span class="o">.</span><span class="n">CreateIdentity</span><span class="p">(</span><span class="s">"Alice"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
-        <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="n">alice</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span> <span class="c">// Important: cleanup Rust resources</span>
-    
-    <span class="n">bob</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">slim</span><span class="o">.</span><span class="n">CreateIdentity</span><span class="p">(</span><span class="s">"Bob"</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
-        <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    <span class="k">defer</span> <span class="n">bob</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
-    
-    <span class="c">// Get public keys</span>
-    <span class="n">alicePubKey</span> <span class="o">:=</span> <span class="n">alice</span><span class="o">.</span><span class="n">PublicKey</span><span class="p">()</span>
-    <span class="n">bobPubKey</span> <span class="o">:=</span> <span class="n">bob</span><span class="o">.</span><span class="n">PublicKey</span><span class="p">()</span>
-    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Alice public key: %x</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">alicePubKey</span><span class="p">)</span>
-    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Bob public key: %x</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">bobPubKey</span><span class="p">)</span>
-    
-    <span class="c">// Alice creates an encrypted message for Bob</span>
-    <span class="n">message</span> <span class="o">:=</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">(</span><span class="s">"Secret message"</span><span class="p">)</span>
-    <span class="n">encrypted</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">alice</span><span class="o">.</span><span class="n">Encrypt</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">bobPubKey</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
-        <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    
-    <span class="c">// Bob decrypts the message</span>
-    <span class="n">decrypted</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">bob</span><span class="o">.</span><span class="n">Decrypt</span><span class="p">(</span><span class="n">encrypted</span><span class="p">,</span> <span class="n">alicePubKey</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
-        <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    
-    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Original:  %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
-    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Decrypted: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">decrypted</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p><strong>Key Features:</strong></p>
-<ul>
-  <li><strong>Idiomatic Go error handling</strong> with the <code class="language-plaintext highlighter-rouge">error</code> interface</li>
-  <li><strong>Automatic type conversions</strong> (Rust <code class="language-plaintext highlighter-rouge">Vec&lt;u8&gt;</code> ↔ Go <code class="language-plaintext highlighter-rouge">[]byte</code>)</li>
-  <li><strong>Memory management</strong> via <code class="language-plaintext highlighter-rouge">Destroy()</code> method—call this to free Rust resources</li>
-  <li><strong>High-level API</strong> that hides all FFI complexity</li>
-</ul>
-
-<p>This high-level Go code is calling Rust crypto functions under the hood, with all the FFI complexity handled by UniFFI.</p>
-
-<h2 id="how-uniffi-works-under-the-hood">How UniFFI Works: Under the Hood</h2>
-
-<p>Let’s understand what UniFFI generates:</p>
-
-<h3 id="the-rust-side-generated-by-uniffi">The Rust Side (Generated by UniFFI)</h3>
-
-<p>UniFFI generates a C-compatible FFI layer:</p>
-
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Generated by UniFFI</span>
-<span class="nd">#[no_mangle]</span>
-<span class="k">pub</span> <span class="k">extern</span> <span class="s">"C"</span> <span class="k">fn</span> <span class="nf">slim_create_identity</span><span class="p">(</span>
-    <span class="n">name</span><span class="p">:</span> <span class="n">RustBuffer</span><span class="p">,</span>
-    <span class="n">err</span><span class="p">:</span> <span class="o">&amp;</span><span class="k">mut</span> <span class="n">RustCallStatus</span><span class="p">,</span>
-<span class="p">)</span> <span class="k">-&gt;</span> <span class="o">*</span><span class="k">const</span> <span class="n">Identity</span> <span class="p">{</span>
-    <span class="c1">// Conversion logic from C types to Rust types</span>
-    <span class="c1">// Calls your actual Rust function</span>
-    <span class="c1">// Converts result back to C-compatible types</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<h3 id="the-go-side-generated-by-uniffi-bindgen-go">The Go Side (Generated by uniffi-bindgen-go)</h3>
-
-<p>The Go bindings wrap the C functions:</p>
-
-<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">// Generated by uniffi-bindgen-go</span>
-
-<span class="c">// #include "slim_bindings.h"</span>
-<span class="c">// #cgo LDFLAGS: -lslim_bindings</span>
-<span class="k">import</span> <span class="s">"C"</span>
-
-<span class="k">type</span> <span class="n">Identity</span> <span class="k">struct</span> <span class="p">{</span>
-    <span class="n">pointer</span> <span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span>
-<span class="p">}</span>
-
-<span class="k">func</span> <span class="n">CreateIdentity</span><span class="p">(</span><span class="n">name</span> <span class="kt">string</span><span class="p">)</span> <span class="p">(</span><span class="o">*</span><span class="n">Identity</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
-    <span class="c">// Convert Go string to C string</span>
-    <span class="n">cName</span> <span class="o">:=</span> <span class="n">C</span><span class="o">.</span><span class="n">CString</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-    <span class="k">defer</span> <span class="n">C</span><span class="o">.</span><span class="n">free</span><span class="p">(</span><span class="n">unsafe</span><span class="o">.</span><span class="n">Pointer</span><span class="p">(</span><span class="n">cName</span><span class="p">))</span>
-    
-    <span class="c">// Call C function</span>
-    <span class="k">var</span> <span class="n">err</span> <span class="n">C</span><span class="o">.</span><span class="n">RustCallStatus</span>
-    <span class="n">ptr</span> <span class="o">:=</span> <span class="n">C</span><span class="o">.</span><span class="n">slim_create_identity</span><span class="p">(</span><span class="n">cName</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">err</span><span class="p">)</span>
-    
-    <span class="c">// Handle errors</span>
-    <span class="k">if</span> <span class="n">err</span><span class="o">.</span><span class="n">code</span> <span class="o">!=</span> <span class="m">0</span> <span class="p">{</span>
-        <span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="n">convertError</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-    <span class="p">}</span>
-    
-    <span class="k">return</span> <span class="o">&amp;</span><span class="n">Identity</span><span class="p">{</span><span class="n">pointer</span><span class="o">:</span> <span class="n">ptr</span><span class="p">},</span> <span class="no">nil</span>
-<span class="p">}</span>
-
-<span class="k">func</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span><span class="n">Identity</span><span class="p">)</span> <span class="n">Destroy</span><span class="p">()</span> <span class="p">{</span>
-    <span class="n">C</span><span class="o">.</span><span class="n">slim_identity_free</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">pointer</span><span class="p">)</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<h3 id="memory-management">Memory Management</h3>
-
-<p>UniFFI handles the complex memory management at the boundary:</p>
-
-<ul>
-  <li><strong>Rust → Go</strong>: Rust allocates, Go receives pointer, Go calls <code class="language-plaintext highlighter-rouge">Destroy()</code> to free</li>
-  <li><strong>Go → Rust</strong>: Go data is copied into Rust-owned memory</li>
-  <li><strong>Return values</strong>: Rust allocates, transfers ownership to Go</li>
-</ul>
-
-<p>The generated <code class="language-plaintext highlighter-rouge">Destroy()</code> method is crucial—it tells Rust to free its memory. Without it, you’d have memory leaks.</p>
-
-<h2 id="advantages-of-the-uniffi-approach">Advantages of the UniFFI Approach</h2>
-
-<ol>
-  <li><strong>Type Safety</strong>: UniFFI generates type-safe bindings automatically</li>
-  <li><strong>Error Handling</strong>: Rust <code class="language-plaintext highlighter-rouge">Result</code> types map to Go <code class="language-plaintext highlighter-rouge">error</code> naturally</li>
-  <li><strong>Multiple Languages</strong>: Same Rust code can target Go, Python, Swift, Kotlin</li>
-  <li><strong>Maintainability</strong>: Changes to Rust API automatically reflect in bindings</li>
-  <li><strong>Idiomatic APIs</strong>: Generated code feels natural in each target language</li>
-  <li><strong>Memory Safety</strong>: Automatic handling of ownership and lifetimes</li>
-</ol>
-
-<h2 id="challenges-and-limitations">Challenges and Limitations</h2>
-
-<ol>
-  <li><strong>Learning Curve</strong>: Understanding UniFFI’s macro system takes time</li>
-  <li><strong>Build Complexity</strong>: Requires cargo, uniffi-bindgen-go, and CGO toolchain</li>
-  <li><strong>Memory Management</strong>: Developers must remember to call <code class="language-plaintext highlighter-rouge">Destroy()</code></li>
-  <li><strong>Type Limitations</strong>: Not all Rust types can cross FFI boundary (e.g., traits, complex generics)</li>
-  <li><strong>Debugging</strong>: Stack traces cross language boundaries</li>
-  <li><strong>Binary Size</strong>: Static linking increases final binary size</li>
-</ol>
-
-<h2 id="special-cases">Special Cases</h2>
-
-<h3 id="native-async-functions">Native Async Functions</h3>
-
-<p>UniFFI supports exposing Rust async functions through the FFI interface. The key thing to understand is that these async functions use the <strong>binding language’s async runtime</strong>, not Rust’s:</p>
-
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">#[uniffi::export]</span>
-<span class="k">pub</span> <span class="k">async</span> <span class="k">fn</span> <span class="nf">fetch_data</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">String</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
-    <span class="c1">// This async function will be translated to the target language</span>
-    <span class="nf">perform_http_request</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="k">.await</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p><strong>How it translates across languages:</strong></p>
-
-<ul>
-  <li><strong>Python</strong>: Directly becomes an awaitable function that integrates with Python’s <code class="language-plaintext highlighter-rouge">asyncio</code>
-    <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">data</span> <span class="o">=</span> <span class="k">await</span> <span class="n">fetch_data</span><span class="p">(</span><span class="s">"https://example.com"</span><span class="p">)</span>
-</code></pre></div>    </div>
-  </li>
-  <li><strong>Go</strong>: Becomes a regular blocking function (Go doesn’t have native async/await)
-    <div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">data</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">FetchData</span><span class="p">(</span><span class="s">"https://example.com"</span><span class="p">)</span> <span class="c">// Blocks until complete</span>
-  
-<span class="c">// To make it non-blocking, wrap it in a goroutine</span>
-<span class="k">go</span> <span class="k">func</span><span class="p">()</span> <span class="p">{</span>
-    <span class="n">data</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">FetchData</span><span class="p">(</span><span class="s">"https://example.com"</span><span class="p">)</span>
-    <span class="c">// Handle result...</span>
-<span class="p">}()</span>
-</code></pre></div>    </div>
-  </li>
-</ul>
-
-<p><strong>Important Note About Futures:</strong></p>
-
-<p>Rust <code class="language-plaintext highlighter-rouge">Future</code> types don’t translate well to Go. If you need to expose a custom future, you must provide a <code class="language-plaintext highlighter-rouge">.Wait()</code> method that handles the awaiting internally:</p>
-
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">#[derive(uniffi::Object)]</span>
-<span class="k">pub</span> <span class="k">struct</span> <span class="n">DataFuture</span> <span class="p">{</span>
-    <span class="n">inner</span><span class="p">:</span> <span class="cm">/* your future implementation */</span>
-<span class="p">}</span>
-
-<span class="nd">#[uniffi::export]</span>
-<span class="k">impl</span> <span class="n">DataFuture</span> <span class="p">{</span>
-    <span class="c1">// Provide an async wait method that UniFFI will translate</span>
-    <span class="k">pub</span> <span class="k">async</span> <span class="k">fn</span> <span class="nf">wait</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
-        <span class="k">self</span><span class="py">.inner</span><span class="k">.await</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>Then in Go:</p>
-<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">future</span> <span class="o">:=</span> <span class="n">CreateDataFuture</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
-<span class="k">defer</span> <span class="n">future</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
-<span class="n">result</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">future</span><span class="o">.</span><span class="n">Wait</span><span class="p">()</span> <span class="c">// Blocks until complete</span>
-</code></pre></div></div>
-
-<h3 id="tokio-and-external-async-runtimes">Tokio and External Async Runtimes</h3>
-
-<p>If your Rust code uses an external async runtime like <strong>Tokio</strong>, you need to handle it differently. The runtime must live on the Rust side of the boundary, and you need to explicitly spawn or block on tasks:</p>
-
-<div class="language-rust highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">use</span> <span class="nn">tokio</span><span class="p">::</span><span class="nn">runtime</span><span class="p">::</span><span class="n">Runtime</span><span class="p">;</span>
-<span class="k">use</span> <span class="nn">std</span><span class="p">::</span><span class="nn">sync</span><span class="p">::</span><span class="nb">Arc</span><span class="p">;</span>
-
-<span class="nd">#[derive(uniffi::Object)]</span>
-<span class="k">pub</span> <span class="k">struct</span> <span class="n">AsyncClient</span> <span class="p">{</span>
-    <span class="n">runtime</span><span class="p">:</span> <span class="nb">Arc</span><span class="o">&lt;</span><span class="n">Runtime</span><span class="o">&gt;</span><span class="p">,</span>
-    <span class="c1">// other fields...</span>
-<span class="p">}</span>
-
-<span class="nd">#[uniffi::export]</span>
-<span class="k">impl</span> <span class="n">AsyncClient</span> <span class="p">{</span>
-    <span class="nd">#[uniffi::constructor]</span>
-    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">new</span><span class="p">()</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Arc</span><span class="o">&lt;</span><span class="k">Self</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
-        <span class="k">let</span> <span class="n">runtime</span> <span class="o">=</span> <span class="nn">Runtime</span><span class="p">::</span><span class="nf">new</span><span class="p">()</span>
-            <span class="nf">.map_err</span><span class="p">(|</span><span class="n">e</span><span class="p">|</span> <span class="nn">SlimError</span><span class="p">::</span><span class="n">RuntimeError</span> <span class="p">{</span> 
-                <span class="n">message</span><span class="p">:</span> <span class="n">e</span><span class="nf">.to_string</span><span class="p">()</span> 
-            <span class="p">})</span><span class="o">?</span><span class="p">;</span>
-        
-        <span class="nf">Ok</span><span class="p">(</span><span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="k">Self</span> <span class="p">{</span>
-            <span class="n">runtime</span><span class="p">:</span> <span class="nn">Arc</span><span class="p">::</span><span class="nf">new</span><span class="p">(</span><span class="n">runtime</span><span class="p">),</span>
-        <span class="p">}))</span>
-    <span class="p">}</span>
-    
-    <span class="c1">// Blocking operation that uses the Tokio runtime</span>
-    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">fetch_data</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">String</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="nb">Vec</span><span class="o">&lt;</span><span class="nb">u8</span><span class="o">&gt;</span><span class="p">,</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
-        <span class="c1">// Use block_on to await the async operation</span>
-        <span class="k">self</span><span class="py">.runtime</span><span class="nf">.block_on</span><span class="p">(</span><span class="k">async</span> <span class="p">{</span>
-            <span class="nf">perform_async_request</span><span class="p">(</span><span class="o">&amp;</span><span class="n">url</span><span class="p">)</span><span class="k">.await</span>
-        <span class="p">})</span>
-    <span class="p">}</span>
-    
-    <span class="c1">// Fire-and-forget background task</span>
-    <span class="k">pub</span> <span class="k">fn</span> <span class="nf">start_background_task</span><span class="p">(</span><span class="o">&amp;</span><span class="k">self</span><span class="p">,</span> <span class="n">interval_ms</span><span class="p">:</span> <span class="nb">u64</span><span class="p">)</span> <span class="k">-&gt;</span> <span class="nb">Result</span><span class="o">&lt;</span><span class="p">(),</span> <span class="n">SlimError</span><span class="o">&gt;</span> <span class="p">{</span>
-        <span class="k">let</span> <span class="n">runtime</span> <span class="o">=</span> <span class="k">self</span><span class="py">.runtime</span><span class="nf">.clone</span><span class="p">();</span>
-        
-        <span class="c1">// Spawn a task on the Tokio runtime</span>
-        <span class="n">runtime</span><span class="nf">.spawn</span><span class="p">(</span><span class="k">async</span> <span class="k">move</span> <span class="p">{</span>
-            <span class="k">loop</span> <span class="p">{</span>
-                <span class="nn">tokio</span><span class="p">::</span><span class="nn">time</span><span class="p">::</span><span class="nf">sleep</span><span class="p">(</span>
-                    <span class="nn">tokio</span><span class="p">::</span><span class="nn">time</span><span class="p">::</span><span class="nn">Duration</span><span class="p">::</span><span class="nf">from_millis</span><span class="p">(</span><span class="n">interval_ms</span><span class="p">)</span>
-                <span class="p">)</span><span class="k">.await</span><span class="p">;</span>
-                <span class="c1">// Do background work...</span>
-            <span class="p">}</span>
-        <span class="p">});</span>
-        
-        <span class="nf">Ok</span><span class="p">(())</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p><strong>Key points for Tokio integration:</strong></p>
-
-<ol>
-  <li><strong>Create the runtime once</strong>: Store a reference to the Tokio runtime in your Rust object</li>
-  <li><strong>Use <code class="language-plaintext highlighter-rouge">block_on</code></strong>: For synchronous operations that need to await async code</li>
-  <li><strong>Use <code class="language-plaintext highlighter-rouge">spawn</code></strong>: For background tasks that shouldn’t block the caller</li>
-  <li><strong>Runtime lifecycle</strong>: The runtime lives as long as your Rust object exists</li>
-  <li><strong>Go integration</strong>: From Go’s perspective, these are just regular blocking functions</li>
-</ol>
-
-<p>Example usage in Go:</p>
-<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">client</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">NewAsyncClient</span><span class="p">()</span>
-<span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
-    <span class="nb">panic</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
-<span class="p">}</span>
-<span class="k">defer</span> <span class="n">client</span><span class="o">.</span><span class="n">Destroy</span><span class="p">()</span>
-
-<span class="c">// This blocks until the async operation completes</span>
-<span class="n">data</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">client</span><span class="o">.</span><span class="n">FetchData</span><span class="p">(</span><span class="s">"https://example.com"</span><span class="p">)</span>
-
-<span class="c">// This starts a background task and returns immediately</span>
-<span class="n">err</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">StartBackgroundTask</span><span class="p">(</span><span class="m">1000</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>The Tokio runtime handles all the async execution internally, while Go sees only synchronous function calls.</p>
-
-<h2 id="performance-considerations">Performance Considerations</h2>
-
-<p>Crossing the FFI boundary through CGO has overhead. While the exact performance impact depends on your use case, there are some general guidelines:</p>
-
-<p><strong>Key Considerations:</strong></p>
-<ul>
-  <li><strong>Function call overhead</strong>: Each FFI call has a cost beyond a regular function call</li>
-  <li><strong>Data copying</strong>: Data must be copied across the language boundary</li>
-  <li><strong>Avoid chatty APIs</strong>: Design your API to minimize the number of FFI calls</li>
-</ul>
-
-<p><strong>Optimization tips:</strong></p>
-<ul>
-  <li>Batch operations when possible instead of making many small calls</li>
-  <li>Keep data structures simple at the boundary</li>
-  <li>Use byte slices (<code class="language-plaintext highlighter-rouge">Vec&lt;u8&gt;</code>) for efficient data transfer</li>
-  <li>Do heavy processing on one side of the boundary, not back-and-forth</li>
-</ul>
-
-<p>For a detailed analysis of CGO performance overhead, see Shane O’Neill’s excellent post: <a href="https://shane.ai/posts/cgo-performance-in-go1.21/">CGO Performance in Go 1.21</a></p>
-
-<h2 id="build-and-distribution">Build and Distribution</h2>
-
-<p>For production use, you’ll need to:</p>
-
-<ol>
-  <li><strong>Cross-compile Rust libraries</strong> for target platforms</li>
-  <li><strong>Distribute static libraries</strong> (see our <a href="https://blog.agntcy.com/2026/01/16/distributing-c-artifacts-for-go-modules.html">previous blog post</a>)</li>
-  <li><strong>Configure CGO</strong> to link against the Rust library</li>
-  <li><strong>Handle platform-specific differences</strong></li>
-</ol>
-
-<p>We cover this in detail in our blog post about <a href="https://blog.agntcy.com/2026/01/16/distributing-c-artifacts-for-go-modules.html">distributing C artifacts for Go modules</a>.</p>
-
-<h2 id="automation-and-cicd">Automation and CI/CD</h2>
-
-<p>Our release process automates the entire workflow for building Rust libraries, generating Go bindings, and distributing them across platforms. You can see our complete CI/CD setup in the <a href="https://github.com/agntcy/slim/blob/main/.github/workflows/release-bindings.yaml">SLIM repository’s release-bindings.yaml workflow</a>.</p>
-
-<p>This workflow handles:</p>
-<ul>
-  <li>Cross-compilation for multiple platforms using Zig</li>
-  <li>UniFFI binding generation</li>
-  <li>Packaging and uploading to GitHub Releases</li>
-  <li>Version tagging and coordination between repositories</li>
-</ul>
-
-<h2 id="conclusion">Conclusion</h2>
-
-<p>UniFFI provides a powerful way to integrate Rust and Go, combining Rust’s safety and performance with Go’s simplicity and deployment model. While there’s complexity in the build process and memory management, the type safety and automated binding generation make it far superior to manual FFI code.</p>
-
-<p>For the SLIM project, this approach allows us to:</p>
-<ul>
-  <li>Write cryptographic code once in Rust</li>
-  <li>Expose it to Go developers with an idiomatic API</li>
-  <li>Maintain type safety across the language boundary</li>
-  <li>Support multiple languages from the same Rust codebase</li>
-</ul>
-
-<p>If you’re building performance-critical libraries or need Rust’s safety guarantees in your Go projects, UniFFI is worth the investment.</p>
-
-<h2 id="additional-resources">Additional Resources</h2>
-
-<ul>
-  <li><a href="https://mozilla.github.io/uniffi-rs/">UniFFI Documentation</a></li>
-  <li><a href="https://github.com/NordSecurity/uniffi-bindgen-go">uniffi-bindgen-go</a></li>
-  <li><a href="https://github.com/agntcy/slim-bindings-go">SLIM Go Bindings Repository</a></li>
-  <li><a href="https://github.com/agntcy/slim">SLIM Main Repository</a></li>
-  <li><a href="https://pkg.go.dev/cmd/cgo">CGO Documentation</a></li>
-</ul>
-
-<hr />
-
-<p><em>Have questions about Rust-Go integration or UniFFI? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Sam Betts</name></author><category term="technical" /><category term="rust" /><category term="go" /><category term="uniffi" /><category term="bindings" /><category term="cgo" /><category term="interop" /><summary type="html"><![CDATA[Rust and Go are both excellent languages, but they excel in different areas. Rust provides memory safety and zero-cost abstractions, while Go offers simplicity and fast compilation. What if you could combine the strengths of both? This post explores how we use UniFFI to create seamless Rust-Go integrations for the SLIM messaging library.]]></summary></entry></feed>
+License.</em></p>]]></content><author><name>Mauro Sardara</name></author><category term="technical" /><category term="slim" /><category term="rust" /><category term="messaging" /><category term="groups" /><category term="grpc" /><summary type="html"><![CDATA[The AI landscape is rapidly evolving from isolated models to interconnected networks of intelligent agents. As AI systems become more sophisticated, they need to communicate, collaborate, and coordinate in real-time. Protocols like A2A (Agent-to-Agent) define what agents say to each other: standardized messages, task delegation, and coordination semantics. But A2A needs a robust transport layer that defines how agents securely exchange these messages across network boundaries. Existing messaging frameworks weren’t designed for the unique demands of agentic AI. They either sacrifice security for performance, lack proper group communication primitives, or can’t scale to support distributed multi-agent systems. Others rely on centralized brokers that can’t be safely exposed across network boundaries, limiting agents to run only where the broker is deployed. Enter SLIM (Secure Low-Latency Interactive Messaging), a next-generation communication framework that provides the secure, scalable transport layer for agentic AI protocols like A2A. SLIM handles the “piping”: secure connections, message routing, group communication, and end-to-end encryption, so protocol implementations can focus on agent semantics, not infrastructure. The Problem: Agent Protocols Need Secure Transport Modern AI applications are increasingly agentic. They don’t just respond to prompts, they take action, use tools, coordinate with other agents, and make autonomous decisions. The A2A protocol has emerged as a standard for defining how agents communicate: specifying message formats, task delegation patterns, and coordination semantics. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go) that implement these agent-level semantics. However, A2A and similar agent protocols need a robust transport layer beneath them. Whether you’re building: Multi-agent AI systems where specialized agents collaborate to solve complex problems. AI-powered workflows that orchestrate between LLMs, tools, and data sources. Real-time agent collaboration where agents need to share context and coordinate actions. Distributed AI services that span data centers, edge devices, and browsers. You need a messaging infrastructure that can handle: Real-time, low-latency communication — AI agents can’t wait seconds for responses. End-to-end security — Agent communications must remain confidential even through untrusted infrastructure. Flexible communication patterns — From point-to-point tool calls to group coordination. Scale — Supporting thousands of concurrent agents across distributed environments. Protocol flexibility — Supporting A2A, MCP, and custom agent protocols Simplicity — Developers shouldn’t need to be cryptography or distributed systems experts. Flexible deployment — Agents should be reachable without requiring direct server exposure. Traditional messaging systems fall short. MQTT and AMQP weren’t designed for interactive AI workflows. gRPC provides excellent RPC semantics but lacks group capabilities and end-to-end encryption. Message queues add latency and complexity. Rolling your own solution means reinventing security, scaling, and reliability. A critical networking challenge also emerges: when A2A runs on direct HTTP/gRPC connections, servers must be continuously exposed and directly reachable. However, A2A can instead use SLIM as its transport layer. SLIM’s registration-based model allows agents to register with the SLIM network and become reachable by peers without exposing server ports. While SLIM routing nodes themselves need to be exposed, agent endpoints can run behind NATs and firewalls while remaining fully accessible, significantly simplifying deployment. SLIM was built to solve exactly these challenges. It provides the secure, scalable “piping” that agent protocols like A2A need to operate across network boundaries. What is SLIM? SLIM is a secure, scalable, and developer-friendly messaging framework that provides the transport layer for agent communication protocols like A2A. While A2A defines what agents say (message formats, task semantics, coordination patterns), SLIM defines how these messages are securely delivered across distributed networks. At its core, SLIM combines: gRPC’s performance and reliability — Built on HTTP/2 for efficient, multiplexed transport. Messaging capabilities — Native support for channels and group communication. End-to-end encryption — Using Message Layer Security (MLS) protocol. Native RPC support — SRPC (SLIM RPC) for request-response patterns alongside messaging. Distributed architecture — Separate control and data planes for scalability and management. Protocol flexibility — Transport layer for A2A, MCP, and custom agent protocols. SLIM enables AI agents to communicate securely whether they’re running in a data center, in a browser, on mobile devices, or across organizational boundaries, all while maintaining sub-second latencies and strong security guarantees. Key Strengths and Capabilities The strengths and capabilities of SLIM are: Scalable Distributed Architecture End-to-End Security by Design Two Powerful Session Types Intelligent Routing and Naming Low Latency Architecture Developer-Friendly APIs Native RPC Support with SRPC Scalable Distributed Architecture SLIM is architected with three main components that cleanly separate concerns: The Data Plane The data plane’s sole purpose is to route messages across SLIM nodes. It handles: Efficient message forwarding based on hierarchical names. Connection management between SLIM nodes. Network topology and routing table maintenance. Transport optimization without needing to inspect message contents. The data plane operates purely on message metadata, forwarding packets without understanding application-level sessions or encryption. The Session Layer The session layer sits on top of the data plane and handles the complex requirements of secure agent communication: Reliable delivery: automatic retries, acknowledgments, and ordering guarantees. Encryption: end-to-end encryption using the Message Layer Security (MLS) protocol. Session management: group creation, invites, membership changes, and state synchronization. While the session layer is required for applications to achieve secure, reliable communication, it is not used by SLIM nodes themselves—they only need the data plane. The Control Plane The control plane manages the distributed network of SLIM nodes: Configuration management for routing nodes. Monitoring and telemetry collection (planned for future releases). Network orchestration and service discovery. Administrative operations across the SLIM infrastructure. Architecture Diagram The following diagram illustrates how these components are distributed across applications and intermediate routing nodes: graph TB subgraph "Application Node (Agent A)" A1[Session Layer 1] A2[Session Layer 2] A3[Data Plane Client] A1 -.-&gt;|encrypted messages| A3 A2 -.-&gt;|encrypted messages| A3 end subgraph "Intermediate SLIM Node 1" I1[Data Plane] end subgraph "Intermediate SLIM Node 2" I2[Data Plane] end subgraph "Application Node (Agent B)" B1[Session Layer 1] B2[Session Layer 2] B3[Data Plane Client] B1 -.-&gt;|encrypted messages| B3 B2 -.-&gt;|encrypted messages| B3 end subgraph "Control Plane" CP[Configuration &amp; Monitoring] end A3 -.-&gt;|encrypted messages| I1 I1 -.-&gt;|route| I2 I2 -.-&gt;|encrypted messages| B3 CP -.-&gt;|manages| I1 CP -.-&gt;|manages| I2 style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B2 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B3 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style I2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style CP fill:#7f8c8d,stroke:#5a6970,stroke-width:2px,color:#fff Distributed Artifacts This architecture dictates how SLIM is distributed: Pure Data Plane We distribute the slim binary and Docker images as pure data-plane artifacts. Since SLIM routing nodes only forward messages and don’t participate in application sessions, they don’t need the session layer. This keeps the infrastructure lightweight, fast, and simple to deploy. Language Bindings We distribute libraries (Python, Go, etc.) that include both the data plane client and the session layer on top. Applications use these bindings to get the full stack: secure, reliable, encrypted communication with automatic session management. This separation means you can run a global network of SLIM routing nodes without any application logic, while your agents use the rich, full-featured language bindings for their communication needs. The control plane manages the routing infrastructure independently, ensuring the network operates efficiently. End-to-End Security by Design SLIM leverages the Message Layer Security (MLS) protocol (RFC 9420) to provide end-to-end encryption for all agent communications. Unlike TLS, which only secures point-to-point connections, MLS ensures that messages remain encrypted even when passing through intermediate nodes or experiencing TLS termination along the path. This means: Messages are confidential. Only authorized group members can decrypt content. Authentication is built-in. Cryptographic identities verify agent authenticity. Zero-trust architecture. You don’t need to trust intermediate infrastructure Group security. Add or remove agents from secure groups without rekeying everything. For AI applications, this is crucial. Your agent conversations, tool outputs, and coordination messages stay private even when traversing cloud infrastructure you don’t control. Two Powerful Session Types SLIM provides two session abstractions that map perfectly to agentic AI patterns: point-to-point and group sessions. Point-to-Point Sessions Perfect for tool invocations and direct agent-to-agent communication: # Discover and connect to a specific service instance session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.POINT_TO_POINT, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create session and wait for establishment session_context = await app.create_session_async(session_config, remote_name) await session_context.completion.wait_async() session = session_context.session # Send a request await session.publish_async( b"execute_tool: search(query='AI agents')", None, None ) # Get the response received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) result = received_msg.payload The session automatically: Discovers an available service instance. Establishes a secure MLS group (if enabled). Binds all subsequent communication to that instance. Provides reliable delivery with automatic retries. Group Sessions Ideal for multi-agent coordination, broadcast updates, and collaborative workflows: # Create a coordination channel session_config = slim_bindings.SessionConfig( session_type=slim_bindings.SessionType.GROUP, enable_mls=True, max_retries=5, interval=datetime.timedelta(seconds=5), metadata={} ) # Create group session and wait for establishment session_context = await app.create_session_async(session_config, channel_name) await session_context.completion.wait_async() session = session_context.session # Invite other agents to join handle = await session.invite_async(agent_name) await handle.wait_async() # Broadcast to all participants await session.publish_async( b"task_update: analysis complete", None, None ) Group sessions support: Many-to-many communication: all messages delivered to all participants. Dynamic membership: add or remove agents on the fly. Moderation: channel creators control membership. Secure group state: MLS ensures all members share cryptographic context. Intelligent Routing and Naming SLIM uses a hierarchical naming system based on Decentralized Identifiers (DIDs) that enables both human-readable names and secure, globally unique identifiers: organization/namespace/service/instance For example: agntcy/production/search-agent/a3f9k2 This structure supports: Anycast routing: send to org/ns/service and reach any available instance. Unicast routing: target a specific instance with the full four-part name. Service discovery: find agents by their organizational and service identifiers. Scalable forwarding: hierarchical names aggregate efficiently in routing tables. No more hardcoded endpoints or complex service registries. SLIM’s naming system just works. Low Latency Architecture SLIM is optimized for interactive AI workloads where every millisecond counts: Multiplexed streams: multiple logical streams over single connections. Efficient message routing: intelligent forwarding tables minimize hops. Zero-copy operations: where possible, avoid unnecessary data copying. Async-first design: non-blocking I/O throughout the stack. HTTP/2 transport: proven, efficient binary protocol. Real-world deployments show sub-second end-to-end latencies even with MLS encryption enabled. Developer-Friendly APIs SLIM provides high-quality bindings for multiple languages that abstract complexity. Here’s an example in Python: import slim_bindings import datetime # Initialize the global service service = slim_bindings.get_global_service() # Create a SLIM instance with shared secret auth local_name = slim_bindings.Name("org", "namespace", "my-agent") app = service.create_app_with_secret( local_name, "my-shared-secret" ) # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( "http://127.0.0.1:46357" ) conn_id = await service.connect_async(client_config) # Subscribe to receive messages await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Receive and reply to messages received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload await session.publish_async(b"response", None, None) No need to manage MLS groups manually, handle connection pooling, or worry about encryption keys — SLIM’s session layer handles it all. Native RPC Support with SRPC Many agent-facing protocols (like A2A and MCP) are RPC-oriented. SLIM includes SRPC (SLIM RPC), which provides gRPC-like streaming RPC semantics directly over the SLIM transport. SRPC supports all four gRPC patterns: Unary → Unary — Simple request-response Unary → Stream — Server streaming responses Stream → Unary — Client streaming requests Stream → Stream — Bidirectional streaming Define services with Protocol Buffers: service AgentService { rpc ExecuteTool(ToolRequest) returns (ToolResponse); rpc StreamResults(Query) returns (stream Result); rpc CollectInputs(stream Input) returns (Summary); rpc Coordinate(stream Message) returns (stream Message); } The SLIM RPC compiler generates language-specific stubs that work seamlessly with SLIM’s secure messaging layer. You get familiar RPC semantics with SLIM’s security and group communication benefits. We are also studying how to extend these RPC interaction patterns to support group communication scenarios, enabling multi-agent RPC workflows. Single Implementation, Multiple Languages SLIM is implemented in Rust, providing a high-performance, memory-safe core that powers all language bindings. This approach ensures: Consistent behavior: all language bindings use the same battle-tested implementation. Performance: Rust’s zero-cost abstractions deliver native speed across all platforms. Security: Memory safety guarantees prevent entire classes of vulnerabilities. Maintainability: Bug fixes and improvements benefit all language ecosystems simultaneously. Currently Available: Python. Full-featured bindings with async/await support Go. Native Go bindings for seamless integration (see our technical blog posts on integrating Rust and Go with UniFFI and distributing C artifacts for Go modules) Coming Soon: C#. For .NET and Unity applications. JavaScript/TypeScript. Browser and Node.js support. Kotlin. Android and JVM applications. This multi-language strategy means you can build heterogeneous agent systems where different components use their most appropriate language, all communicating seamlessly through SLIM’s unified protocol. One of the key reasons SLIM provides multiple language bindings is to support agent communication protocols like A2A across different programming ecosystems. A2A comes with SDKs in multiple languages (Python, JavaScript, Java, C#, Go), and SLIM’s language bindings enable these A2A SDKs to communicate securely. An A2A Python agent can securely communicate with an A2A Java agent, with SLIM handling the underlying transport transparently. Real-World Use Cases SLIM + A2A: Agent-to-Agent Communication SLIM and A2A are designed to work together: A2A SDKs (Python, JavaScript, Java, C#, Go) implement agent-level semantics — task delegation, message formats, coordination patterns. SLIM bindings provide the secure transport, handling connection management, routing, encryption, and delivery guarantees. Currently, A2A sits on top of SLIM RPC (SRPC), enabling secure point-to-point agent interactions. We provide slim-a2a-python, a Python A2A SDK implementation built on SLIMRPC that enables developers to build A2A-compliant agents with SLIM as the transport layer. We are actively working to add A2A SDK support for the remaining SLIM language bindings (Go, C#, JavaScript/TypeScript, Kotlin). Looking ahead, A2A is evolving to support bidirectional streaming for real-time, interactive agent conversations and group communication for multi-agent coordination and collaboration. SLIM naturally provides both capabilities at the transport level through SRPC and MLS-based end-to-end encryption for groups, which many pub-sub systems lack. This positions SLIM as an ideal transport foundation for A2A’s continued evolution toward richer, more secure agent communication patterns. The following diagram illustrates how A2A and SLIM capabilities combine: graph LR subgraph Protocol["Protocol Layer (Application Semantics)"] direction TB A1["A2A Go SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"] B1["A2A C# SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"] C1["A2A Python SDK&lt;br/&gt;Task Delegation&lt;br/&gt;Coordination"] end subgraph Transport["Transport Layer (SLIM)"] direction TB subgraph Endpoints["Agent Endpoints"] A2["SLIM Go Bindings&lt;br/&gt;SRPC + Session + Data Plane"] B2["SLIM C# Bindings&lt;br/&gt;SRPC + Session + Data Plane"] C2["SLIM Python Bindings&lt;br/&gt;SRPC + Session + Data Plane"] end subgraph Network["SLIM Network Infrastructure"] SN1[SLIM Node 1&lt;br/&gt;Data Plane] SN2[SLIM Node 2&lt;br/&gt;Data Plane] end end A1 --&gt;|uses| A2 B1 --&gt;|uses| B2 C1 --&gt;|uses| C2 A2 -.-&gt;|"SRPC (P2P)&lt;br/&gt;encrypted via MLS"| SN1 B2 -.-&gt;|"SRPC (P2P)&lt;br/&gt;encrypted via MLS"| SN1 C2 -.-&gt;|"SRPC (Groups)&lt;br/&gt;encrypted via MLS"| SN2 SN1 -.-&gt;|routes| SN2 SN2 -.-&gt;|routes| SN1 style Protocol fill:#e8f4f8,stroke:#2980b9,stroke-width:3px style Transport fill:#fef5e7,stroke:#f39c12,stroke-width:3px style Endpoints fill:#fff,stroke:#95a5a6,stroke-width:2px style Network fill:#fff,stroke:#95a5a6,stroke-width:2px style A1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style B1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style C1 fill:#4a90e2,stroke:#2e5c8a,stroke-width:2px,color:#fff style A2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style B2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style C2 fill:#27ae60,stroke:#1e8449,stroke-width:2px,color:#fff style SN1 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff style SN2 fill:#f39c12,stroke:#d68910,stroke-width:2px,color:#fff Architecture Overview: Protocol Layer (blue, left): A2A SDKs implement agent-level semantics — defining what agents say through standardized task delegation, message formats, and coordination patterns. Transport Layer (green/orange, right): SLIM provides the secure infrastructure for how messages are delivered: SLIM Bindings (green): Include SRPC for RPC semantics, Session Layer for reliability and encryption, and Data Plane client for connectivity. SLIM Network (orange): Pure data plane nodes route encrypted messages without understanding agent semantics. Communication Patterns: Current: A2A uses SRPC for point-to-point (P2P) agent interactions with MLS encryption. Future: SLIM naturally provides SRPC group capabilities and MLS-based group encryption, ready to support A2A’s evolution toward groups and bidirectional streaming. SLIM also provides the transport layer for other agent communication protocols: MCP (Model Context Protocol) for context sharing between agents and tools. Custom protocols for domain-specific agent interactions. For more information about A2A, see the official A2A documentation. Getting Started Installation Install the SLIM node: # Docker docker pull ghcr.io/agntcy/slim:v1.0.0 # Cargo cargo install agntcy-slim # Helm (Kubernetes) helm pull oci://ghcr.io/agntcy/slim/helm/slim --version v1.0.0 Install Python bindings: pip install slim-bindings Quick Example Create your first SLIM agent in minutes: import asyncio import slim_bindings import datetime async def main(): # Initialize the global service service = slim_bindings.get_global_service() # Create app with shared secret authentication local_name = slim_bindings.Name("org", "namespace", "agent") app = service.create_app_with_secret(local_name, "my-shared-secret") # Connect to SLIM node client_config = slim_bindings.new_insecure_client_config( "http://127.0.0.1:46357" ) conn_id = await service.connect_async(client_config) # Subscribe to local name await app.subscribe_async(local_name, conn_id) # Listen for incoming session session = await app.listen_for_session_async(None) # Handle messages while True: received_msg = await session.get_message_async( timeout=datetime.timedelta(seconds=30) ) payload = received_msg.payload print(f"Received: {payload.decode()}") await session.publish_async(b"Acknowledged: " + payload, None, None) asyncio.run(main()) The Road Ahead SLIM is being actively developed as an open-source project under the Apache 2.0 license. The protocol specification has been submitted as an Internet-Draft to the IETF, reflecting its ambition to become a standard for agentic AI communication. Current capabilities include: Rust core with multi-language bindings (Python, Go, and more coming) MLS-based end-to-end encryption Point-to-point and group sessions SRPC for RPC patterns Control plane for management Kubernetes deployment support The community is working on: Additional language bindings (C#, JavaScript/TypeScript, Kotlin) Enhanced monitoring and observability Integration with popular AI frameworks Extended A2A support for groups and bidirectional streaming Reference implementations of MCP over SLIM Performance optimizations Why SLIM Matters As AI systems evolve from monolithic models to distributed networks of specialized agents, the communication infrastructure becomes critical. SLIM provides a foundation that: Ensures security: end-to-end encryption without complexity. Scales with demand: from prototype to production. Simplifies development: intuitive APIs for complex capabilities. Future-proofs architecture: standards-based, extensible design. Whether you’re building a multi-agent AI system, an agentic workflow platform, or the next generation of AI applications, SLIM provides the messaging infrastructure you need. Get Involved SLIM is open source and welcomes contributions: GitHub Documentation Specification You can find comprehensive Python and Go examples in the GitHub repository. Join the community building the communication layer for agentic AI. Try SLIM in your next project with our language binding examples, contribute to the codebase, or share your use cases. The future of AI is collaborative, distributed, and secure. SLIM makes it possible. SLIM is developed by AGNTCY Contributors and released under the Apache 2.0 License.]]></summary></entry></feed>
