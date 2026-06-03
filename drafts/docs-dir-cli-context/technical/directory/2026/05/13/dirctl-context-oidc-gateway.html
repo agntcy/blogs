@@ -122,9 +122,9 @@
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--server-addr</span> localhost:8888 search <span class="nt">--name</span> <span class="s2">"*"</span>
 
-dirctl <span class="nt">--server-addr</span> prod.gateway.ads.outshift.io:443 <span class="se">\</span>
+dirctl <span class="nt">--server-addr</span> ads.outshift.io:443 <span class="se">\</span>
   <span class="nt">--auth-mode</span> oidc <span class="se">\</span>
-  <span class="nt">--oidc-issuer</span> https://prod.idp.ads.outshift.io <span class="se">\</span>
+  <span class="nt">--oidc-issuer</span> https://idp.ads.outshift.io <span class="se">\</span>
   <span class="nt">--oidc-client-id</span> dirctl <span class="se">\</span>
   search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
 </code></pre></div></div>
@@ -175,9 +175,9 @@ dirctl <span class="nt">--server-addr</span> prod.gateway.ads.outshift.io:443 <s
     <span class="na">server_address</span><span class="pi">:</span> <span class="s">localhost:8888</span>
     <span class="na">auth_mode</span><span class="pi">:</span> <span class="s">insecure</span>
   <span class="na">prod</span><span class="pi">:</span>
-    <span class="na">server_address</span><span class="pi">:</span> <span class="s">prod.gateway.ads.outshift.io:443</span>
+    <span class="na">server_address</span><span class="pi">:</span> <span class="s">ads.outshift.io:443</span>
     <span class="na">auth_mode</span><span class="pi">:</span> <span class="s">oidc</span>
-    <span class="na">oidc_issuer</span><span class="pi">:</span> <span class="s">https://prod.idp.ads.outshift.io</span>
+    <span class="na">oidc_issuer</span><span class="pi">:</span> <span class="s">https://idp.ads.outshift.io</span>
     <span class="na">oidc_client_id</span><span class="pi">:</span> <span class="s">dirctl</span>
 </code></pre></div></div>
 

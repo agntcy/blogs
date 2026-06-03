@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/drafts/docs-dir-cli-context/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/drafts/docs-dir-cli-context/" rel="alternate" type="text/html" /><updated>2026-05-13T16:16:13+00:00</updated><id>https://blogs.agntcy.org/drafts/docs-dir-cli-context/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Switching Between Local and Hosted Directory with dirctl Contexts</title><link href="https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html" rel="alternate" type="text/html" title="Switching Between Local and Hosted Directory with dirctl Contexts" /><published>2026-05-13T09:00:00+00:00</published><updated>2026-05-13T09:00:00+00:00</updated><id>https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway</id><content type="html" xml:base="https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html"><![CDATA[<p>When you work with <a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a>, you often move between two worlds.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/drafts/docs-dir-cli-context/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/drafts/docs-dir-cli-context/" rel="alternate" type="text/html" /><updated>2026-06-03T15:33:08+00:00</updated><id>https://blogs.agntcy.org/drafts/docs-dir-cli-context/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Switching Between Local and Hosted Directory with dirctl Contexts</title><link href="https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html" rel="alternate" type="text/html" title="Switching Between Local and Hosted Directory with dirctl Contexts" /><published>2026-05-13T09:00:00+00:00</published><updated>2026-05-13T09:00:00+00:00</updated><id>https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway</id><content type="html" xml:base="https://blogs.agntcy.org/drafts/docs-dir-cli-context/technical/directory/2026/05/13/dirctl-context-oidc-gateway.html"><![CDATA[<p>When you work with <a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a>, you often move between two worlds.</p>
 
 <p>On your laptop, you want a fast local Directory server where you can test records, validate metadata, and iterate without needing a cluster. When you are ready to search, publish, or interact with a shared environment, you want the hosted Directory testbed with real authentication at the edge.</p>
 
@@ -54,9 +54,9 @@
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--server-addr</span> localhost:8888 search <span class="nt">--name</span> <span class="s2">"*"</span>
 
-dirctl <span class="nt">--server-addr</span> prod.gateway.ads.outshift.io:443 <span class="se">\</span>
+dirctl <span class="nt">--server-addr</span> ads.outshift.io:443 <span class="se">\</span>
   <span class="nt">--auth-mode</span> oidc <span class="se">\</span>
-  <span class="nt">--oidc-issuer</span> https://prod.idp.ads.outshift.io <span class="se">\</span>
+  <span class="nt">--oidc-issuer</span> https://idp.ads.outshift.io <span class="se">\</span>
   <span class="nt">--oidc-client-id</span> dirctl <span class="se">\</span>
   search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
 </code></pre></div></div>
@@ -107,9 +107,9 @@ dirctl <span class="nt">--server-addr</span> prod.gateway.ads.outshift.io:443 <s
     <span class="na">server_address</span><span class="pi">:</span> <span class="s">localhost:8888</span>
     <span class="na">auth_mode</span><span class="pi">:</span> <span class="s">insecure</span>
   <span class="na">prod</span><span class="pi">:</span>
-    <span class="na">server_address</span><span class="pi">:</span> <span class="s">prod.gateway.ads.outshift.io:443</span>
+    <span class="na">server_address</span><span class="pi">:</span> <span class="s">ads.outshift.io:443</span>
     <span class="na">auth_mode</span><span class="pi">:</span> <span class="s">oidc</span>
-    <span class="na">oidc_issuer</span><span class="pi">:</span> <span class="s">https://prod.idp.ads.outshift.io</span>
+    <span class="na">oidc_issuer</span><span class="pi">:</span> <span class="s">https://idp.ads.outshift.io</span>
     <span class="na">oidc_client_id</span><span class="pi">:</span> <span class="s">dirctl</span>
 </code></pre></div></div>
 
