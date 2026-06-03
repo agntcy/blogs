@@ -63,9 +63,9 @@ Without contexts, you can still pass flags manually:
 ```bash
 dirctl --server-addr localhost:8888 search --name "*"
 
-dirctl --server-addr prod.gateway.ads.outshift.io:443 \
+dirctl --server-addr ads.outshift.io:443 \
   --auth-mode oidc \
-  --oidc-issuer https://prod.idp.ads.outshift.io \
+  --oidc-issuer https://idp.ads.outshift.io \
   --oidc-client-id dirctl \
   search --skill "natural_language_processing"
 ```
@@ -122,9 +122,9 @@ contexts:
     server_address: localhost:8888
     auth_mode: insecure
   prod:
-    server_address: prod.gateway.ads.outshift.io:443
+    server_address: ads.outshift.io:443
     auth_mode: oidc
-    oidc_issuer: https://prod.idp.ads.outshift.io
+    oidc_issuer: https://idp.ads.outshift.io
     oidc_client_id: dirctl
 ```
 
