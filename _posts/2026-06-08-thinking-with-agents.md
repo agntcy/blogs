@@ -2,7 +2,7 @@
 layout: post
 title: "Now you're thinking with Agents"
 title_html: '"Now you&rsquo;re thinking with <s>Portals</s> Agents"'
-date: 2026-05-18 09:00:00 +0000
+date: 2026-06-08 09:00:00 +0000
 author: Sam Betts
 author_url: https://github.com/tehsmash
 categories: [technical, agents, a2a]
