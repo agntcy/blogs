@@ -114,7 +114,8 @@ ARD is a contract; something has to *fill and manage* the data, storage, routing
 The clean consequence is that **ADS is a reference implementation of ARD.** ADS is a distributed registry that exposes its [OASF](https://docs.agntcy.org/oasf/open-agentic-schema-framework/) records as AI Catalog entries and serves them securely over the ARD endpoints so the same inventory is reachable by both ADS and ARD client integrations. Operators publish records to ADS while the consumers discover through ARD, verify through ADS, and invoke through MCP or A2A -- one flow, many protocols.
 
 ```bash
-# Start local ADS node in the background
+# Start local ADS node in the background.
+# UI dashboard available at http://localhost:8889
 $ dirctl daemon start &
 
 # Define sample agent skill data
