@@ -1,4 +1,481 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-06-17T07:51:18+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Now you’re thinking with Agents</title><link href="https://blogs.agntcy.org/technical/agents/a2a/2026/06/08/thinking-with-agents.html" rel="alternate" type="text/html" title="Now you’re thinking with Agents" /><published>2026-06-08T09:00:00+00:00</published><updated>2026-06-08T09:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/agents/a2a/2026/06/08/thinking-with-agents</id><content type="html" xml:base="https://blogs.agntcy.org/technical/agents/a2a/2026/06/08/thinking-with-agents.html"><![CDATA[<p>There is a moment in Portal when the game clicks. You stop trying to find a way
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-06-17T14:15:29+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">ARD over Agent Directory: Interoperability by Design</title><link href="https://blogs.agntcy.org/technical/2026/06/16/ai-catalog-over-directory.html" rel="alternate" type="text/html" title="ARD over Agent Directory: Interoperability by Design" /><published>2026-06-16T12:00:00+00:00</published><updated>2026-06-16T12:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/06/16/ai-catalog-over-directory</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/06/16/ai-catalog-over-directory.html"><![CDATA[<p>A developer integrating agentic capabilities today faces a discovery problem that looks deceptively like a solved one. We have standards, registries, catalogs, and well-knowns; surely finding the right tool is just a lookup? In practice it is not, because the ecosystem has fragmented into protocols that each describe the <em>same</em> artifact differently; be it a resource, tool, agent, or a full agentic system. And while the artifact is one thing; its discovery representations are many.</p>
+
+<p>The question of discovery and interoperability is not achieved by picking a winning format or specification. <a href="https://agent-card.github.io/ai-catalog">AI Catalog</a> and <a href="https://agenticresourcediscovery.org/">Agentic Resource Discovery (ARD)</a> are not competing standards; they are complementary lenses on the same underlying problem. Each one tries to answers a shared set of questions - <em>what is this artifact</em>, <em>what can it do</em>, <em>how to use it</em>, <em>who published it</em>, and <em>can I trust it</em>.</p>
+
+<p>Most of these formats are <strong>higher-level discovery protocols</strong>: they define a vocabulary and an envelope. What they do <em>not</em> define is the hard part – a secure, federated, capability-driven discovery layer that actually links these artifacts, routes queries across organizational boundaries, and provides security and control policies embedded in. That layer is exactly what <a href="https://github.com/agntcy/dir">Agent Directory Service (ADS)</a> provides - not another competing registry, but a <strong>low-level protocol</strong> the others can be built on.</p>
+
+<!-- **TL;DR:** AI Catalog and ARD are intentionally artifact-agnostic envelopes; they identify *what* an agentic thing is and delegate *how* to invoke it to the native protocol. ADS supplies the shared schema, identity, routing, and security layer beneath them. A consumer can therefore discover through ARD, verify through ADS, and invoke through MCP or A2A -- one flow, many protocols. -->
+
+<h2 id="three-layers-one-stack">Three layers, one stack</h2>
+
+<p>A recurring design mistake is to collapse “the format”, “the query API”, and “the system” into one monolith. The agentic ecosystem deliberately keeps them apart, and the separation is the whole reason it interoperates.</p>
+
+<pre><code class="language-mermaid">flowchart BT
+    subgraph L3["ADS -- Discovery &amp; Control Plane"]
+        OASF["Records"]
+        API["API (gRPC / REST)"]
+        CID["Identifiers (CIDs / DIDs)"]
+        DHT["Routing (DHT)"]
+        OCI["Storage (OCI)"]
+        SIGN["Security / Policies"]
+    end
+    subgraph L2["ARD -- Consumption API"]
+        WK["GET /.well-known/ai-catalog.json"]
+        SEARCH["POST /search"]
+        LIST["GET /agents"]
+    end
+    subgraph L1["AI Catalog -- Index / Content Standard"]
+        ENTRY["Catalog Entry Schema"]
+        TRUST["Trust Manifest Schema"]
+        TYPES["IANA media types"]
+    end
+
+    L1 --&gt;|"mapped by"| L2
+    L2 --&gt;|"implemented by"| L3
+    L3 --&gt;|"consumed by"| CLIENT["AI clients / applications / systems"]
+
+    style CLIENT fill:#800080,stroke:#800080,color:#fff
+    style OASF fill:#023a7a,color:#f3f6fd
+    style API fill:#023a7a,color:#f3f6fd
+    style CID fill:#023a7a,color:#f3f6fd
+    style DHT fill:#023a7a,color:#f3f6fd
+    style OCI fill:#023a7a,color:#f3f6fd
+    style SIGN fill:#023a7a,color:#f3f6fd
+    style WK fill:#023a7a,color:#f3f6fd
+    style SEARCH fill:#023a7a,color:#f3f6fd
+    style LIST fill:#023a7a,color:#f3f6fd
+    style ENTRY fill:#023a7a,color:#f3f6fd
+    style TRUST fill:#023a7a,color:#f3f6fd
+    style TYPES fill:#023a7a,color:#f3f6fd
+</code></pre>
+
+<h3 id="layer-1-ai-catalog-as-the-index-standard">Layer 1: AI Catalog as the index standard</h3>
+
+<p>The <a href="https://agent-card.github.io/ai-catalog/">AI Catalog</a> is a <em>typed, nestable JSON container</em> for describing heterogeneous AI artifacts. Each entry identifies an artifact by an <strong>IANA media type</strong> and a <strong>domain-anchored URN</strong>. The catalog is therefore <em>protocol-agnostic</em>: it can describe an MCP server, an A2A agent, a custom tool, or a set of catalogs in the same way. On its own, the catalog is a static index intended to be consumed by AI applications and served over higher-level discovery protocols like ARD.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"identifier"</span><span class="p">:</span><span class="w"> </span><span class="s2">"urn:ai:acme.com:agents:weather"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"displayName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Weather Agent"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"application/mcp-server+json"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://api.acme.com/mcp/weather.json"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"capabilities"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"WeatherTool"</span><span class="p">,</span><span class="w"> </span><span class="s2">"ForecastTool"</span><span class="p">],</span><span class="w">
+  </span><span class="nl">"representativeQueries"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"current wind speed in Chicago"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"5-day forecast for Seattle"</span><span class="p">,</span><span class="w">
+  </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="layer-2-ard-as-the-consumption-api">Layer 2: ARD as the consumption API</h3>
+
+<p>The <a href="https://agenticresourcediscovery.org/">Agentic Resource Discovery</a> is a <em>read-only discovery API layer</em> on top of the AI Catalog. It defines how AI artifacts are cataloged, discovered, and searched within and across registries. It promotes the search-first discovery where registries maintain a shared index while the clients find capabilities over standard HTTP REST APIs instead of loading every tool description into an LLM context window. The ARD spec is intentionally agnostic about the underlying storage, identity, and routing mechanisms; it only defines the <em>contract</em> but does not ship discovery or control plane.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-s</span> https://your-discovery-service/search <span class="se">\</span>
+  <span class="nt">-H</span> <span class="s1">'content-type: application/json'</span> <span class="se">\</span>
+  <span class="nt">-d</span> <span class="s1">'{"query": {"text":"book me a flight to Tokyo"}, "pageSize":3}'</span>
+<span class="o">{</span>
+  <span class="s2">"results"</span>: <span class="o">[</span>
+    <span class="o">{</span>
+      <span class="s2">"identifier"</span>: <span class="s2">"urn:ai:acme.com:travel:concierge"</span>,
+      <span class="s2">"displayName"</span>: <span class="s2">"Travel Concierge"</span>,
+      <span class="s2">"type"</span>: <span class="s2">"application/mcp-server+json"</span>,
+      <span class="s2">"url"</span>: <span class="s2">"https://api.acme.com/mcp/travel.json"</span>,
+      <span class="s2">"score"</span>: 95,
+      <span class="s2">"source"</span>: <span class="s2">"https://registry.acme.com/api/v1/"</span>
+    <span class="o">}</span>
+  <span class="o">]</span>,
+  <span class="s2">"referrals"</span>: <span class="o">[</span>
+    <span class="o">{</span>
+      <span class="s2">"identifier"</span>: <span class="s2">"urn:ai:example.org:registry"</span>,
+      <span class="s2">"type"</span>: <span class="s2">"application/ai-registry"</span>,
+      <span class="s2">"url"</span>: <span class="s2">"https://registry.acme.com/search"</span>
+    <span class="o">}</span>
+  <span class="o">]</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<h3 id="layer-3-ads-as-the-discovery-and-control-plane">Layer 3: ADS as the discovery and control plane</h3>
+
+<p>ARD is a contract; something has to <em>fill and manage</em> the data, storage, routing, and trust. That role is performed by <a href="https://docs.agntcy.org/dir/overview/">ADS</a>, the only layer with a <strong>control plane</strong>: it ingests records, content-addresses them with CIDs, signs and verifies them, announces them to a DHT, replicates them over OCI, and enforces zero-trust identity between data, clients, and nodes. Where ARD answers “what fits this task?”, ADS owns “what exists, best fit, who vouches for it, and where it physically lives.”</p>
+
+<p>The clean consequence is that <strong>ADS is a reference implementation of ARD.</strong> ADS is a distributed registry that exposes its <a href="https://docs.agntcy.org/oasf/open-agentic-schema-framework/">OASF</a> records as AI Catalog entries and serves them securely over the ARD endpoints so the same inventory is reachable by both ADS and ARD client integrations. Operators publish records to ADS while the consumers discover through ARD, verify through ADS, and invoke through MCP or A2A – one flow, many protocols.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Start local ADS node in the background.</span>
+<span class="c"># UI dashboard available at http://localhost:8889</span>
+<span class="nv">$ </span>dirctl daemon start &amp;
+
+<span class="c"># Define sample agent skill data</span>
+<span class="nv">$ </span><span class="nb">export </span><span class="nv">SKILL_DATA</span><span class="o">=</span><span class="s2">"This is a sample agent skill for weather details over AccuWeather."</span>
+
+<span class="c"># Push and sign a sample record</span>
+<span class="nv">$ </span><span class="nb">cat</span> <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh"> | dirctl push --sign --stdin
+{
+  "name": "Weather Agent",
+  "schema_version": "1.0.0",
+  "version": "1.0.0",
+  "description": "Helps with tracking weather information",
+  "authors": ["Example Organization"],
+  "created_at": "2025-01-01T00:00:00Z",
+  "skills": [
+    {"name": "natural_language_processing/natural_language_understanding/contextual_comprehension"}
+  ],
+  "modules": [
+    {
+      "name": "core/language_model/agentskills",
+      "data": {
+        "skill_file": "SKILL.md",
+        "skill_manifest": {
+          "name": "Weather Agent",
+          "description": "Helps with tracking weather information",
+          "version": "1.0.0"
+        }
+      },
+      "artifact": {
+        "data": "</span><span class="si">$(</span><span class="nb">echo</span> <span class="s2">"</span><span class="nv">$SKILL_DATA</span><span class="s2">"</span> | <span class="nb">base64</span><span class="si">)</span><span class="sh">",
+        "media_type": "application/agentskill+md",
+        "digest": "sha256:</span><span class="si">$(</span><span class="nb">echo</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$SKILL_DATA</span><span class="s2">"</span> | <span class="nb">sha256sum</span> | <span class="nb">awk</span> <span class="s1">'{print $1}'</span><span class="si">)</span><span class="sh">",
+        "size": </span><span class="si">$(</span><span class="nb">echo</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$SKILL_DATA</span><span class="s2">"</span> | <span class="nb">wc</span> <span class="nt">-c</span><span class="si">)</span><span class="sh">
+      }
+    }
+  ]
+}
+</span><span class="no">EOF
+
+</span><span class="c"># Discover via ARD over ADS</span>
+<span class="nv">$ </span>curl <span class="nt">-s</span> http://localhost:8889/v1/agents | <span class="se">\</span>
+    jq <span class="nt">-r</span> <span class="s1">'.results[] | "\(.displayName) \(.identifier) \(.mediaType)"'</span>
+
+<span class="c"># Verify the record</span>
+<span class="nv">$ </span>dirctl verify baeareieojr2mtkdtddnllqhanf3aev4qcsd5rz6oj4by6f563l3mmnro5y
+
+<span class="c"># Stop the ADS daemon</span>
+<span class="nv">$ </span>dirctl daemon stop
+</code></pre></div></div>
+
+<h2 id="what-the-specs-leave-unsolved">What the specs leave unsolved</h2>
+
+<p>Both the AI Catalog and ARD specifications are scrupulous about scope. They define the <em>what</em> and the <em>how</em>, but not the <em>where</em> or the <em>who</em>. They describe identity, federation, distribution, and security but do not ship a control plane that supports it. The table below summarizes how the higher-level specification concepts map to the underlying ADS primitives and what is solved by ADS.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Spec concept</th>
+      <th>ADS supported primitives</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Artifact/Publisher identity</td>
+      <td>SPIFFE + DNS/HTTPS identity</td>
+    </tr>
+    <tr>
+      <td>Content integrity</td>
+      <td>CID (content addressing)</td>
+    </tr>
+    <tr>
+      <td>Authenticity</td>
+      <td>OIDC / key-based sign + verify</td>
+    </tr>
+    <tr>
+      <td>Search</td>
+      <td>ARD REST API (without <code class="language-plaintext highlighter-rouge">POST /search</code>)</td>
+    </tr>
+    <tr>
+      <td>Federation</td>
+      <td>libp2p DHT two-phase routing + sync</td>
+    </tr>
+    <tr>
+      <td>Distribution</td>
+      <td>OCI v1.1 distribution spec</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="identity">Identity</h3>
+
+<p>AI Catalog’s <a href="https://agent-card.github.io/ai-catalog/#trust-manifest">Trust Manifest</a> carries <code class="language-plaintext highlighter-rouge">identity</code>, <code class="language-plaintext highlighter-rouge">attestations</code>, <code class="language-plaintext highlighter-rouge">provenance</code> and an optional <code class="language-plaintext highlighter-rouge">signature</code> field for security policies. ARD reuses this object and additionally <em>requires</em> that the cryptographic identity aligns with the domain embedded in the resource’s URN. Both specs describe verification procedures, but neither defines how. ADS already runs one. Records are addressed by <a href="https://github.com/multiformats/cid">CID</a>, so <code class="language-plaintext highlighter-rouge">provenance</code> models are native, not bolted on. Workload identity comes from <a href="https://spiffe.io/">SPIFFE</a> and <a href="https://datatracker.ietf.org/doc/html/rfc1035/">DNS/HTTPS</a> where every component gets a verifiable ID, which is precisely the <code class="language-plaintext highlighter-rouge">identity</code> ARD wants anchored to a publisher. ADS also ships a signing and verification plane, so the <code class="language-plaintext highlighter-rouge">signature</code> is not just a placeholder but actually a verifiable field over the data.</p>
+
+<h3 id="federation">Federation</h3>
+
+<p>ARD’s federation model is elegant precisely because it assumes the implementations can route. <em>“Query upstream registries and merge”</em> is one HTTP line in the spec and a distributed-systems problem in practice. ADS solves the routing problem with a <a href="https://github.com/libp2p/specs/tree/master/kad-dht">libp2p Kad-DHT</a> and a two-phase lookup: <em>capability to CIDs</em>, then <em>CID to servers</em>. An ARD <code class="language-plaintext highlighter-rouge">referrals</code> response is, underneath, a projection of that routing table.</p>
+
+<h3 id="distribution">Distribution</h3>
+
+<p>AI Catalog maps the logical format onto OCI registries for content-addressed storage. ADS uses the <a href="https://github.com/opencontainers/distribution-spec">OCI distribution spec</a> as its reference storage model. The mapping the spec describes as future work is the mechanism ADS already ships today. When a record is pushed to ADS, it is automatically stored in the given OCI registry and made available for fetch by CID. The ARD <code class="language-plaintext highlighter-rouge">url</code> field can directly point to the OCI location, or it can point to the ADS node which proxies the fetch.</p>
+
+<h2 id="end-to-end-discovery-to-invocation-with-ard-over-ads">End-to-End Discovery-to-Invocation with ARD over ADS</h2>
+
+<p><a href="https://github.com/agntcy/dir/releases/tag/v1.5.0">ADS v1.5</a> ships with a reference implementation of the ARD specification. A publisher can push an artifact to ADS and have it automatically available through any ARD client, regardless of whether the client speaks MCP, A2A, or any other protocol. The publisher does not need to implement multiple discovery protocols; they can rely on ADS to bridge the gap.</p>
+
+<p>Below is a sequence diagram showing a sample end-to-end flow, from discovery to invocation, across heterogeneous protocols. The idea is simple: an agentic application queries ADS over ARD, discovers capabilities, verifies trust, and dispatches work to the appropriate protocol based on its requirements.</p>
+
+<blockquote>
+  <p>Full code samples are available in <a href="https://github.com/agntcy/dir/tree/main/samples">github.com/agntcy/dir</a> repository.</p>
+</blockquote>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant U as User
+    participant O as Application (Go/CLI)
+    participant ADS as ADS node (ARD endpoint)
+	participant DHT as DHT federation layer
+	participant FADS as Federated ADS node
+    participant P as Publisher
+    participant T as Tool (MCP / A2A / REST)
+
+	P-&gt;&gt;ADS: push signed OASF record
+	ADS-&gt;&gt;DHT: announce capability + CID
+	DHT--&gt;&gt;ADS: discoverable in federation
+
+    U-&gt;&gt;O: "Book a flight to Tokyo and file the expense"
+    O-&gt;&gt;ADS: POST /search { text, filter: type in [a2a, mcp] }
+	ADS-&gt;&gt;DHT: federated lookup (capability -&gt; CID -&gt; providers)
+	DHT--&gt;&gt;ADS: provider nodes + matching CIDs
+	ADS-&gt;&gt;FADS: fetch federated records by CID
+	FADS--&gt;&gt;ADS: sync federated records
+    ADS--&gt;&gt;O: ranked CatalogEntries (type + url + score)
+    O-&gt;&gt;O: select top entry per sub-task
+    O-&gt;&gt;O: verify bindings + signature
+    O-&gt;&gt;T: dispatch by media type → native protocol
+    T--&gt;&gt;O: result
+    O--&gt;&gt;U: task complete
+</code></pre>
+
+<p>The decisive step is where the application dispatches runs <strong>by media type</strong>. ADS doesn’t invoke anything; it tells the application <em>which</em> protocol each capability speaks, and the application routes accordingly. This is how one discovery query spans heterogeneous protocols and domains, exactly as envisioned in the agnostic discovery model of ADS.</p>
+
+<h2 id="building-the-application">Building the application</h2>
+
+<p>We use the following tools and libraries to build a sample producer/consumer application:</p>
+<ul>
+  <li><strong>ARD consumption API</strong>: plain <code class="language-plaintext highlighter-rouge">net/http</code> or <code class="language-plaintext highlighter-rouge">curl</code> for the ARD consumption API used for discovery.</li>
+  <li><strong>ADS client tools</strong>: <a href="https://github.com/agntcy/dir/tree/main/client">Go SDK</a> or <a href="https://github.com/agntcy/dir/tree/main/cli">dirctl</a> CLI for pushing, signing, and verifying records.</li>
+</ul>
+
+<p>Code snippets below are simplified for clarity and focus on ideas. The samples in the repository include full working implementations.</p>
+
+<h3 id="step-1-publish-an-agentic-capability-to-ads">Step 1: Publish an agentic capability to ADS</h3>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">(</span>
+  <span class="n">adsclient</span> <span class="s">"github.com/agntcy/dir/client"</span>
+  <span class="n">corev1</span> <span class="s">"github.com/agntcy/dir/api/core/v1"</span>
+<span class="p">)</span>
+
+<span class="c">// Publish an OASF record to ADS, sign it, then announce to DHT for federated discovery.</span>
+<span class="c">// Local node indexes it and can serve it locally over ADS or ARD right away.</span>
+<span class="k">func</span> <span class="n">Publish</span><span class="p">(</span><span class="n">ctx</span> <span class="n">context</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">client</span> <span class="o">*</span><span class="n">adsclient</span><span class="o">.</span><span class="n">Client</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+  <span class="c">// Push locally</span>
+  <span class="n">ref</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">client</span><span class="o">.</span><span class="n">Push</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">corev1</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="o">&amp;</span><span class="n">typesv1</span><span class="o">.</span><span class="n">Record</span><span class="p">{</span>
+      <span class="n">Name</span><span class="o">:</span> <span class="s">"weather-agent"</span><span class="p">,</span>
+      <span class="n">Version</span><span class="o">:</span> <span class="s">"1.0.0"</span><span class="p">,</span>
+      <span class="c">// ...</span>
+  <span class="p">}))</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">err</span>
+  <span class="p">}</span>
+
+  <span class="c">// Sign the record to prove authenticity and integrity.</span>
+  <span class="c">// Provider can be a private key or OIDC token.</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">client</span><span class="o">.</span><span class="n">Sign</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="p">{</span><span class="n">ref</span><span class="p">,</span> <span class="n">provider</span><span class="p">});</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="n">err</span>
+  <span class="p">}</span>
+
+  <span class="c">// Publish to DHT for federated discovery, so other nodes can find it.</span>
+  <span class="c">// Optional if only local discovery is needed.</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">client</span><span class="o">.</span><span class="n">Publish</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="p">{</span><span class="n">ref</span><span class="p">});</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="n">err</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="no">nil</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="step-2-discover-over-ard">Step 2: Discover over ARD</h3>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">(</span>
+  <span class="n">catalogv1</span> <span class="s">"github.com/agntcy/dir/api/catalog/v1"</span>
+<span class="p">)</span>
+
+<span class="c">// Discover asks a local ADS node via its ARD endpoint for capabilities matching a task.</span>
+<span class="c">// The consumer application can extend this with more complex query matching and ranking logic as needed.</span>
+<span class="k">func</span> <span class="n">Discover</span><span class="p">(</span><span class="n">ctx</span> <span class="n">context</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">taskQuery</span> <span class="kt">string</span><span class="p">)</span> <span class="p">([]</span><span class="o">*</span><span class="n">catalogv1</span><span class="o">.</span><span class="n">CatalogEntry</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c">// Find relevant capabilities</span>
+  <span class="n">httpReq</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">http</span><span class="o">.</span><span class="n">NewRequestWithContext</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">http</span><span class="o">.</span><span class="n">MethodGet</span><span class="p">,</span> <span class="s">"http://localhost:8889/v1/agents"</span><span class="p">,</span> <span class="n">bytes</span><span class="o">.</span><span class="n">NewReader</span><span class="p">([]</span><span class="kt">byte</span><span class="p">(</span><span class="n">taskQuery</span><span class="p">)))</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="n">err</span>
+  <span class="p">}</span>
+  <span class="n">httpReq</span><span class="o">.</span><span class="n">Header</span><span class="o">.</span><span class="n">Set</span><span class="p">(</span><span class="s">"Content-Type"</span><span class="p">,</span> <span class="s">"application/json"</span><span class="p">)</span>
+
+  <span class="n">resp</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">http</span><span class="o">.</span><span class="n">Client</span><span class="p">{</span><span class="n">Timeout</span><span class="o">:</span> <span class="m">10</span> <span class="o">*</span> <span class="n">time</span><span class="o">.</span><span class="n">Second</span><span class="p">})</span><span class="o">.</span><span class="n">Do</span><span class="p">(</span><span class="n">httpReq</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="n">err</span>
+  <span class="p">}</span>
+  <span class="k">defer</span> <span class="n">resp</span><span class="o">.</span><span class="n">Body</span><span class="o">.</span><span class="n">Close</span><span class="p">()</span>
+
+  <span class="c">// Read the response</span>
+  <span class="n">outBytes</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">io</span><span class="o">.</span><span class="n">ReadAll</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">Body</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="n">err</span>
+  <span class="p">}</span>
+
+  <span class="c">// Unmarshal the response into a ListAgentsResponse</span>
+  <span class="c">// Note: use protojson since the response is a protobuf message</span>
+  <span class="c">// and we're communicating over HTTP with JSON encoding</span>
+  <span class="k">var</span> <span class="n">out</span> <span class="n">catalogv1</span><span class="o">.</span><span class="n">ListAgentsResponse</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">protojson</span><span class="o">.</span><span class="n">Unmarshal</span><span class="p">(</span><span class="n">outBytes</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">out</span><span class="p">);</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="no">nil</span><span class="p">,</span> <span class="n">err</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="n">out</span><span class="o">.</span><span class="n">Results</span><span class="p">,</span> <span class="no">nil</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="step-2-dispatch-by-media-type-to-the-native-protocol">Step 2: Dispatch by media type to the native protocol</h3>
+
+<p>Discovery hands us a <code class="language-plaintext highlighter-rouge">mediaType</code> and other relevant details such as <code class="language-plaintext highlighter-rouge">url</code> about the discovered capabilities. The application’s job is now to route to the right execution path and not to “guess” a protocol:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">(</span>
+  <span class="n">catalogv1</span> <span class="s">"github.com/agntcy/dir/api/catalog/v1"</span>
+<span class="p">)</span>
+
+<span class="c">// Dispatch routes a discovered entry to its native invocation path.</span>
+<span class="k">func</span> <span class="n">Dispatch</span><span class="p">(</span><span class="n">ctx</span> <span class="n">context</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">entry</span> <span class="o">*</span><span class="n">catalogv1</span><span class="o">.</span><span class="n">CatalogEntry</span><span class="p">,</span> <span class="n">task</span> <span class="k">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="n">any</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+  <span class="k">switch</span> <span class="n">entry</span><span class="o">.</span><span class="n">MediaType</span> <span class="p">{</span>
+  <span class="k">case</span> <span class="s">"application/mcp-server-card+json"</span><span class="o">:</span>
+    <span class="c">// Fetch the MCP server descriptor at entry.URL, then speak JSON-RPC.</span>
+    <span class="k">return</span> <span class="n">invokeMCP</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">URL</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span>
+  <span class="k">case</span> <span class="s">"application/a2a-agent-card+json"</span><span class="o">:</span>
+    <span class="c">// Load the A2A agent card at entry.URL, then speak A2A.</span>
+    <span class="k">return</span> <span class="n">invokeA2A</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">URL</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span>
+  <span class="k">case</span> <span class="s">"application/agentskill+md"</span><span class="o">:</span>
+    <span class="c">// Pull the agent skill markdown at entry.URL, then execute.</span>
+    <span class="k">return</span> <span class="n">invokeAgentSkill</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">URL</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span>
+  <span class="k">default</span><span class="o">:</span>
+    <span class="k">return</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"unsupported media type: %s"</span><span class="p">,</span> <span class="n">entry</span><span class="o">.</span><span class="n">MediaType</span><span class="p">)</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><strong>This <code class="language-plaintext highlighter-rouge">switch</code> is the interoperability boundary.</strong> ARD guarantees the <code class="language-plaintext highlighter-rouge">mediaType</code> is a well-known IANA media type; the consumer owns the mapping logic and decides what to do with each type. Add a new artifact type to your stack, and you add one <code class="language-plaintext highlighter-rouge">case</code> while the discovery itself is unchanged.</p>
+
+<h3 id="step-3-verify-trust-before-you-invoke">Step 3: Verify trust before you invoke</h3>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">(</span>
+  <span class="n">adsclient</span> <span class="s">"github.com/agntcy/dir/client"</span>
+  <span class="n">corev1</span> <span class="s">"github.com/agntcy/dir/api/core/v1"</span>
+<span class="p">)</span>
+
+<span class="c">// Verify confirms the entry owns its claimed identity and trust signals.</span>
+<span class="c">// Identifier format is expected to be urn:ai:org.agntcy:cid:&lt;cid&gt;</span>
+<span class="k">func</span> <span class="n">Verify</span><span class="p">(</span><span class="n">ctx</span> <span class="n">context</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">client</span> <span class="o">*</span><span class="n">adsclient</span><span class="o">.</span><span class="n">Client</span><span class="p">,</span> <span class="n">e</span> <span class="o">*</span><span class="n">catalogv1</span><span class="o">.</span><span class="n">CatalogEntry</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+  <span class="c">// Get AGNTYCY identifier</span>
+  <span class="n">cid</span><span class="p">,</span> <span class="n">found</span> <span class="o">:=</span> <span class="n">strings</span><span class="o">.</span><span class="n">CutPrefix</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">Identifier</span><span class="p">,</span> <span class="s">"urn:ai:org.agntcy:cid:"</span><span class="p">)</span>
+  <span class="k">if</span> <span class="o">!</span><span class="n">found</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"invalid identifier format: %s"</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">Identifier</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="c">// Verify provenance</span>
+  <span class="k">if</span> <span class="n">verified</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">client</span><span class="o">.</span><span class="n">Verify</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">adssignv1</span><span class="o">.</span><span class="n">VerifyRequest</span><span class="p">{</span>
+    <span class="n">RecordRef</span><span class="o">:</span> <span class="o">&amp;</span><span class="n">adscorev1</span><span class="o">.</span><span class="n">RecordRef</span><span class="p">{</span><span class="n">Cid</span><span class="o">:</span> <span class="n">cid</span><span class="p">},</span>
+  <span class="p">});</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"failed to verify provenance: %w"</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">!</span><span class="n">verified</span><span class="o">.</span><span class="n">Success</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">fmt</span><span class="o">.</span><span class="n">Errorf</span><span class="p">(</span><span class="s">"provenance verification failed: %s"</span><span class="p">,</span> <span class="o">*</span><span class="n">verified</span><span class="o">.</span><span class="n">ErrorMessage</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="c">// Verify naming</span>
+  <span class="c">// We do not fail here, simply log a warning</span>
+  <span class="k">if</span> <span class="n">verified</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">client</span><span class="o">.</span><span class="n">GetVerificationInfo</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">cid</span><span class="p">);</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Warning: failed to get verification info for CID %s: %v</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">cid</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">!</span><span class="n">verified</span><span class="o">.</span><span class="n">Verified</span> <span class="p">{</span>
+    <span class="n">fmt</span><span class="o">.</span><span class="n">Printf</span><span class="p">(</span><span class="s">"Warning: identity verification failed for CID %s: %+v</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">cid</span><span class="p">,</span> <span class="n">verified</span><span class="p">)</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="no">nil</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="step-4-tie-it-together">Step 4: Tie it together</h3>
+
+<p>Once the discovery, verification, and dispatch functions are implemented, the consumer application can orchestrate them in a single flow. The following function demonstrates how to handle a task query by discovering capabilities, verifying trust, and dispatching to the appropriate protocol:</p>
+
+<div class="language-go highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">(</span>
+  <span class="n">adsclient</span> <span class="s">"github.com/agntcy/dir/client"</span>
+  <span class="n">corev1</span> <span class="s">"github.com/agntcy/dir/api/core/v1"</span>
+<span class="p">)</span>
+
+<span class="k">func</span> <span class="n">Handle</span><span class="p">(</span><span class="n">ctx</span> <span class="n">context</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">client</span> <span class="o">*</span><span class="n">adsclient</span><span class="o">.</span><span class="n">Client</span><span class="p">,</span> <span class="n">taskQuery</span> <span class="kt">string</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+  <span class="n">entries</span><span class="p">,</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">Discover</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">taskQuery</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">err</span>
+  <span class="p">}</span>
+
+  <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">e</span> <span class="o">:=</span> <span class="k">range</span> <span class="n">entries</span> <span class="p">{</span>
+    <span class="c">// Skip anything we can't verify</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">Verify</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">e</span><span class="p">);</span> <span class="n">err</span> <span class="o">!=</span> <span class="no">nil</span> <span class="p">{</span>
+      <span class="k">continue</span>
+    <span class="p">}</span>
+
+    <span class="c">// First trusted, working capability wins</span>
+    <span class="k">if</span> <span class="n">err</span> <span class="o">:=</span> <span class="n">Dispatch</span><span class="p">(</span><span class="n">ctx</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="k">map</span><span class="p">[</span><span class="kt">string</span><span class="p">]</span><span class="n">any</span><span class="p">{</span><span class="s">"task"</span><span class="o">:</span> <span class="n">taskQuery</span><span class="p">});</span> <span class="n">err</span> <span class="o">==</span> <span class="no">nil</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="no">nil</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+
+  <span class="k">return</span> <span class="n">errors</span><span class="o">.</span><span class="n">New</span><span class="p">(</span><span class="s">"no trusted capability satisfied the task"</span><span class="p">)</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="where-the-ads-control-plane-earns-its-keep">Where the ADS control plane earns its keep</h2>
+
+<p>The consumption side is plain HTTP, but the <em>security gate</em> of what comes back depends entirely on the ADS control plane that produced it. When you publish the agents your application later discovers, you use the ADS SDK, not raw HTTP. This is the division of labor that makes the whole stack work:</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    subgraph Control["ADS control plane (ADS SDK)"]
+        PUSH["Push + Sign"]
+        INDEX["Announce + Discover"]
+    end
+    subgraph Consume["ARD consumption (net/http)"]
+        SEARCH["GET /agents"]
+        PROJECT["OASF → AI Catalog entry"]
+    end
+    PUSH --&gt; INDEX --&gt; PROJECT --&gt; SEARCH --&gt; ORCH["AI workflows"]
+
+    style PUSH fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style INDEX fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style SEARCH fill:#0251af,color:#f3f6fd
+    style PROJECT fill:#0251af,color:#f3f6fd
+    style ORCH fill:#cfe1fb,color:#1c1e21
+</code></pre>
+
+<p>Publishers and platform teams drive the <strong>control plane</strong> (push, sign, announce). Clients ride the <strong>consumption plane</strong> (discover, verify, dispatch). The contract between them is the AI Catalog and ARD, which is why an agentic resource can be published and discovered regardless of the protocol or domain.</p>
+
+<h3 id="why-this-matters">Why this matters</h3>
+
+<p>ADS is not just another registry; it is the shared control plane that makes the discovery work. The AI Catalog and ARD specifications define the primitives, but without a control plane, they are just static formats. ADS provides a secure, federated, capability-driven discovery layer that makes them work, ensuring:</p>
+
+<ul>
+  <li><strong>No protocol lock-in for publishers.</strong> A record pushed to ADS is reachable through an ARD search registry, local gRPC query, or across the network. The publisher does not need to worry.</li>
+  <li><strong>Security is solved once, at the bottom.</strong> SPIFFE identity, HTTPS/DNS resolution, CID integrity, and signing are available directly. Higher layers can focus on the discovery without re-implementing security.</li>
+  <li><strong>Federation is real, not only desirable.</strong> ARD’s discovery modes need a routing fabric to be more than a single registry. The DHT can be that fabric.</li>
+</ul>
+
+<h2 id="whats-next">What’s Next</h2>
+
+<p>The current ARD implementation in ADS is a reference implementation of the spec, but there are many features we plan to add in future releases of ADS:</p>
+
+<ul>
+  <li><strong>ARD POST /search</strong> endpoint with advanced query capabilities and relevance ranking. Currently available through DIR MCP server only.</li>
+  <li><strong>DID-based identity</strong> for decentralized identifiers and verifiable credentials.</li>
+  <li><strong>Client tooling and SDKs</strong> to simplify integration with ADS and ARD, both for publishers and consumers.</li>
+</ul>
+
+<p>If you’re building multi-agent systems, we’d love to hear your use cases.
+Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a>
+or open an issue on <a href="https://github.com/agntcy/dir">GitHub</a>.</p>
+
+<hr />
+
+<p><em>ADS and its components are developed by AGNTCY Contributors and released under the Apache 2.0 License.</em></p>]]></content><author><name>Ramiz Polic</name></author><category term="technical" /><category term="ads" /><category term="a2a" /><category term="mcp" /><category term="agent-skills" /><category term="discovery" /><category term="ai-catalog" /><category term="ard" /><summary type="html"><![CDATA[A developer integrating agentic capabilities today faces a discovery problem that looks deceptively like a solved one. We have standards, registries, catalogs, and well-knowns; surely finding the right tool is just a lookup? In practice it is not, because the ecosystem has fragmented into protocols that each describe the same artifact differently; be it a resource, tool, agent, or a full agentic system. And while the artifact is one thing; its discovery representations are many. The question of discovery and interoperability is not achieved by picking a winning format or specification. AI Catalog and Agentic Resource Discovery (ARD) are not competing standards; they are complementary lenses on the same underlying problem. Each one tries to answers a shared set of questions - what is this artifact, what can it do, how to use it, who published it, and can I trust it. Most of these formats are higher-level discovery protocols: they define a vocabulary and an envelope. What they do not define is the hard part – a secure, federated, capability-driven discovery layer that actually links these artifacts, routes queries across organizational boundaries, and provides security and control policies embedded in. That layer is exactly what Agent Directory Service (ADS) provides - not another competing registry, but a low-level protocol the others can be built on. Three layers, one stack A recurring design mistake is to collapse “the format”, “the query API”, and “the system” into one monolith. The agentic ecosystem deliberately keeps them apart, and the separation is the whole reason it interoperates. flowchart BT subgraph L3["ADS -- Discovery &amp; Control Plane"] OASF["Records"] API["API (gRPC / REST)"] CID["Identifiers (CIDs / DIDs)"] DHT["Routing (DHT)"] OCI["Storage (OCI)"] SIGN["Security / Policies"] end subgraph L2["ARD -- Consumption API"] WK["GET /.well-known/ai-catalog.json"] SEARCH["POST /search"] LIST["GET /agents"] end subgraph L1["AI Catalog -- Index / Content Standard"] ENTRY["Catalog Entry Schema"] TRUST["Trust Manifest Schema"] TYPES["IANA media types"] end L1 --&gt;|"mapped by"| L2 L2 --&gt;|"implemented by"| L3 L3 --&gt;|"consumed by"| CLIENT["AI clients / applications / systems"] style CLIENT fill:#800080,stroke:#800080,color:#fff style OASF fill:#023a7a,color:#f3f6fd style API fill:#023a7a,color:#f3f6fd style CID fill:#023a7a,color:#f3f6fd style DHT fill:#023a7a,color:#f3f6fd style OCI fill:#023a7a,color:#f3f6fd style SIGN fill:#023a7a,color:#f3f6fd style WK fill:#023a7a,color:#f3f6fd style SEARCH fill:#023a7a,color:#f3f6fd style LIST fill:#023a7a,color:#f3f6fd style ENTRY fill:#023a7a,color:#f3f6fd style TRUST fill:#023a7a,color:#f3f6fd style TYPES fill:#023a7a,color:#f3f6fd Layer 1: AI Catalog as the index standard The AI Catalog is a typed, nestable JSON container for describing heterogeneous AI artifacts. Each entry identifies an artifact by an IANA media type and a domain-anchored URN. The catalog is therefore protocol-agnostic: it can describe an MCP server, an A2A agent, a custom tool, or a set of catalogs in the same way. On its own, the catalog is a static index intended to be consumed by AI applications and served over higher-level discovery protocols like ARD. { "identifier": "urn:ai:acme.com:agents:weather", "displayName": "Weather Agent", "type": "application/mcp-server+json", "url": "https://api.acme.com/mcp/weather.json", "capabilities": ["WeatherTool", "ForecastTool"], "representativeQueries": [ "current wind speed in Chicago", "5-day forecast for Seattle", ] } Layer 2: ARD as the consumption API The Agentic Resource Discovery is a read-only discovery API layer on top of the AI Catalog. It defines how AI artifacts are cataloged, discovered, and searched within and across registries. It promotes the search-first discovery where registries maintain a shared index while the clients find capabilities over standard HTTP REST APIs instead of loading every tool description into an LLM context window. The ARD spec is intentionally agnostic about the underlying storage, identity, and routing mechanisms; it only defines the contract but does not ship discovery or control plane. $ curl -s https://your-discovery-service/search \ -H 'content-type: application/json' \ -d '{"query": {"text":"book me a flight to Tokyo"}, "pageSize":3}' { "results": [ { "identifier": "urn:ai:acme.com:travel:concierge", "displayName": "Travel Concierge", "type": "application/mcp-server+json", "url": "https://api.acme.com/mcp/travel.json", "score": 95, "source": "https://registry.acme.com/api/v1/" } ], "referrals": [ { "identifier": "urn:ai:example.org:registry", "type": "application/ai-registry", "url": "https://registry.acme.com/search" } ] } Layer 3: ADS as the discovery and control plane ARD is a contract; something has to fill and manage the data, storage, routing, and trust. That role is performed by ADS, the only layer with a control plane: it ingests records, content-addresses them with CIDs, signs and verifies them, announces them to a DHT, replicates them over OCI, and enforces zero-trust identity between data, clients, and nodes. Where ARD answers “what fits this task?”, ADS owns “what exists, best fit, who vouches for it, and where it physically lives.” The clean consequence is that ADS is a reference implementation of ARD. ADS is a distributed registry that exposes its OASF records as AI Catalog entries and serves them securely over the ARD endpoints so the same inventory is reachable by both ADS and ARD client integrations. Operators publish records to ADS while the consumers discover through ARD, verify through ADS, and invoke through MCP or A2A – one flow, many protocols. # Start local ADS node in the background. # UI dashboard available at http://localhost:8889 $ dirctl daemon start &amp; # Define sample agent skill data $ export SKILL_DATA="This is a sample agent skill for weather details over AccuWeather." # Push and sign a sample record $ cat &lt;&lt;EOF | dirctl push --sign --stdin { "name": "Weather Agent", "schema_version": "1.0.0", "version": "1.0.0", "description": "Helps with tracking weather information", "authors": ["Example Organization"], "created_at": "2025-01-01T00:00:00Z", "skills": [ {"name": "natural_language_processing/natural_language_understanding/contextual_comprehension"} ], "modules": [ { "name": "core/language_model/agentskills", "data": { "skill_file": "SKILL.md", "skill_manifest": { "name": "Weather Agent", "description": "Helps with tracking weather information", "version": "1.0.0" } }, "artifact": { "data": "$(echo "$SKILL_DATA" | base64)", "media_type": "application/agentskill+md", "digest": "sha256:$(echo -n "$SKILL_DATA" | sha256sum | awk '{print $1}')", "size": $(echo -n "$SKILL_DATA" | wc -c) } } ] } EOF # Discover via ARD over ADS $ curl -s http://localhost:8889/v1/agents | \ jq -r '.results[] | "\(.displayName) \(.identifier) \(.mediaType)"' # Verify the record $ dirctl verify baeareieojr2mtkdtddnllqhanf3aev4qcsd5rz6oj4by6f563l3mmnro5y # Stop the ADS daemon $ dirctl daemon stop What the specs leave unsolved Both the AI Catalog and ARD specifications are scrupulous about scope. They define the what and the how, but not the where or the who. They describe identity, federation, distribution, and security but do not ship a control plane that supports it. The table below summarizes how the higher-level specification concepts map to the underlying ADS primitives and what is solved by ADS. Spec concept ADS supported primitives Artifact/Publisher identity SPIFFE + DNS/HTTPS identity Content integrity CID (content addressing) Authenticity OIDC / key-based sign + verify Search ARD REST API (without POST /search) Federation libp2p DHT two-phase routing + sync Distribution OCI v1.1 distribution spec Identity AI Catalog’s Trust Manifest carries identity, attestations, provenance and an optional signature field for security policies. ARD reuses this object and additionally requires that the cryptographic identity aligns with the domain embedded in the resource’s URN. Both specs describe verification procedures, but neither defines how. ADS already runs one. Records are addressed by CID, so provenance models are native, not bolted on. Workload identity comes from SPIFFE and DNS/HTTPS where every component gets a verifiable ID, which is precisely the identity ARD wants anchored to a publisher. ADS also ships a signing and verification plane, so the signature is not just a placeholder but actually a verifiable field over the data. Federation ARD’s federation model is elegant precisely because it assumes the implementations can route. “Query upstream registries and merge” is one HTTP line in the spec and a distributed-systems problem in practice. ADS solves the routing problem with a libp2p Kad-DHT and a two-phase lookup: capability to CIDs, then CID to servers. An ARD referrals response is, underneath, a projection of that routing table. Distribution AI Catalog maps the logical format onto OCI registries for content-addressed storage. ADS uses the OCI distribution spec as its reference storage model. The mapping the spec describes as future work is the mechanism ADS already ships today. When a record is pushed to ADS, it is automatically stored in the given OCI registry and made available for fetch by CID. The ARD url field can directly point to the OCI location, or it can point to the ADS node which proxies the fetch. End-to-End Discovery-to-Invocation with ARD over ADS ADS v1.5 ships with a reference implementation of the ARD specification. A publisher can push an artifact to ADS and have it automatically available through any ARD client, regardless of whether the client speaks MCP, A2A, or any other protocol. The publisher does not need to implement multiple discovery protocols; they can rely on ADS to bridge the gap. Below is a sequence diagram showing a sample end-to-end flow, from discovery to invocation, across heterogeneous protocols. The idea is simple: an agentic application queries ADS over ARD, discovers capabilities, verifies trust, and dispatches work to the appropriate protocol based on its requirements. Full code samples are available in github.com/agntcy/dir repository. sequenceDiagram autonumber participant U as User participant O as Application (Go/CLI) participant ADS as ADS node (ARD endpoint) participant DHT as DHT federation layer participant FADS as Federated ADS node participant P as Publisher participant T as Tool (MCP / A2A / REST) P-&gt;&gt;ADS: push signed OASF record ADS-&gt;&gt;DHT: announce capability + CID DHT--&gt;&gt;ADS: discoverable in federation U-&gt;&gt;O: "Book a flight to Tokyo and file the expense" O-&gt;&gt;ADS: POST /search { text, filter: type in [a2a, mcp] } ADS-&gt;&gt;DHT: federated lookup (capability -&gt; CID -&gt; providers) DHT--&gt;&gt;ADS: provider nodes + matching CIDs ADS-&gt;&gt;FADS: fetch federated records by CID FADS--&gt;&gt;ADS: sync federated records ADS--&gt;&gt;O: ranked CatalogEntries (type + url + score) O-&gt;&gt;O: select top entry per sub-task O-&gt;&gt;O: verify bindings + signature O-&gt;&gt;T: dispatch by media type → native protocol T--&gt;&gt;O: result O--&gt;&gt;U: task complete The decisive step is where the application dispatches runs by media type. ADS doesn’t invoke anything; it tells the application which protocol each capability speaks, and the application routes accordingly. This is how one discovery query spans heterogeneous protocols and domains, exactly as envisioned in the agnostic discovery model of ADS. Building the application We use the following tools and libraries to build a sample producer/consumer application: ARD consumption API: plain net/http or curl for the ARD consumption API used for discovery. ADS client tools: Go SDK or dirctl CLI for pushing, signing, and verifying records. Code snippets below are simplified for clarity and focus on ideas. The samples in the repository include full working implementations. Step 1: Publish an agentic capability to ADS import ( adsclient "github.com/agntcy/dir/client" corev1 "github.com/agntcy/dir/api/core/v1" ) // Publish an OASF record to ADS, sign it, then announce to DHT for federated discovery. // Local node indexes it and can serve it locally over ADS or ARD right away. func Publish(ctx context.Context, client *adsclient.Client) error { // Push locally ref, err := client.Push(ctx, corev1.New(&amp;typesv1.Record{ Name: "weather-agent", Version: "1.0.0", // ... })) if err != nil { return err } // Sign the record to prove authenticity and integrity. // Provider can be a private key or OIDC token. if err := client.Sign(ctx, {ref, provider}); err != nil { return err } // Publish to DHT for federated discovery, so other nodes can find it. // Optional if only local discovery is needed. if err := client.Publish(ctx, {ref}); err != nil { return err } return nil } Step 2: Discover over ARD import ( catalogv1 "github.com/agntcy/dir/api/catalog/v1" ) // Discover asks a local ADS node via its ARD endpoint for capabilities matching a task. // The consumer application can extend this with more complex query matching and ranking logic as needed. func Discover(ctx context.Context, taskQuery string) ([]*catalogv1.CatalogEntry, error) { // Find relevant capabilities httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost:8889/v1/agents", bytes.NewReader([]byte(taskQuery))) if err != nil { return nil, err } httpReq.Header.Set("Content-Type", "application/json") resp, err := (&amp;http.Client{Timeout: 10 * time.Second}).Do(httpReq) if err != nil { return nil, err } defer resp.Body.Close() // Read the response outBytes, err := io.ReadAll(resp.Body) if err != nil { return nil, err } // Unmarshal the response into a ListAgentsResponse // Note: use protojson since the response is a protobuf message // and we're communicating over HTTP with JSON encoding var out catalogv1.ListAgentsResponse if err := protojson.Unmarshal(outBytes, &amp;out); err != nil { return nil, err } return out.Results, nil } Step 2: Dispatch by media type to the native protocol Discovery hands us a mediaType and other relevant details such as url about the discovered capabilities. The application’s job is now to route to the right execution path and not to “guess” a protocol: import ( catalogv1 "github.com/agntcy/dir/api/catalog/v1" ) // Dispatch routes a discovered entry to its native invocation path. func Dispatch(ctx context.Context, entry *catalogv1.CatalogEntry, task map[string]any) error { switch entry.MediaType { case "application/mcp-server-card+json": // Fetch the MCP server descriptor at entry.URL, then speak JSON-RPC. return invokeMCP(ctx, entry.URL, task) case "application/a2a-agent-card+json": // Load the A2A agent card at entry.URL, then speak A2A. return invokeA2A(ctx, entry.URL, task) case "application/agentskill+md": // Pull the agent skill markdown at entry.URL, then execute. return invokeAgentSkill(ctx, entry.URL, task) default: return fmt.Errorf("unsupported media type: %s", entry.MediaType) } } This switch is the interoperability boundary. ARD guarantees the mediaType is a well-known IANA media type; the consumer owns the mapping logic and decides what to do with each type. Add a new artifact type to your stack, and you add one case while the discovery itself is unchanged. Step 3: Verify trust before you invoke import ( adsclient "github.com/agntcy/dir/client" corev1 "github.com/agntcy/dir/api/core/v1" ) // Verify confirms the entry owns its claimed identity and trust signals. // Identifier format is expected to be urn:ai:org.agntcy:cid:&lt;cid&gt; func Verify(ctx context.Context, client *adsclient.Client, e *catalogv1.CatalogEntry) error { // Get AGNTYCY identifier cid, found := strings.CutPrefix(e.Identifier, "urn:ai:org.agntcy:cid:") if !found { return fmt.Errorf("invalid identifier format: %s", e.Identifier) } // Verify provenance if verified, err := client.Verify(ctx, &amp;adssignv1.VerifyRequest{ RecordRef: &amp;adscorev1.RecordRef{Cid: cid}, }); err != nil { return fmt.Errorf("failed to verify provenance: %w", err) } else if !verified.Success { return fmt.Errorf("provenance verification failed: %s", *verified.ErrorMessage) } // Verify naming // We do not fail here, simply log a warning if verified, err := client.GetVerificationInfo(ctx, cid); err != nil { fmt.Printf("Warning: failed to get verification info for CID %s: %v\n", cid, err) } else if !verified.Verified { fmt.Printf("Warning: identity verification failed for CID %s: %+v\n", cid, verified) } return nil } Step 4: Tie it together Once the discovery, verification, and dispatch functions are implemented, the consumer application can orchestrate them in a single flow. The following function demonstrates how to handle a task query by discovering capabilities, verifying trust, and dispatching to the appropriate protocol: import ( adsclient "github.com/agntcy/dir/client" corev1 "github.com/agntcy/dir/api/core/v1" ) func Handle(ctx context.Context, client *adsclient.Client, taskQuery string) error { entries, err := Discover(ctx, taskQuery) if err != nil { return err } for _, e := range entries { // Skip anything we can't verify if err := Verify(ctx, client, e); err != nil { continue } // First trusted, working capability wins if err := Dispatch(ctx, e, map[string]any{"task": taskQuery}); err == nil { return nil } } return errors.New("no trusted capability satisfied the task") } Where the ADS control plane earns its keep The consumption side is plain HTTP, but the security gate of what comes back depends entirely on the ADS control plane that produced it. When you publish the agents your application later discovers, you use the ADS SDK, not raw HTTP. This is the division of labor that makes the whole stack work: flowchart LR subgraph Control["ADS control plane (ADS SDK)"] PUSH["Push + Sign"] INDEX["Announce + Discover"] end subgraph Consume["ARD consumption (net/http)"] SEARCH["GET /agents"] PROJECT["OASF → AI Catalog entry"] end PUSH --&gt; INDEX --&gt; PROJECT --&gt; SEARCH --&gt; ORCH["AI workflows"] style PUSH fill:#e8eefb,stroke:#0251af,color:#1c1e21 style INDEX fill:#e8eefb,stroke:#0251af,color:#1c1e21 style SEARCH fill:#0251af,color:#f3f6fd style PROJECT fill:#0251af,color:#f3f6fd style ORCH fill:#cfe1fb,color:#1c1e21 Publishers and platform teams drive the control plane (push, sign, announce). Clients ride the consumption plane (discover, verify, dispatch). The contract between them is the AI Catalog and ARD, which is why an agentic resource can be published and discovered regardless of the protocol or domain. Why this matters ADS is not just another registry; it is the shared control plane that makes the discovery work. The AI Catalog and ARD specifications define the primitives, but without a control plane, they are just static formats. ADS provides a secure, federated, capability-driven discovery layer that makes them work, ensuring: No protocol lock-in for publishers. A record pushed to ADS is reachable through an ARD search registry, local gRPC query, or across the network. The publisher does not need to worry. Security is solved once, at the bottom. SPIFFE identity, HTTPS/DNS resolution, CID integrity, and signing are available directly. Higher layers can focus on the discovery without re-implementing security. Federation is real, not only desirable. ARD’s discovery modes need a routing fabric to be more than a single registry. The DHT can be that fabric. What’s Next The current ARD implementation in ADS is a reference implementation of the spec, but there are many features we plan to add in future releases of ADS: ARD POST /search endpoint with advanced query capabilities and relevance ranking. Currently available through DIR MCP server only. DID-based identity for decentralized identifiers and verifiable credentials. Client tooling and SDKs to simplify integration with ADS and ARD, both for publishers and consumers. If you’re building multi-agent systems, we’d love to hear your use cases. Join our Slack community or open an issue on GitHub. ADS and its components are developed by AGNTCY Contributors and released under the Apache 2.0 License.]]></summary></entry><entry><title type="html">Now you’re thinking with Agents</title><link href="https://blogs.agntcy.org/technical/agents/a2a/2026/06/08/thinking-with-agents.html" rel="alternate" type="text/html" title="Now you’re thinking with Agents" /><published>2026-06-08T09:00:00+00:00</published><updated>2026-06-08T09:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/agents/a2a/2026/06/08/thinking-with-agents</id><content type="html" xml:base="https://blogs.agntcy.org/technical/agents/a2a/2026/06/08/thinking-with-agents.html"><![CDATA[<p>There is a moment in Portal when the game clicks. You stop trying to find a way
 around the obstacle and you realise you can just connect two surfaces with a
 portal and walk straight through. The puzzle hasn’t changed, but your perception
 of the solution has — and that makes all the difference.</p>
@@ -4044,545 +4521,4 @@ git push origin main
 
 <hr />
 
-<p><em>Have questions about Directory or the MCP server? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Adam Tagscherer</name></author><category term="technical" /><category term="mcp" /><category term="directory" /><category term="oasf" /><category term="ai-agents" /><category term="ide-integration" /><summary type="html"><![CDATA[The Model Context Protocol (MCP) has emerged as a powerful standard for connecting AI assistants with external tools and data sources. In this post, we’ll explore the Directory MCP server—a feature that brings AI agent discovery and management directly into your IDE, enabling seamless interaction with the Directory ecosystem.]]></summary></entry><entry><title type="html">Agent Directory v1.0: Distributed Announce and Discovery of Multi-Agentic-Systems</title><link href="https://blogs.agntcy.org/technical/2026/02/19/dir-v1.html" rel="alternate" type="text/html" title="Agent Directory v1.0: Distributed Announce and Discovery of Multi-Agentic-Systems" /><published>2026-02-19T07:00:00+00:00</published><updated>2026-02-19T07:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/02/19/dir-v1</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/02/19/dir-v1.html"><![CDATA[<p>As AI systems evolve from isolated models into interconnected networks of specialized agents, several challenges emerge: How do agents find each other? How does an AI application discover which agents can perform specific actions driven by the current context or task requirements? How do developers publish their agents so others can find and use them?</p>
-
-<p>Traditional service discovery systems weren’t designed for the agentic AI ecosystem. They lack semantic understanding of agent capabilities, don’t support capability-based discovery, and can’t handle the rich metadata that describes what agents can do. Developer platforms often resort to centralized marketplaces or proprietary directories, fragmenting the ecosystem and limiting agent reusability.</p>
-
-<h2 id="the-problem-agent-discovery-at-scale">The Problem: Agent Discovery at Scale</h2>
-
-<p>Modern AI applications increasingly rely on specialized agents working together:</p>
-
-<ul>
-  <li><strong>Multi-agent Workflows</strong> where different agents handle specific tasks (data processing, analysis, synthesis)</li>
-  <li><strong>Agent Marketplaces</strong> where developers publish agents for others to discover and use</li>
-  <li><strong>Dynamic Agent Coordination</strong> where systems discover and invoke agents based on current requirements</li>
-  <li><strong>Federated AI Services</strong> spanning organizations, platforms, and deployment environments</li>
-</ul>
-
-<p>These scenarios require sophisticated discovery capabilities:</p>
-
-<ul>
-  <li><strong>Capability-based Search</strong> to find agents by what they <em>can do</em>, not just by name or identifier</li>
-  <li><strong>Semantic Discovery</strong> to match agent capabilities to requirements using hierarchical taxonomies</li>
-  <li><strong>Verifiable Metadata</strong> to trust that agent descriptions are authentic and haven’t been tampered with</li>
-  <li><strong>Distributed Architecture</strong> to enable discovery across organizational boundaries without centralized control</li>
-  <li><strong>Protocol Integrations</strong> to support various agent protocols (A2A, MCP) while maintaining semantic consistency</li>
-  <li><strong>Developer Experience</strong> to make it simple to publish and discover agents programmatically</li>
-</ul>
-
-<p>Existing solutions fall short. DNS-based service discovery provides naming but lacks semantic understanding. Cloud-native service meshes focus on network routing, not capability matching. Container registries store artifacts but don’t organize by functional attributes. Centralized marketplaces work within single platforms but don’t enable cross-platform discovery.</p>
-
-<p>The <a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a> was built to solve exactly these challenges, providing a distributed, capability-aware directory service purpose-built for the agentic AI ecosystem. Agents announce their capabilities through structured metadata, while consumers discover them through rich capability-based queries. Whether you’re building a multi-agent AI system, an agent marketplace, or a platform that coordinates specialized AI services, Agent Directory provides the discovery infrastructure you need.</p>
-
-<p>Agent Directory is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. It is available as open-source software and can be found on <a href="https://github.com/agntcy/dir">GitHub</a>.</p>
-
-<h2 id="what-is-agent-directory">What is Agent Directory?</h2>
-
-<p>Agent Directory is a distributed directory service that enables agents to announce their capabilities and allows others to discover them through capability-based queries. Built on proven distributed systems principles, Directory uses content-addressing for global uniqueness, hierarchical taxonomies for semantic organization, and distributed hash tables (DHT) for scalable discovery across decentralized networks.</p>
-
-<p>At its core, Agent Directory combines:</p>
-
-<ul>
-  <li><strong>Capability-based Discovery</strong> - Agents publish structured metadata describing their functional characteristics</li>
-  <li><strong>Hierarchical Taxonomies</strong> - Capabilities are organized through semantic taxonomies for efficient matching</li>
-  <li><strong>Content-addressed Naming</strong> - Cryptographic hashes (CIDs) ensure global uniqueness and data integrity</li>
-  <li><strong>Distributed Architecture</strong> - DHT-based routing enables scalable discovery without centralized control</li>
-  <li><strong>Verifiable Claims</strong> - Cryptographic signing provides data integrity and provenance tracking</li>
-  <li><strong>OCI Integration</strong> - Standard OCI distribution protocol for interoperable storage and retrieval</li>
-  <li><strong>Multi-Protocol Support</strong> - Native integration with A2A, MCP, and custom agent protocols</li>
-</ul>
-
-<p>This approach enables developers to publish agents once and make them discoverable across the entire ecosystem, while consumers can find the right agents for their needs through requirement- and capability-based queries rather than simple name lookups.</p>
-
-<h3 id="capability-based-discovery">Capability-Based Discovery</h3>
-
-<p>Agent Directory leverages the <a href="https://docs.agntcy.org/oasf/open-agentic-schema-framework/">Open Agentic Schema Framework (OASF)</a> to provide standardized, capability-based agent discovery. OASF defines a structured schema for describing AI agents through:</p>
-
-<ul>
-  <li><strong>Skills Taxonomy</strong> - Hierarchical organization of agent capabilities, from high-level categories like “natural language processing” down to specific skills like “sentiment analysis” or “named entity recognition”.</li>
-  <li><strong>Domain Classification</strong> - Agents can be categorized by application domains such as “healthcare”, “finance”, or “manufacturing”, enabling domain-specific discovery.</li>
-  <li><strong>Modular Extensions</strong> - OASF records support modular extensions for protocol-specific metadata (A2A cards, MCP server configurations, GitHub Copilot integrations), allowing agents to work seamlessly across different agent frameworks.</li>
-</ul>
-
-<p>The Directory indexes records by their skills and domains, enabling natural capability-based queries like:</p>
-
-<ul>
-  <li>“Find agents with image analysis capabilities”</li>
-  <li>“Discover agents that can perform sentiment analysis”</li>
-  <li>“Show me all agents in the healthcare domain with natural language processing skills”</li>
-</ul>
-
-<p>This semantic approach to discovery is far more powerful than simple name-based lookups, enabling developers to find the right agents based on what they need them to <em>do</em>.</p>
-
-<h3 id="content-addressed-naming">Content-Addressed Naming</h3>
-
-<p>Agent Directory uses <a href="https://github.com/multiformats/cid">Content Identifiers (CIDs)</a> for naming directory records. CIDs provide a self-describing, content-addressed naming scheme that ensures:</p>
-
-<ul>
-  <li><strong>Global Uniqueness</strong> - CIDs are cryptographic hashes of the record content, making them globally unique without requiring a central authority to assign identifiers.</li>
-  <li><strong>Immutability</strong> - Any change to a record produces a different CID, providing a natural versioning mechanism and tamper detection.</li>
-  <li><strong>Self-Verification</strong> - Anyone can verify that the content matches its CID by recomputing the hash, enabling trustless verification.</li>
-</ul>
-
-<p>In addition to CID-based addressing, Agent Directory supports <strong>verifiable domain-based names</strong> that enable human-readable references while maintaining cryptographic verification. For example, <code class="language-plaintext highlighter-rouge">example.org/my-agent</code> can be mapped to a CID while preserving the trust model through DNS-based verification.</p>
-
-<p>This dual naming approach provides both the usability of human-readable names and the security guarantees of content-addressed identifiers.</p>
-
-<h3 id="distributed-dht-based-routing">Distributed DHT-Based Routing</h3>
-
-<p>Agent Directory uses <a href="https://github.com/libp2p/specs/tree/master/kad-dht">libp2p Kad-DHT</a> for both server and content discovery, providing a proven, scalable foundation for distributed routing. This architecture enables:</p>
-<ul>
-  <li><strong>Decentralization</strong> - No single point of failure or central authority</li>
-  <li><strong>Fault Tolerance</strong> - The DHT can handle node churn and network partitions gracefully</li>
-  <li><strong>Scalability</strong> - DHT-based routing scales to thousands of nodes and millions of records</li>
-  <li><strong>Resilience</strong> - Multiple nodes can host the same records, providing redundancy</li>
-  <li><strong>Efficient Lookup</strong> - Logarithmic search complexity for fast discovery even at scale</li>
-</ul>
-
-<p>Agent Directory implements a two-phase discovery process powered by distributed hash tables (DHT):</p>
-
-<p><strong>1. Capability-to-Record Mapping</strong></p>
-
-<p>When an agent publishes its capabilities, Agent Directory performs the following steps:</p>
-<ul>
-  <li>Extract taxonomy data from the OASF record</li>
-  <li>Announces the record’s CID associated with those taxonomies to the DHT</li>
-  <li>Updates routing tables that map taxonomies to record identifiers</li>
-</ul>
-
-<p><strong>2. Record-to-Server Mapping</strong></p>
-
-<p>Agent Directory tracks which directory nodes store which records:</p>
-<ul>
-  <li>When a node stores a record, it announces its availability to the DHT</li>
-  <li>The DHT maintains mappings from CIDs to server addresses</li>
-  <li>Query resolution identifies optimal data sources</li>
-</ul>
-
-<p>Discovery queries execute this two-phase process:</p>
-
-<pre><code class="language-mermaid">flowchart LR
-    subgraph Query["Discovery Query"]
-        Q["Query: agents with NLP skills"]
-    end
-    
-    subgraph Phase1["Phase 1: Capability → CIDs"]
-        DHT1[("DHT&lt;br/&gt;Capability Index")]
-        CIDS["Matching CIDs:&lt;br/&gt;• bafkrei...abc&lt;br/&gt;• bafkrei...def&lt;br/&gt;• bafkrei...ghi"]
-    end
-    
-    subgraph Phase2["Phase 2: CIDs → Servers"]
-        DHT2[("DHT&lt;br/&gt;Provider Index")]
-        MAPPING["Server → CID Mapping"]
-    end
-    
-    subgraph Result["Result: Server → CIDs"]
-        R1["dir-node-1.example.org&lt;br/&gt;  └─ bafkrei...abc&lt;br/&gt;  └─ bafkrei...def"]
-        R2["dir-node-2.example.org&lt;br/&gt;  └─ bafkrei...ghi"]
-    end
-    
-    Q --&gt;|"skill: NLP"| DHT1
-    DHT1 --&gt;|"resolve taxonomy"| CIDS
-    CIDS --&gt;|"lookup providers"| DHT2
-    DHT2 --&gt;|"find hosting nodes"| MAPPING
-    MAPPING --&gt; R1
-    MAPPING --&gt; R2
-    
-    style Query fill:transparent,stroke:#6b9fc8,stroke-width:2px
-    style Phase1 fill:transparent,stroke:#d4a054,stroke-width:2px
-    style Phase2 fill:transparent,stroke:#5ba67a,stroke-width:2px
-    style Result fill:transparent,stroke:#9a7bb0,stroke-width:2px
-    style Q fill:#6b9fc8,stroke:#4a7a9c,stroke-width:2px
-    style DHT1 fill:#d4a054,stroke:#b08540,stroke-width:2px
-    style CIDS fill:#d4a054,stroke:#b08540,stroke-width:2px
-    style DHT2 fill:#5ba67a,stroke:#478a60,stroke-width:2px
-    style MAPPING fill:#5ba67a,stroke:#478a60,stroke-width:2px
-    style R1 fill:#9a7bb0,stroke:#7a5f8c,stroke-width:2px
-    style R2 fill:#9a7bb0,stroke:#7a5f8c,stroke-width:2px
-</code></pre>
-
-<p>The final result is a mapping of servers to their hosted CIDs, enabling the client to download records from optimal sources.</p>
-
-<h3 id="security-and-trust">Security and Trust</h3>
-
-<p>In distributed agentic systems, trust is paramount. Agent Directory provides a comprehensive security model that combines content integrity and content provenance via the publisher’s identity to enable secure agent discovery across organizational boundaries.</p>
-
-<h4 id="content-integrity-and-provenance">Content Integrity and Provenance</h4>
-
-<p>All records are identified by their CID, enabling anyone to verify that content hasn’t been tampered with by recomputing the hash. Records can be signed using OIDC flows or private keys, proving authorship and enabling trust decisions based on publisher reputation.</p>
-
-<p>Agent Directory supports local trust chain verification, allowing organizations to:</p>
-<ul>
-  <li>Establish their own trust anchors</li>
-  <li>Define verification policies for external records</li>
-  <li>Validate complete provenance chains from publisher to record</li>
-  <li>Make informed decisions about agent selection based on trust policies specific to their use case</li>
-</ul>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Verify a record's signature and trust chain</span>
-dirctl verify bafkreiabcd1234567890
-
-<span class="c"># Output includes verification status, signer identity, and trust chain details</span>
-</code></pre></div></div>
-
-<p>This multi-layered security approach combines content-addressed integrity with cryptographic signing and trust chain verification, enabling secure discovery in a decentralized ecosystem without relying on centralized authority.</p>
-
-<h4 id="zero-trust-security">Zero-Trust Security</h4>
-
-<p>Agent Directory leverages <a href="https://spiffe.io/">SPIFFE (Secure Production Identity Framework For Everyone)</a> and its runtime implementation <a href="https://spiffe.io/docs/latest/spire-about/">SPIRE</a> to provide zero-trust security for the federation of different agent directory nodes. This enables:</p>
-
-<ul>
-  <li><strong>Workload Identity</strong> - Every Directory component receives a cryptographically verifiable identity in the form of a SPIFFE ID like <code class="language-plaintext highlighter-rouge">spiffe://directory.example/ns/production/sa/my-agent</code>. This identity is used for authentication and authorization across the system and network.</li>
-  <li><strong>Mutual TLS (mTLS)</strong> - SPIRE issues SVIDs enabling automatic mTLS between all Directory components. Communication is encrypted and both parties are authenticated without manual certificate management.</li>
-  <li><strong>Cross-Organization Federation</strong> - Organizations can federate their SPIRE deployments by exchanging trust bundles to form networks. This enables secure, authenticated communication between Directory nodes in different organizations without custom integration.</li>
-  <li><strong>Policy-Based Access Control</strong> - SPIFFE IDs enable fine-grained authorization policies. Organizations can define which workloads can push records, which can query, and which external trust domains are authorized for federation and for which operations.</li>
-</ul>
-
-<h3 id="oci-based-distributed-storage">OCI-Based Distributed Storage</h3>
-
-<p>Agent Directory differs from block storage systems like <a href="https://ipfs.tech/">IPFS</a> in its approach to distributed object storage, leveraging the <strong>OCI (Open Container Initiative) distribution specification</strong> for content storage and retrieval.</p>
-
-<p><strong>Content Retrieval</strong></p>
-
-<ul>
-  <li>Agent Directory directly stores complete records rather than splitting them into blocks</li>
-  <li>Records are retrieved as complete units using standard OCI protocols</li>
-  <li>No complex block reassembly or multi-source optimization needed</li>
-</ul>
-
-<p><strong>Distribution Layer</strong></p>
-
-<ul>
-  <li>Records are stored and transferred using OCI artifacts</li>
-  <li>Any OCI distribution-compliant server can participate in the Agent Directory network</li>
-  <li>Servers retrieve records from each other using well-established OCI protocols</li>
-  <li>Existing OCI infrastructure (registries, caching layers, CDNs) can be leveraged</li>
-</ul>
-
-<p><strong>Integration Support</strong></p>
-
-<p>While Agent Directory uses <a href="https://zotregistry.dev/">zot</a> as its reference OCI store, the system works with <strong>any server that implements the OCI distribution specification</strong>. This means you can use existing container registries like Docker Registry, Harbor, or cloud-provider managed registries as Directory storage backends.</p>
-
-<p>This OCI-based approach provides:</p>
-<ul>
-  <li><strong>Interoperability</strong> - Leverage existing OCI tooling and infrastructure</li>
-  <li><strong>Simplicity</strong> - Standard HTTP-based protocol without custom networking requirements</li>
-  <li><strong>Efficiency</strong> - Single-request record retrieval without block coordination overhead</li>
-  <li><strong>Enterprise Integration</strong> - Use existing OCI registries and security policies</li>
-</ul>
-
-<h3 id="runtime-discovery-integration">Runtime Discovery Integration</h3>
-
-<p>Agent Directory includes a <strong>runtime discovery service</strong> that automatically discovers and indexes agent workloads running in a specific environment, bridging the gap between deployed agents and directory records.
-The runtime discovery system provides real-time visibility into active agents, enabling dynamic discovery and coordination in orchestrated environments like Kubernetes or Docker, but also
-local environments such as developer machines or edge devices.</p>
-
-<p>Workloads can be discovered through annotations that indicate they should be indexed by the Directory. For example, in Kubernetes, a pod can be annotated to enable discovery:</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">v1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">Pod</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">translation-agent</span>
-  <span class="na">annotations</span><span class="pi">:</span>
-    <span class="na">org.agntcy/discover</span><span class="pi">:</span> <span class="s2">"</span><span class="s">true"</span> <span class="c1"># Enable discovery for this workload</span>
-    <span class="na">org.agntcy/agent-type</span><span class="pi">:</span> <span class="s2">"</span><span class="s">a2a"</span> <span class="c1"># Indicate the protocol or framework used</span>
-    <span class="na">org.agntcy/agent-record</span><span class="pi">:</span> <span class="s2">"</span><span class="s">my-agent/v1.0.0"</span> <span class="c1"># Indicate reference to a Directory record</span>
-</code></pre></div></div>
-
-<p>The Agent Directory runtime discovery is an optional component of the Directory stack that makes workloads queryable alongside statically published records. This enables hybrid discovery where some agents are published ahead of time while others are discovered dynamically as they’re deployed. The same discovery and security models apply to both, providing a unified experience for developers and users.</p>
-
-<h2 id="real-world-use-cases">Real-World Use Cases</h2>
-
-<h3 id="building-agent-marketplaces">Building Agent Marketplaces</h3>
-
-<p>Agent Directory provides the foundation for building agent marketplaces where developers can publish agents and users can discover them:</p>
-
-<p><strong>Publisher Workflow</strong>:</p>
-
-<ol>
-  <li>Developer creates an agent with specific capabilities</li>
-  <li>Generates an OASF record describing skills, domains, and deployment details</li>
-  <li>Signs the record with their identity for authenticity</li>
-  <li>Publishes to the Directory which announces the CID and metadata to the DHT</li>
-</ol>
-
-<p><strong>Consumer Workflow</strong>:</p>
-
-<ol>
-  <li>User queries Agent Directory for agents with specific capabilities</li>
-  <li>The Directory returns matching records with CIDs</li>
-  <li>User reviews metadata, verifies signatures, and checks trust chains</li>
-  <li>User pulls the complete record and retrieves deployment artifacts (Docker images, API endpoints)</li>
-  <li>User deploys or invokes the agent</li>
-</ol>
-
-<p>This decentralized marketplace model enables anyone to publish and discover agents without requiring approval from a central authority or platform lock-in.</p>
-
-<h3 id="multi-agent-system-coordination">Multi-Agent System Coordination</h3>
-
-<p>In complex multi-agent systems, agents need to discover collaborators dynamically:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">agntcy.dir_sdk.client</span> <span class="kn">import</span> <span class="n">Config</span><span class="p">,</span> <span class="n">Client</span>
-<span class="kn">from</span> <span class="nn">agntcy.dir_sdk.models</span> <span class="kn">import</span> <span class="n">search_v1</span>
-
-<span class="c1"># Select either local/cache or remote Directory node based on context
-</span><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">Config</span><span class="p">(</span><span class="n">server_address</span><span class="o">=</span><span class="s">"dir.example.org:8888"</span><span class="p">))</span>
-
-<span class="c1"># Agent needs image analysis capability
-# Use network or local discovery based on context
-</span><span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">search_records</span><span class="p">(</span><span class="n">search_v1</span><span class="p">.</span><span class="n">ListRequest</span><span class="p">(</span>
-  <span class="n">queries</span><span class="o">=</span><span class="p">[</span><span class="n">search_v1</span><span class="p">.</span><span class="n">RecordQuery</span><span class="p">(</span>
-    <span class="nb">type</span><span class="o">=</span><span class="n">search_v1</span><span class="p">.</span><span class="n">RECORD_QUERY_TYPE_SKILL_NAME</span><span class="p">,</span>
-    <span class="n">value</span><span class="o">=</span><span class="s">"images_computer_vision/object_detection"</span><span class="p">,</span>
-  <span class="p">)]</span>
-  <span class="n">limit</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
-<span class="p">))</span>
-
-<span class="c1"># Select the best candidate based on metadata
-</span><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-    <span class="c1"># Verify signature, check version, evaluate endpoints
-</span>    <span class="k">if</span> <span class="n">meets_requirements</span><span class="p">(</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">):</span>
-        <span class="n">endpoint</span> <span class="o">=</span> <span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="s">'locators'</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">'url'</span><span class="p">]</span>
-        <span class="c1"># Invoke the discovered agent
-</span>        <span class="n">invoke_agent</span><span class="p">(</span><span class="n">endpoint</span><span class="p">,</span> <span class="n">task_data</span><span class="p">)</span>
-        <span class="k">break</span>
-</code></pre></div></div>
-
-<p>This pattern enables <strong>dynamic capability discovery</strong> where agents find and coordinate with each other based on current requirements rather than hardcoded integrations.</p>
-
-<h3 id="federated-agent-networks">Federated Agent Networks</h3>
-
-<p>Organizations can run their own Directory nodes while participating in a federated discovery network:</p>
-
-<ul>
-  <li><strong>Internal Directory Node</strong> - Organization runs an Agent Directory node behind their firewall, containing proprietary agents not shared externally.</li>
-  <li><strong>Federation</strong> - The internal node connects to external Directory nodes via DHT, enabling discovery of public agents while keeping internal agents private.</li>
-  <li><strong>Policy Enforcement</strong> - Organizations define trust policies determining which external agents can be discovered and used, based on publisher identity, signatures, and verification chains.</li>
-</ul>
-
-<p>This federated model enables both private agent catalogs and participation in the broader ecosystem, with fine-grained control over what’s shared and discovered.</p>
-
-<h3 id="protocol-agnostic-discovery">Protocol-Agnostic Discovery</h3>
-
-<p>Agent Directory’s OASF-based approach provides a unified discovery layer across different agent protocols:</p>
-
-<ul>
-  <li><strong>A2A Agents</strong> - Agents implementing the <a href="https://a2a-protocol.org/">Agent-to-Agent protocol</a> can be described in OASF records with A2A-specific metadata in modules.</li>
-  <li><strong>MCP Servers</strong> - <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> servers can be imported to OASF format, indexed by capabilities, and discovered through Agent Directory.</li>
-  <li><strong>Custom Protocols</strong> - Organizations developing custom agent protocols can define public or private OASF modules for their specific metadata while leveraging Agent Directory’s discovery infrastructure.</li>
-</ul>
-
-<p>Example: A user searching for “text completion” might discover agents using A2A, MCP, or custom protocols - all through a single capability-based query. The OASF record clearly indicates which protocol each agent uses, enabling proper invocation.</p>
-
-<h2 id="getting-started">Getting Started</h2>
-
-<h3 id="installation">Installation</h3>
-
-<p>Agent Directory provides a comprehensive suite of tools that make it easy to publish, discover, and work with agent records.</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Tool</th>
-      <th>Install</th>
-      <th>Prerequisite</th>
-      <th>Usage</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>dirctl</td>
-      <td><code class="language-plaintext highlighter-rouge">brew tap agntcy/dir https://github.com/agntcy/dir/</code><br /><code class="language-plaintext highlighter-rouge">brew install dirctl</code></td>
-      <td>-</td>
-      <td><a href="https://docs.agntcy.org/dir/directory-cli/">CLI Documentation</a></td>
-    </tr>
-    <tr>
-      <td>Go SDK</td>
-      <td><code class="language-plaintext highlighter-rouge">go get github.com/agntcy/dir/client</code></td>
-      <td>-</td>
-      <td><a href="https://docs.agntcy.org/dir/directory-sdk/#go-sdk">Go SDK Documentation</a></td>
-    </tr>
-    <tr>
-      <td>Python SDK</td>
-      <td><code class="language-plaintext highlighter-rouge">pip install agntcy-dir</code></td>
-      <td>dirctl (sign/verify)</td>
-      <td><a href="https://docs.agntcy.org/dir/directory-sdk/#python-sdk">Python SDK Documentation</a></td>
-    </tr>
-    <tr>
-      <td>JS/TS SDK</td>
-      <td><code class="language-plaintext highlighter-rouge">npm install agntcy-dir</code></td>
-      <td>dirctl (sign/verify)</td>
-      <td><a href="https://docs.agntcy.org/dir/directory-sdk/#javascript-sdk">JS/TS SDK Documentation</a></td>
-    </tr>
-    <tr>
-      <td>MCP Server</td>
-      <td><code class="language-plaintext highlighter-rouge">dirctl mcp serve</code></td>
-      <td>dirctl</td>
-      <td><a href="https://blogs.agntcy.org/technical/2026/02/19/directory-mcp-server.html">Directory MCP Server Blog Post</a> <br /> <a href="https://docs.agntcy.org/dir/directory-cli/#directory-mcp-server">MCP Integration Documentation</a></td>
-    </tr>
-    <tr>
-      <td>Deployment</td>
-      <td>-</td>
-      <td>-</td>
-      <td><a href="https://docs.agntcy.org/dir/getting-started/#deployment">Getting Started</a></td>
-    </tr>
-  </tbody>
-</table>
-
-<h3 id="quick-example">Quick Example</h3>
-
-<p>Publish and discover your first agent in minutes:</p>
-
-<ol>
-  <li>Deploy an Agent Directory node locally</li>
-</ol>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm pull oci://ghcr.io/agntcy/dir/helm-charts/dir <span class="nt">--version</span> v1.0.0
-helm upgrade <span class="nt">--install</span> <span class="nb">dir </span>oci://ghcr.io/agntcy/dir/helm-charts/dir <span class="nt">--version</span> v1.0.0
-kubectl port-forward svc/dir-apiserver 8888:8888
-</code></pre></div></div>
-
-<ol>
-  <li>Download a sample agent record</li>
-</ol>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-o</span> sample-record.json https://raw.githubusercontent.com/agntcy/dir/refs/heads/main/e2e/shared/testdata/record_100.json
-</code></pre></div></div>
-
-<ol>
-  <li>Use CLI to publish and discover agents</li>
-</ol>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Push and sign the agent record to Agent Directory</span>
-dirctl push sample-record.json <span class="nt">--sign</span>
-
-<span class="c"># Search for agents with specific capabilities</span>
-dirctl search <span class="nt">--skill</span> <span class="s2">"natural_language_processing/*"</span>
-
-<span class="c"># Pull a specific record by CID</span>
-dirctl pull baeareiabbog2umgduqhlcb64fzt6adn34kblzvru3fdzkl75hjhwt6h3da
-
-<span class="c"># Verify a record's signature and trust chain</span>
-dirctl verify baeareiabbog2umgduqhlcb64fzt6adn34kblzvru3fdzkl75hjhwt6h3da
-</code></pre></div></div>
-
-<ol>
-  <li>Use SDK to publish and discover agents</li>
-</ol>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">agntcy.dir_sdk.client</span> <span class="kn">import</span> <span class="n">Config</span><span class="p">,</span> <span class="n">Client</span>
-<span class="kn">from</span> <span class="nn">agntcy.dir_sdk.models</span> <span class="kn">import</span> <span class="n">core_v1</span><span class="p">,</span> <span class="n">search_v1</span>
-
-<span class="c1"># Connect to an Agent Directory node
-</span><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">Config</span><span class="p">(</span><span class="n">server_address</span><span class="o">=</span><span class="s">"localhost:8888"</span><span class="p">))</span>
-
-<span class="c1"># Push an agent record (requires signing credentials)
-</span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">"sample-record.json"</span><span class="p">,</span> <span class="s">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">record</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-
-<span class="n">cid</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">records</span><span class="o">=</span><span class="p">[</span><span class="n">core_v1</span><span class="p">.</span><span class="n">Record</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">record</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
-<span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"Published agent with CID: </span><span class="si">{</span><span class="n">cid</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
-
-<span class="c1"># Search for agents by capability
-</span><span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">search_records</span><span class="p">(</span><span class="n">search_v1</span><span class="p">.</span><span class="n">ListRequest</span><span class="p">(</span>
-    <span class="n">queries</span><span class="o">=</span><span class="p">[</span><span class="n">search_v1</span><span class="p">.</span><span class="n">RecordQuery</span><span class="p">(</span>
-        <span class="nb">type</span><span class="o">=</span><span class="n">search_v1</span><span class="p">.</span><span class="n">RECORD_QUERY_TYPE_SKILL_NAME</span><span class="p">,</span>
-        <span class="n">value</span><span class="o">=</span><span class="s">"natural_language_processing/*"</span><span class="p">,</span>
-    <span class="p">)],</span>
-    <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-<span class="p">))</span>
-
-<span class="c1"># Retrieve and inspect matching agents
-</span><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"Found: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s"> (CID: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">cid</span><span class="si">}</span><span class="s">)"</span><span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"  Skills: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'skills'</span><span class="p">,</span> <span class="p">[])</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"  Locator: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="s">'locators'</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">'url'</span><span class="p">]</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
-</code></pre></div></div>
-
-<h2 id="why-agent-directory-matters">Why Agent Directory Matters</h2>
-
-<p>As AI systems evolve from isolated models to interconnected networks of specialized agents, discovery infrastructure becomes critical. Agent Directory provides a foundation that:</p>
-
-<ul>
-  <li><strong>Enables Semantic Discovery</strong> - Find agents by what they <em>can do</em>, not just by name or endpoint.</li>
-  <li><strong>Ensures Data Integrity</strong> - Content-addressed naming and cryptographic signing guarantee authenticity.</li>
-  <li><strong>Scales Without Centralization</strong> - DHT-based routing eliminates single points of failure.</li>
-  <li><strong>Bridges Organizational Boundaries</strong> - Federated architecture enables cross-organization discovery with fine-grained trust policies.</li>
-  <li><strong>Supports Protocol Diversity</strong> - Native integration with A2A, MCP, and custom agent protocols through OASF extensions.</li>
-  <li><strong>Simplifies Development</strong> - Publish once, discover everywhere with intuitive CLI and SDK tooling.</li>
-</ul>
-
-<p>Whether you’re building a multi-agent AI system, an agent marketplace, or a platform that coordinates specialized AI services, Agent Directory provides the discovery infrastructure you need.</p>
-
-<h2 id="the-road-ahead">The Road Ahead</h2>
-
-<p>Agent Directory is actively developed as an open-source project under the Apache 2.0 License. The project has reached v1.0 with production-ready capabilities.</p>
-
-<p><strong>Current Capabilities:</strong></p>
-
-<ul>
-  <li>OASF-based capability discovery with hierarchical taxonomies</li>
-  <li>DHT-based distributed routing for scalable discovery</li>
-  <li>Cryptographic signing with OIDC and private key support</li>
-  <li>OCI distribution protocol for interoperable storage</li>
-  <li>Data synchronization between Directory nodes</li>
-  <li>Runtime discovery for Kubernetes and Docker workloads</li>
-  <li>CLI, Go SDK, Python SDK, and JavaScript SDK</li>
-  <li>MCP server integration for AI assistants</li>
-</ul>
-
-<p><strong>Under Active Development:</strong></p>
-
-<ul>
-  <li>Enhanced DHT performance and routing optimizations</li>
-  <li>Extended SPIFFE/SPIRE integration for enterprise deployments</li>
-  <li>Advanced trust chain verification policies</li>
-  <li>Additional runtime discovery targets (edge devices, serverless)</li>
-  <li>Deeper agentic protocol integrations</li>
-  <li>Cross-network federation protocols</li>
-</ul>
-
-<h2 id="get-involved">Get Involved</h2>
-
-<h3 id="public-instance">Public Instance</h3>
-
-<p>A public Agent Directory instance is available for testing and experimentation at <code class="language-plaintext highlighter-rouge">prod.gateway.ads.outshift.io:443</code> in read-only mode.
-This instance is open for anyone that is part of <a href="https://github.com/agntcy">github.com/agntcy</a> organization, making it a great place to get hands-on experience with Agent Directory.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">### Configuration</span>
-<span class="c"># Set environment variables to connect to the public Directory instance</span>
-<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="o">=</span><span class="s2">"prod.gateway.ads.outshift.io:443"</span>
-<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_AUTH_MODE</span><span class="o">=</span><span class="s2">"github"</span>
-
-<span class="c">### Interactive Authentication with GitHub OAuth</span>
-dirctl auth login 
-
-<span class="c">### Non-Interactive Authentication with GitHub Token</span>
-<span class="c"># The token must have `user:email` and `read:org` scope for authentication to work</span>
-<span class="nb">export </span><span class="nv">DIRECTORY_CLIENT_GITHUB_TOKEN</span><span class="o">=</span><span class="s2">"ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"</span>
-
-<span class="c">### Usage</span>
-<span class="c"># Now you can use dirctl or the SDK to query the Agent Directory instance</span>
-dirctl search <span class="nt">--skill</span> <span class="s2">"*"</span>
-</code></pre></div></div>
-
-<p>Check the <a href="https://blogs.agntcy.org/security/authentication/directory/2026/01/22/directory-authentication-dual-mode-security.html">Directory Testbed Authentication Modes</a> blog for detailed guides on integration
-and authentication with the public Agent Directory instance.
-If you’re interested in publishing your own agents, running a full Directory node, or joining the public Directory network, check <a href="https://github.com/agntcy/dir-staging">github.com/agntcy/dir-staging</a> on how to get started.</p>
-
-<h3 id="community">Community</h3>
-
-<p>Agent Directory is open source and welcomes contributions:</p>
-
-<ul>
-  <li><a href="https://github.com/agntcy/dir">GitHub</a></li>
-  <li><a href="https://docs.agntcy.org/dir/overview/">Documentation</a></li>
-  <li><a href="https://spec.dir.agntcy.org/">Specification</a></li>
-</ul>
-
-<p>Join the community building the discovery layer for agentic AI. 
-Try Agent Directory in your next project, contribute to the codebase, or share your use cases.</p>
-
-<hr />
-
-<p><em>Agent Directory is developed by AGNTCY Contributors and released under the Apache 2.0 License.</em></p>]]></content><author><name>Ramiz Polic</name></author><category term="technical" /><category term="dir" /><category term="grpc" /><category term="distributed-systems" /><category term="announce" /><category term="discovery" /><category term="security" /><category term="ai" /><summary type="html"><![CDATA[As AI systems evolve from isolated models into interconnected networks of specialized agents, several challenges emerge: How do agents find each other? How does an AI application discover which agents can perform specific actions driven by the current context or task requirements? How do developers publish their agents so others can find and use them? Traditional service discovery systems weren’t designed for the agentic AI ecosystem. They lack semantic understanding of agent capabilities, don’t support capability-based discovery, and can’t handle the rich metadata that describes what agents can do. Developer platforms often resort to centralized marketplaces or proprietary directories, fragmenting the ecosystem and limiting agent reusability. The Problem: Agent Discovery at Scale Modern AI applications increasingly rely on specialized agents working together: Multi-agent Workflows where different agents handle specific tasks (data processing, analysis, synthesis) Agent Marketplaces where developers publish agents for others to discover and use Dynamic Agent Coordination where systems discover and invoke agents based on current requirements Federated AI Services spanning organizations, platforms, and deployment environments These scenarios require sophisticated discovery capabilities: Capability-based Search to find agents by what they can do, not just by name or identifier Semantic Discovery to match agent capabilities to requirements using hierarchical taxonomies Verifiable Metadata to trust that agent descriptions are authentic and haven’t been tampered with Distributed Architecture to enable discovery across organizational boundaries without centralized control Protocol Integrations to support various agent protocols (A2A, MCP) while maintaining semantic consistency Developer Experience to make it simple to publish and discover agents programmatically Existing solutions fall short. DNS-based service discovery provides naming but lacks semantic understanding. Cloud-native service meshes focus on network routing, not capability matching. Container registries store artifacts but don’t organize by functional attributes. Centralized marketplaces work within single platforms but don’t enable cross-platform discovery. The Agent Directory was built to solve exactly these challenges, providing a distributed, capability-aware directory service purpose-built for the agentic AI ecosystem. Agents announce their capabilities through structured metadata, while consumers discover them through rich capability-based queries. Whether you’re building a multi-agent AI system, an agent marketplace, or a platform that coordinates specialized AI services, Agent Directory provides the discovery infrastructure you need. Agent Directory is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. It is available as open-source software and can be found on GitHub. What is Agent Directory? Agent Directory is a distributed directory service that enables agents to announce their capabilities and allows others to discover them through capability-based queries. Built on proven distributed systems principles, Directory uses content-addressing for global uniqueness, hierarchical taxonomies for semantic organization, and distributed hash tables (DHT) for scalable discovery across decentralized networks. At its core, Agent Directory combines: Capability-based Discovery - Agents publish structured metadata describing their functional characteristics Hierarchical Taxonomies - Capabilities are organized through semantic taxonomies for efficient matching Content-addressed Naming - Cryptographic hashes (CIDs) ensure global uniqueness and data integrity Distributed Architecture - DHT-based routing enables scalable discovery without centralized control Verifiable Claims - Cryptographic signing provides data integrity and provenance tracking OCI Integration - Standard OCI distribution protocol for interoperable storage and retrieval Multi-Protocol Support - Native integration with A2A, MCP, and custom agent protocols This approach enables developers to publish agents once and make them discoverable across the entire ecosystem, while consumers can find the right agents for their needs through requirement- and capability-based queries rather than simple name lookups. Capability-Based Discovery Agent Directory leverages the Open Agentic Schema Framework (OASF) to provide standardized, capability-based agent discovery. OASF defines a structured schema for describing AI agents through: Skills Taxonomy - Hierarchical organization of agent capabilities, from high-level categories like “natural language processing” down to specific skills like “sentiment analysis” or “named entity recognition”. Domain Classification - Agents can be categorized by application domains such as “healthcare”, “finance”, or “manufacturing”, enabling domain-specific discovery. Modular Extensions - OASF records support modular extensions for protocol-specific metadata (A2A cards, MCP server configurations, GitHub Copilot integrations), allowing agents to work seamlessly across different agent frameworks. The Directory indexes records by their skills and domains, enabling natural capability-based queries like: “Find agents with image analysis capabilities” “Discover agents that can perform sentiment analysis” “Show me all agents in the healthcare domain with natural language processing skills” This semantic approach to discovery is far more powerful than simple name-based lookups, enabling developers to find the right agents based on what they need them to do. Content-Addressed Naming Agent Directory uses Content Identifiers (CIDs) for naming directory records. CIDs provide a self-describing, content-addressed naming scheme that ensures: Global Uniqueness - CIDs are cryptographic hashes of the record content, making them globally unique without requiring a central authority to assign identifiers. Immutability - Any change to a record produces a different CID, providing a natural versioning mechanism and tamper detection. Self-Verification - Anyone can verify that the content matches its CID by recomputing the hash, enabling trustless verification. In addition to CID-based addressing, Agent Directory supports verifiable domain-based names that enable human-readable references while maintaining cryptographic verification. For example, example.org/my-agent can be mapped to a CID while preserving the trust model through DNS-based verification. This dual naming approach provides both the usability of human-readable names and the security guarantees of content-addressed identifiers. Distributed DHT-Based Routing Agent Directory uses libp2p Kad-DHT for both server and content discovery, providing a proven, scalable foundation for distributed routing. This architecture enables: Decentralization - No single point of failure or central authority Fault Tolerance - The DHT can handle node churn and network partitions gracefully Scalability - DHT-based routing scales to thousands of nodes and millions of records Resilience - Multiple nodes can host the same records, providing redundancy Efficient Lookup - Logarithmic search complexity for fast discovery even at scale Agent Directory implements a two-phase discovery process powered by distributed hash tables (DHT): 1. Capability-to-Record Mapping When an agent publishes its capabilities, Agent Directory performs the following steps: Extract taxonomy data from the OASF record Announces the record’s CID associated with those taxonomies to the DHT Updates routing tables that map taxonomies to record identifiers 2. Record-to-Server Mapping Agent Directory tracks which directory nodes store which records: When a node stores a record, it announces its availability to the DHT The DHT maintains mappings from CIDs to server addresses Query resolution identifies optimal data sources Discovery queries execute this two-phase process: flowchart LR subgraph Query["Discovery Query"] Q["Query: agents with NLP skills"] end subgraph Phase1["Phase 1: Capability → CIDs"] DHT1[("DHT&lt;br/&gt;Capability Index")] CIDS["Matching CIDs:&lt;br/&gt;• bafkrei...abc&lt;br/&gt;• bafkrei...def&lt;br/&gt;• bafkrei...ghi"] end subgraph Phase2["Phase 2: CIDs → Servers"] DHT2[("DHT&lt;br/&gt;Provider Index")] MAPPING["Server → CID Mapping"] end subgraph Result["Result: Server → CIDs"] R1["dir-node-1.example.org&lt;br/&gt; └─ bafkrei...abc&lt;br/&gt; └─ bafkrei...def"] R2["dir-node-2.example.org&lt;br/&gt; └─ bafkrei...ghi"] end Q --&gt;|"skill: NLP"| DHT1 DHT1 --&gt;|"resolve taxonomy"| CIDS CIDS --&gt;|"lookup providers"| DHT2 DHT2 --&gt;|"find hosting nodes"| MAPPING MAPPING --&gt; R1 MAPPING --&gt; R2 style Query fill:transparent,stroke:#6b9fc8,stroke-width:2px style Phase1 fill:transparent,stroke:#d4a054,stroke-width:2px style Phase2 fill:transparent,stroke:#5ba67a,stroke-width:2px style Result fill:transparent,stroke:#9a7bb0,stroke-width:2px style Q fill:#6b9fc8,stroke:#4a7a9c,stroke-width:2px style DHT1 fill:#d4a054,stroke:#b08540,stroke-width:2px style CIDS fill:#d4a054,stroke:#b08540,stroke-width:2px style DHT2 fill:#5ba67a,stroke:#478a60,stroke-width:2px style MAPPING fill:#5ba67a,stroke:#478a60,stroke-width:2px style R1 fill:#9a7bb0,stroke:#7a5f8c,stroke-width:2px style R2 fill:#9a7bb0,stroke:#7a5f8c,stroke-width:2px The final result is a mapping of servers to their hosted CIDs, enabling the client to download records from optimal sources. Security and Trust In distributed agentic systems, trust is paramount. Agent Directory provides a comprehensive security model that combines content integrity and content provenance via the publisher’s identity to enable secure agent discovery across organizational boundaries. Content Integrity and Provenance All records are identified by their CID, enabling anyone to verify that content hasn’t been tampered with by recomputing the hash. Records can be signed using OIDC flows or private keys, proving authorship and enabling trust decisions based on publisher reputation. Agent Directory supports local trust chain verification, allowing organizations to: Establish their own trust anchors Define verification policies for external records Validate complete provenance chains from publisher to record Make informed decisions about agent selection based on trust policies specific to their use case # Verify a record's signature and trust chain dirctl verify bafkreiabcd1234567890 # Output includes verification status, signer identity, and trust chain details This multi-layered security approach combines content-addressed integrity with cryptographic signing and trust chain verification, enabling secure discovery in a decentralized ecosystem without relying on centralized authority. Zero-Trust Security Agent Directory leverages SPIFFE (Secure Production Identity Framework For Everyone) and its runtime implementation SPIRE to provide zero-trust security for the federation of different agent directory nodes. This enables: Workload Identity - Every Directory component receives a cryptographically verifiable identity in the form of a SPIFFE ID like spiffe://directory.example/ns/production/sa/my-agent. This identity is used for authentication and authorization across the system and network. Mutual TLS (mTLS) - SPIRE issues SVIDs enabling automatic mTLS between all Directory components. Communication is encrypted and both parties are authenticated without manual certificate management. Cross-Organization Federation - Organizations can federate their SPIRE deployments by exchanging trust bundles to form networks. This enables secure, authenticated communication between Directory nodes in different organizations without custom integration. Policy-Based Access Control - SPIFFE IDs enable fine-grained authorization policies. Organizations can define which workloads can push records, which can query, and which external trust domains are authorized for federation and for which operations. OCI-Based Distributed Storage Agent Directory differs from block storage systems like IPFS in its approach to distributed object storage, leveraging the OCI (Open Container Initiative) distribution specification for content storage and retrieval. Content Retrieval Agent Directory directly stores complete records rather than splitting them into blocks Records are retrieved as complete units using standard OCI protocols No complex block reassembly or multi-source optimization needed Distribution Layer Records are stored and transferred using OCI artifacts Any OCI distribution-compliant server can participate in the Agent Directory network Servers retrieve records from each other using well-established OCI protocols Existing OCI infrastructure (registries, caching layers, CDNs) can be leveraged Integration Support While Agent Directory uses zot as its reference OCI store, the system works with any server that implements the OCI distribution specification. This means you can use existing container registries like Docker Registry, Harbor, or cloud-provider managed registries as Directory storage backends. This OCI-based approach provides: Interoperability - Leverage existing OCI tooling and infrastructure Simplicity - Standard HTTP-based protocol without custom networking requirements Efficiency - Single-request record retrieval without block coordination overhead Enterprise Integration - Use existing OCI registries and security policies Runtime Discovery Integration Agent Directory includes a runtime discovery service that automatically discovers and indexes agent workloads running in a specific environment, bridging the gap between deployed agents and directory records. The runtime discovery system provides real-time visibility into active agents, enabling dynamic discovery and coordination in orchestrated environments like Kubernetes or Docker, but also local environments such as developer machines or edge devices. Workloads can be discovered through annotations that indicate they should be indexed by the Directory. For example, in Kubernetes, a pod can be annotated to enable discovery: apiVersion: v1 kind: Pod metadata: name: translation-agent annotations: org.agntcy/discover: "true" # Enable discovery for this workload org.agntcy/agent-type: "a2a" # Indicate the protocol or framework used org.agntcy/agent-record: "my-agent/v1.0.0" # Indicate reference to a Directory record The Agent Directory runtime discovery is an optional component of the Directory stack that makes workloads queryable alongside statically published records. This enables hybrid discovery where some agents are published ahead of time while others are discovered dynamically as they’re deployed. The same discovery and security models apply to both, providing a unified experience for developers and users. Real-World Use Cases Building Agent Marketplaces Agent Directory provides the foundation for building agent marketplaces where developers can publish agents and users can discover them: Publisher Workflow: Developer creates an agent with specific capabilities Generates an OASF record describing skills, domains, and deployment details Signs the record with their identity for authenticity Publishes to the Directory which announces the CID and metadata to the DHT Consumer Workflow: User queries Agent Directory for agents with specific capabilities The Directory returns matching records with CIDs User reviews metadata, verifies signatures, and checks trust chains User pulls the complete record and retrieves deployment artifacts (Docker images, API endpoints) User deploys or invokes the agent This decentralized marketplace model enables anyone to publish and discover agents without requiring approval from a central authority or platform lock-in. Multi-Agent System Coordination In complex multi-agent systems, agents need to discover collaborators dynamically: from agntcy.dir_sdk.client import Config, Client from agntcy.dir_sdk.models import search_v1 # Select either local/cache or remote Directory node based on context client = Client(Config(server_address="dir.example.org:8888")) # Agent needs image analysis capability # Use network or local discovery based on context results = client.search_records(search_v1.ListRequest( queries=[search_v1.RecordQuery( type=search_v1.RECORD_QUERY_TYPE_SKILL_NAME, value="images_computer_vision/object_detection", )] limit=5, )) # Select the best candidate based on metadata for item in results: # Verify signature, check version, evaluate endpoints if meets_requirements(item.record): endpoint = item.record.data['locators'][0]['url'] # Invoke the discovered agent invoke_agent(endpoint, task_data) break This pattern enables dynamic capability discovery where agents find and coordinate with each other based on current requirements rather than hardcoded integrations. Federated Agent Networks Organizations can run their own Directory nodes while participating in a federated discovery network: Internal Directory Node - Organization runs an Agent Directory node behind their firewall, containing proprietary agents not shared externally. Federation - The internal node connects to external Directory nodes via DHT, enabling discovery of public agents while keeping internal agents private. Policy Enforcement - Organizations define trust policies determining which external agents can be discovered and used, based on publisher identity, signatures, and verification chains. This federated model enables both private agent catalogs and participation in the broader ecosystem, with fine-grained control over what’s shared and discovered. Protocol-Agnostic Discovery Agent Directory’s OASF-based approach provides a unified discovery layer across different agent protocols: A2A Agents - Agents implementing the Agent-to-Agent protocol can be described in OASF records with A2A-specific metadata in modules. MCP Servers - Model Context Protocol servers can be imported to OASF format, indexed by capabilities, and discovered through Agent Directory. Custom Protocols - Organizations developing custom agent protocols can define public or private OASF modules for their specific metadata while leveraging Agent Directory’s discovery infrastructure. Example: A user searching for “text completion” might discover agents using A2A, MCP, or custom protocols - all through a single capability-based query. The OASF record clearly indicates which protocol each agent uses, enabling proper invocation. Getting Started Installation Agent Directory provides a comprehensive suite of tools that make it easy to publish, discover, and work with agent records. Tool Install Prerequisite Usage dirctl brew tap agntcy/dir https://github.com/agntcy/dir/brew install dirctl - CLI Documentation Go SDK go get github.com/agntcy/dir/client - Go SDK Documentation Python SDK pip install agntcy-dir dirctl (sign/verify) Python SDK Documentation JS/TS SDK npm install agntcy-dir dirctl (sign/verify) JS/TS SDK Documentation MCP Server dirctl mcp serve dirctl Directory MCP Server Blog Post MCP Integration Documentation Deployment - - Getting Started Quick Example Publish and discover your first agent in minutes: Deploy an Agent Directory node locally helm pull oci://ghcr.io/agntcy/dir/helm-charts/dir --version v1.0.0 helm upgrade --install dir oci://ghcr.io/agntcy/dir/helm-charts/dir --version v1.0.0 kubectl port-forward svc/dir-apiserver 8888:8888 Download a sample agent record curl -o sample-record.json https://raw.githubusercontent.com/agntcy/dir/refs/heads/main/e2e/shared/testdata/record_100.json Use CLI to publish and discover agents # Push and sign the agent record to Agent Directory dirctl push sample-record.json --sign # Search for agents with specific capabilities dirctl search --skill "natural_language_processing/*" # Pull a specific record by CID dirctl pull baeareiabbog2umgduqhlcb64fzt6adn34kblzvru3fdzkl75hjhwt6h3da # Verify a record's signature and trust chain dirctl verify baeareiabbog2umgduqhlcb64fzt6adn34kblzvru3fdzkl75hjhwt6h3da Use SDK to publish and discover agents from agntcy.dir_sdk.client import Config, Client from agntcy.dir_sdk.models import core_v1, search_v1 # Connect to an Agent Directory node client = Client(Config(server_address="localhost:8888")) # Push an agent record (requires signing credentials) with open("sample-record.json", "r") as f: record = json.load(f) cid = client.push(records=[core_v1.Record(data=record)])[0] print(f"Published agent with CID: {cid}") # Search for agents by capability results = client.search_records(search_v1.ListRequest( queries=[search_v1.RecordQuery( type=search_v1.RECORD_QUERY_TYPE_SKILL_NAME, value="natural_language_processing/*", )], limit=10, )) # Retrieve and inspect matching agents for item in results: print(f"Found: {item.record.name} (CID: {item.cid})") print(f" Skills: {item.record.data.get('skills', [])}") print(f" Locator: {item.record.data['locators'][0]['url']}") Why Agent Directory Matters As AI systems evolve from isolated models to interconnected networks of specialized agents, discovery infrastructure becomes critical. Agent Directory provides a foundation that: Enables Semantic Discovery - Find agents by what they can do, not just by name or endpoint. Ensures Data Integrity - Content-addressed naming and cryptographic signing guarantee authenticity. Scales Without Centralization - DHT-based routing eliminates single points of failure. Bridges Organizational Boundaries - Federated architecture enables cross-organization discovery with fine-grained trust policies. Supports Protocol Diversity - Native integration with A2A, MCP, and custom agent protocols through OASF extensions. Simplifies Development - Publish once, discover everywhere with intuitive CLI and SDK tooling. Whether you’re building a multi-agent AI system, an agent marketplace, or a platform that coordinates specialized AI services, Agent Directory provides the discovery infrastructure you need. The Road Ahead Agent Directory is actively developed as an open-source project under the Apache 2.0 License. The project has reached v1.0 with production-ready capabilities. Current Capabilities: OASF-based capability discovery with hierarchical taxonomies DHT-based distributed routing for scalable discovery Cryptographic signing with OIDC and private key support OCI distribution protocol for interoperable storage Data synchronization between Directory nodes Runtime discovery for Kubernetes and Docker workloads CLI, Go SDK, Python SDK, and JavaScript SDK MCP server integration for AI assistants Under Active Development: Enhanced DHT performance and routing optimizations Extended SPIFFE/SPIRE integration for enterprise deployments Advanced trust chain verification policies Additional runtime discovery targets (edge devices, serverless) Deeper agentic protocol integrations Cross-network federation protocols Get Involved Public Instance A public Agent Directory instance is available for testing and experimentation at prod.gateway.ads.outshift.io:443 in read-only mode. This instance is open for anyone that is part of github.com/agntcy organization, making it a great place to get hands-on experience with Agent Directory. ### Configuration # Set environment variables to connect to the public Directory instance export DIRECTORY_CLIENT_SERVER_ADDRESS="prod.gateway.ads.outshift.io:443" export DIRECTORY_CLIENT_AUTH_MODE="github" ### Interactive Authentication with GitHub OAuth dirctl auth login ### Non-Interactive Authentication with GitHub Token # The token must have `user:email` and `read:org` scope for authentication to work export DIRECTORY_CLIENT_GITHUB_TOKEN="ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" ### Usage # Now you can use dirctl or the SDK to query the Agent Directory instance dirctl search --skill "*" Check the Directory Testbed Authentication Modes blog for detailed guides on integration and authentication with the public Agent Directory instance. If you’re interested in publishing your own agents, running a full Directory node, or joining the public Directory network, check github.com/agntcy/dir-staging on how to get started. Community Agent Directory is open source and welcomes contributions: GitHub Documentation Specification Join the community building the discovery layer for agentic AI. Try Agent Directory in your next project, contribute to the codebase, or share your use cases. Agent Directory is developed by AGNTCY Contributors and released under the Apache 2.0 License.]]></summary></entry></feed>
+<p><em>Have questions about Directory or the MCP server? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Adam Tagscherer</name></author><category term="technical" /><category term="mcp" /><category term="directory" /><category term="oasf" /><category term="ai-agents" /><category term="ide-integration" /><summary type="html"><![CDATA[The Model Context Protocol (MCP) has emerged as a powerful standard for connecting AI assistants with external tools and data sources. In this post, we’ll explore the Directory MCP server—a feature that brings AI agent discovery and management directly into your IDE, enabling seamless interaction with the Directory ecosystem.]]></summary></entry></feed>
