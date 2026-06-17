@@ -111,7 +111,7 @@ $ curl -s https://your-discovery-service/search \
 
 ARD is a contract; something has to *fill and manage* the data, storage, routing, and trust. That role is performed by [ADS](https://docs.agntcy.org/dir/overview/), the only layer with a **control plane**: it ingests records, content-addresses them with CIDs, signs and verifies them, announces them to a DHT, replicates them over OCI, and enforces zero-trust identity between data, clients, and nodes. Where ARD answers "what fits this task?", ADS owns "what exists, best fit, who vouches for it, and where it physically lives."
 
-The clean consequence is that **ADS is a reference implementation of ARD.** ADS is a distributed registry that exposes its [OASF](https://docs.agntcy.org/oasf/open-agentic-schema-framework/) records as AI Catalog entries and serves them securely over the ARD endpoints so the same inventory is reachable by both ADS and ARD client integration. Operators publish records to ADS and consumer discover through ARD, verify through ADS, and invoke through MCP or A2A -- one flow, many protocols.
+The clean consequence is that **ADS is a reference implementation of ARD.** ADS is a distributed registry that exposes its [OASF](https://docs.agntcy.org/oasf/open-agentic-schema-framework/) records as AI Catalog entries and serves them securely over the ARD endpoints so the same inventory is reachable by both ADS and ARD client integrations. Operators publish records to ADS while the consumers discover through ARD, verify through ADS, and invoke through MCP or A2A -- one flow, many protocols.
 
 ```bash
 # Start local ADS node in the background
@@ -180,9 +180,7 @@ Both the AI Catalog and ARD specifications are scrupulous about scope. They defi
 
 ### Identity
 
-AI Catalog's [Trust Manifest](https://agent-card.github.io/ai-catalog/#trust-manifest) carries `identity`, `attestations`, `provenance` and an optional `signature` field for security policies. ARD reuses this object and additionally *requires* that the cryptographic identity aligns with the domain embedded in the resource's URN. Both specs describe verification procedures, but neither defines how.
-
-ADS already runs one. Records are addressed by [CID](https://github.com/multiformats/cid), so `provenance` models are native, not bolted on. Workload identity comes from [SPIFFE](https://spiffe.io/) and [DNS/HTTPS](https://datatracker.ietf.org/doc/html/rfc1035/) where every component gets a verifiable ID which is precisely the `identity` ARD wants anchored to a publisher. ADS also ships a signing and verification plane, so the `signature` is not just a placeholder but actually a verifiable field over the data.
+AI Catalog's [Trust Manifest](https://agent-card.github.io/ai-catalog/#trust-manifest) carries `identity`, `attestations`, `provenance` and an optional `signature` field for security policies. ARD reuses this object and additionally *requires* that the cryptographic identity aligns with the domain embedded in the resource's URN. Both specs describe verification procedures, but neither defines how. ADS already runs one. Records are addressed by [CID](https://github.com/multiformats/cid), so `provenance` models are native, not bolted on. Workload identity comes from [SPIFFE](https://spiffe.io/) and [DNS/HTTPS](https://datatracker.ietf.org/doc/html/rfc1035/) where every component gets a verifiable ID, which is precisely the `identity` ARD wants anchored to a publisher. ADS also ships a signing and verification plane, so the `signature` is not just a placeholder but actually a verifiable field over the data.
 
 ### Federation
 
@@ -190,7 +188,7 @@ ARD's federation model is elegant precisely because it assumes the implementatio
 
 ### Distribution
 
-AI Catalog's maps the logical format onto OCI registries for content-addressed storage. ADS uses the [OCI distribution spec](https://github.com/opencontainers/distribution-spec) as its reference storage model. The mapping the spec describes as future work is the mechanism ADS already ships today. When a record is pushed to ADS, it is automatically stored in the given OCI registry and made available for fetch by CID. The ARD `url` field can directly point to the OCI location, or it can point to the ADS node which proxies the fetch.
+AI Catalog maps the logical format onto OCI registries for content-addressed storage. ADS uses the [OCI distribution spec](https://github.com/opencontainers/distribution-spec) as its reference storage model. The mapping the spec describes as future work is the mechanism ADS already ships today. When a record is pushed to ADS, it is automatically stored in the given OCI registry and made available for fetch by CID. The ARD `url` field can directly point to the OCI location, or it can point to the ADS node which proxies the fetch.
 
 ## End-to-End Discovery-to-Invocation with ARD over ADS
 
@@ -439,15 +437,15 @@ flowchart LR
     style ORCH fill:#cfe1fb,color:#1c1e21
 ```
 
-Publishers and platform teams drive the **control plane** (push, sign, announce). Orchestrators and clients ride the **consumption plane** (discover, verify, dispatch). The contract between them is the AI Catalog and ARD, which is why an agentic resource can be published and discovered regardless of the protocol or domain.
+Publishers and platform teams drive the **control plane** (push, sign, announce). Clients ride the **consumption plane** (discover, verify, dispatch). The contract between them is the AI Catalog and ARD, which is why an agentic resource can be published and discovered regardless of the protocol or domain.
 
 ### Why this matters
 
 ADS is not just another registry; it is the shared control plane that makes the discovery work. The AI Catalog and ARD specifications define the primitives, but without a control plane, they are just static formats. ADS provides a secure, federated, capability-driven discovery layer that makes them work, ensuring:
 
-- **No protocol lock-in for publishers.** A record pushed to ADS is reachable through AI Catalog resolution, an ARD search registry, or a direct gRPC query. The publisher does not need to worry.
-- **Security is solved once, at the bottom.** SPIFFE identity, HTTPS/DNS resolution, CID integrity, and signing available directly. Higher layers reference them through `trustManifest` fields instead of reinventing key management.
-- **Federation is real, not only desirable.** ARD's `referrals` and `auto` modes need a routing fabric to be more than a single registry. The DHT can be that fabric.
+- **No protocol lock-in for publishers.** A record pushed to ADS is reachable through an ARD search registry, local gRPC query, or across the network. The publisher does not need to worry.
+- **Security is solved once, at the bottom.** SPIFFE identity, HTTPS/DNS resolution, CID integrity, and signing are available directly. Higher layers can focus on the discovery without re-implementing security.
+- **Federation is real, not only desirable.** ARD's discovery modes need a routing fabric to be more than a single registry. The DHT can be that fabric.
 
 ## What's Next
 
@@ -455,7 +453,7 @@ The current ARD implementation in ADS is a reference implementation of the spec,
 
 - **ARD POST /search** endpoint with advanced query capabilities and relevance ranking. Currently available through DIR MCP server only.
 - **DID-based identity** for decentralized identifiers and verifiable credentials.
-- **Client tooling and SDKs** for to simplify integration with ADS and ARD, both for publishers and consumers.
+- **Client tooling and SDKs** to simplify integration with ADS and ARD, both for publishers and consumers.
 
 If you're building multi-agent systems, we'd love to hear your use cases.
 Join our [Slack community](https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ)
