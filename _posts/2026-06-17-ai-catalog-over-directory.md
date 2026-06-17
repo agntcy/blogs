@@ -437,7 +437,7 @@ Publishers and platform teams drive the **control plane** (push, sign, announce)
 ADS is not just another registry; it is the shared control plane that makes the discovery work. The AI Catalog and ARD specifications define the *what* and the *how* for discovery, but without a control plane, they are just static formats. ADS provides the *where* and the *who* -- a secure, federated, capability-driven discovery layer that actually links these artifacts, routes queries across organizational boundaries, and provides security and control policies embedded in.
 
 - **No protocol lock-in for publishers.** A record pushed to ADS is reachable through AI Catalog resolution, an ARD search registry, or a direct gRPC query. The publisher does not need to worry.
-- **Security is solved once, at the bottom.** SPIFFE identity, DID resolution, CID integrity, and signing available directly. Higher layers reference them through `trustManifest` fields instead of reinventing key management.
+- **Security is solved once, at the bottom.** SPIFFE identity, HTTPS/DNS resolution, CID integrity, and signing available directly. Higher layers reference them through `trustManifest` fields instead of reinventing key management.
 - **Federation is real, not only desirable.** ARD's `referrals` and `auto` modes need a routing fabric to be more than a single registry. The DHT can be that fabric.
 
 The table below summarizes how the higher-level specification concepts map to the underlying ADS primitives and what is solved by ADS:
