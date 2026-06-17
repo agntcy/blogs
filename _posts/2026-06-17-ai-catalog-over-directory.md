@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "ARD over Agent Directory: Interoperability by Design"
-date: 2026-06-16 12:00:00 +0000
+date: 2026-06-17 14:00:00 +0000
 author: Ramiz Polic
 author_url: https://github.com/ramizpolic
 categories: technical
