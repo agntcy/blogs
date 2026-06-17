@@ -33,7 +33,7 @@ flowchart BT
     subgraph L2["ARD -- Consumption API"]
         WK["GET /.well-known/ai-catalog.json"]
         SEARCH["POST /search"]
-        LIST["GET /v1/agents"]
+        LIST["GET /agents"]
     end
     subgraph L1["AI Catalog -- Index / Content Standard"]
         ENTRY["Catalog Entry Schema"]
@@ -44,6 +44,20 @@ flowchart BT
     L1 -->|"mapped by"| L2
     L2 -->|"implemented by"| L3
     L3 -->|"consumed by"| CLIENT["AI clients / applications / systems"]
+
+    style CLIENT fill:#800080,stroke:#800080,color:#fff
+    style OASF fill:#023a7a,color:#f3f6fd
+    style API fill:#023a7a,color:#f3f6fd
+    style CID fill:#023a7a,color:#f3f6fd
+    style DHT fill:#023a7a,color:#f3f6fd
+    style OCI fill:#023a7a,color:#f3f6fd
+    style SIGN fill:#023a7a,color:#f3f6fd
+    style WK fill:#023a7a,color:#f3f6fd
+    style SEARCH fill:#023a7a,color:#f3f6fd
+    style LIST fill:#023a7a,color:#f3f6fd
+    style ENTRY fill:#023a7a,color:#f3f6fd
+    style TRUST fill:#023a7a,color:#f3f6fd
+    style TYPES fill:#023a7a,color:#f3f6fd
 ```
 
 ### Layer 1: AI Catalog as the index standard
@@ -71,7 +85,7 @@ The [Agentic Resource Discovery](https://agenticresourcediscovery.org/) is a *re
 ```bash
 $ curl -s https://your-discovery-service/search \
   -H 'content-type: application/json' \
-  -d '{"query":{"text":"book me a flight to Tokyo"},"pageSize":3}'
+  -d '{"query": {"text":"book me a flight to Tokyo"}, "pageSize":3}'
 {
   "results": [
     {
@@ -175,6 +189,8 @@ AI Catalog's maps the logical format onto OCI registries for content-addressed s
 
 Below is a sequence diagram showing a sample end-to-end flow, from discovery to invocation, across heterogeneous protocols. The idea is simple: an agentic application queries ADS over ARD, discovers capabilities, verifies trust, and dispatches work to the appropriate protocol based on its requirements. 
 
+> Full code samples are available in [github.com/agntcy/dir](https://github.com/agntcy/dir/tree/main/samples) repository.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -206,19 +222,17 @@ sequenceDiagram
 
 The decisive step is where the application dispatches runs **by media type**. ADS doesn't invoke anything; it tells the application *which* protocol each capability speaks, and the application routes accordingly. This is how one discovery query spans heterogeneous protocols and domains, exactly as envisioned in the agnostic discovery model of ADS.
 
-> Full code samples are available in [github.com/agntcy/dir](https://github.com/agntcy/dir/tree/main/samples) repository.
-
 ## Building the application
 
 We use the following tools and libraries to build a sample producer/consumer application:
 - **ARD consumption API**: plain `net/http` or `curl` for the ARD consumption API used for discovery.
 - **ADS client tools**: [Go SDK](https://github.com/agntcy/dir/tree/main/client) or [dirctl](https://github.com/agntcy/dir/tree/main/cli) CLI for pushing, signing, and verifying records.
 
+Code snippets below are simplified for clarity and focus on ideas. The samples in the repository include full working implementations.
+
 ### Step 1: Publish an agentic capability to ADS
 
 ```go
-package publisher
-
 import (
   adsclient "github.com/agntcy/dir/client"
   corev1 "github.com/agntcy/dir/api/core/v1"
@@ -228,7 +242,7 @@ import (
 // Local node indexes it and can serve it locally over ADS or ARD right away.
 func Publish(ctx context.Context, client *adsclient.Client) error {
   // Push locally
-  ref, err := client.Push(ctx, &corev1.New(&typesv1.Record{
+  ref, err := client.Push(ctx, corev1.New(&typesv1.Record{
       Name: "weather-agent",
       Version: "1.0.0",
       // ...
@@ -239,13 +253,13 @@ func Publish(ctx context.Context, client *adsclient.Client) error {
 
   // Sign the record to prove authenticity and integrity.
   // Provider can be a private key or OIDC token.
-  if err := client.Sign(ctx, ref, provider); err != nil {
+  if err := client.Sign(ctx, {ref, provider}); err != nil {
       return err
   }
 
   // Publish to DHT for federated discovery, so other nodes can find it.
   // Optional if only local discovery is needed.
-  if err := client.Publish(ctx, ref); err != nil {
+  if err := client.Publish(ctx, {ref}); err != nil {
       return err
   }
 
@@ -299,6 +313,10 @@ func Discover(ctx context.Context, taskQuery string) ([]*catalogv1.CatalogEntry,
 Discovery hands us a `mediaType` and other relevant details such as `url` about the discovered capabilities. The application's job is now to route to the right execution path and not to "guess" a protocol:
 
 ```go
+import (
+  catalogv1 "github.com/agntcy/dir/api/catalog/v1"
+)
+
 // Dispatch routes a discovered entry to its native invocation path.
 func Dispatch(ctx context.Context, entry *catalogv1.CatalogEntry, task map[string]any) error {
   switch entry.MediaType {
@@ -322,6 +340,11 @@ func Dispatch(ctx context.Context, entry *catalogv1.CatalogEntry, task map[strin
 ### Step 3: Verify trust before you invoke
 
 ```go
+import (
+  adsclient "github.com/agntcy/dir/client"
+  corev1 "github.com/agntcy/dir/api/core/v1"
+)
+
 // Verify confirms the entry owns its claimed identity and trust signals.
 // Identifier format is expected to be urn:ai:org.agntcy:cid:<cid>
 func Verify(ctx context.Context, client *adsclient.Client, e *catalogv1.CatalogEntry) error {
@@ -357,7 +380,12 @@ func Verify(ctx context.Context, client *adsclient.Client, e *catalogv1.CatalogE
 Once the discovery, verification, and dispatch functions are implemented, the consumer application can orchestrate them in a single flow. The following function demonstrates how to handle a task query by discovering capabilities, verifying trust, and dispatching to the appropriate protocol:
 
 ```go
-func Handle(ctx context.Context, taskQuery string) error {
+import (
+  adsclient "github.com/agntcy/dir/client"
+  corev1 "github.com/agntcy/dir/api/core/v1"
+)
+
+func Handle(ctx context.Context, client *adsclient.Client, taskQuery string) error {
   entries, err := Discover(ctx, taskQuery)
   if err != nil {
     return err
@@ -395,30 +423,46 @@ flowchart LR
     end
     PUSH --> INDEX --> PROJECT --> SEARCH --> ORCH["AI workflows"]
 
-    style Control fill:#5ba67a,stroke:#478a60,color:#fff
-    style Consume fill:#d4a054,stroke:#b08540,color:#fff
-    style ORCH fill:#9a7bb0,stroke:#7a5f8c,color:#fff
+    style PUSH fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style INDEX fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style SEARCH fill:#0251af,color:#f3f6fd
+    style PROJECT fill:#0251af,color:#f3f6fd
+    style ORCH fill:#cfe1fb,color:#1c1e21
 ```
 
 Publishers and platform teams drive the **control plane** (push, sign, announce). Orchestrators and clients ride the **consumption plane** (discover, verify, dispatch). The contract between them is the AI Catalog and ARD, which is why an agentic resource can be published and discovered regardless of the protocol or domain.
 
 ### Why this matters
 
-Here is the dependency between ARD and ADS, made concrete as a mapping table.
-
-| Higher-level concept | Spec field                      | ADS primitives                       | Supported by ADS                                                               |
-| -------------------- | ------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------ |
-| Artifact identity    | `identifier`                    | OASF record + verifiable domain name | ✅                                                                              |
-| Content integrity    | `provenance.sourceDigest`       | CID (content addressing)             | ✅                                                                              |
-| Publisher identity   | `trustManifest.identity`        | SPIFFE + DID identity                | ✅                                                                              |
-| Authenticity         | `trustManifest.signature`       | OIDC / key-based sign + verify       | ✅                                                                              |
-| Search               | ARD REST API                    | ARD REST API without `POST /search`  | ADS only supports deterministic search due to security and complexity concerns |
-| Federation           | `federation: referrals \| auto` | DHT two-phase routing + sync         | ✅                                                                              |
-| Distribution         | OCI mapping                     | OCI v1.1 distribution spec           | ✅                                                                              |
+ADS is not just another registry; it is the shared control plane that makes the discovery work. The AI Catalog and ARD specifications define the *what* and the *how* for discovery, but without a control plane, they are just static formats. ADS provides the *where* and the *who* -- a secure, federated, capability-driven discovery layer that actually links these artifacts, routes queries across organizational boundaries, and provides security and control policies embedded in.
 
 - **No protocol lock-in for publishers.** A record pushed to ADS is reachable through AI Catalog resolution, an ARD search registry, or a direct gRPC query. The publisher does not need to worry.
 - **Security is solved once, at the bottom.** SPIFFE identity, DID resolution, CID integrity, and signing available directly. Higher layers reference them through `trustManifest` fields instead of reinventing key management.
 - **Federation is real, not only desirable.** ARD's `referrals` and `auto` modes need a routing fabric to be more than a single registry. The DHT can be that fabric.
+
+The table below summarizes how the higher-level specification concepts map to the underlying ADS primitives and what is solved by ADS:
+
+| Spec concept       | Spec field                      | ADS primitives                       | Supported by ADS                                                |
+| ------------------ | ------------------------------- | ------------------------------------ | --------------------------------------------------------------- |
+| Artifact identity  | `identifier`                    | OASF record + verifiable domain name | ✅                                                               |
+| Content integrity  | `provenance.sourceDigest`       | CID (content addressing)             | ✅                                                               |
+| Publisher identity | `trustManifest.identity`        | SPIFFE + DNS/HTTPS identity          | ✅                                                               |
+| Authenticity       | `trustManifest.signature`       | OIDC / key-based sign + verify       | ✅                                                               |
+| Search             | ARD REST API                    | ARD REST API without `POST /search`  | ADS only supports deterministic search due to security concerns |
+| Federation         | `federation: referrals \| auto` | DHT two-phase routing + sync         | ✅                                                               |
+| Distribution       | OCI mapping                     | OCI v1.1 distribution spec           | ✅                                                               |
+
+## What's Next
+
+The current ARD implementation in ADS is a reference implementation of the spec, but there are many features we plan to add in future releases of ADS:
+
+- **POST /search** endpoint with advanced query capabilities and relevance ranking as described in ARD.
+- **New artifact types** beyond agent skills, including tools, datasets, and full agentic systems.
+- **Client tooling and SDKs** for to simplify integration with ADS and ARD, both for publishers and consumers.
+
+If you're building multi-agent systems, we'd love to hear your use cases.
+Join our [Slack community](https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ)
+or open an issue on [GitHub](https://github.com/agntcy/dir).
 
 ---
 
