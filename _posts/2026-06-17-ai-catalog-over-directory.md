@@ -167,7 +167,16 @@ $ dirctl daemon stop
 
 ## What the specs leave unsolved
 
-Both the AI Catalog and ARD specifications are scrupulous about scope. They define the *what* and the *how*, but not the *where* or the *who*. They describe identity, federation, distribution, and security but do not ship a control plane that supports it.
+Both the AI Catalog and ARD specifications are scrupulous about scope. They define the *what* and the *how*, but not the *where* or the *who*. They describe identity, federation, distribution, and security but do not ship a control plane that supports it. The table below summarizes how the higher-level specification concepts map to the underlying ADS primitives and what is solved by ADS.
+
+| Spec concept                 | ADS supported primitives                      |
+| ---------------------------- | --------------------------------------------- |
+| Artifact/Publisher identity  | SPIFFE + DNS/HTTPS identity                   |
+| Content integrity            | CID (content addressing)                      |
+| Authenticity                 | OIDC / key-based sign + verify                |
+| Search                       | ARD REST API (without `POST /search`)         |
+| Federation                   | libp2p DHT two-phase routing + sync           |
+| Distribution                 | OCI v1.1 distribution spec                    |
 
 ### Identity
 
@@ -434,30 +443,18 @@ Publishers and platform teams drive the **control plane** (push, sign, announce)
 
 ### Why this matters
 
-ADS is not just another registry; it is the shared control plane that makes the discovery work. The AI Catalog and ARD specifications define the *what* and the *how* for discovery, but without a control plane, they are just static formats. ADS provides the *where* and the *who* -- a secure, federated, capability-driven discovery layer that actually links these artifacts, routes queries across organizational boundaries, and provides security and control policies embedded in.
+ADS is not just another registry; it is the shared control plane that makes the discovery work. The AI Catalog and ARD specifications define the primitives, but without a control plane, they are just static formats. ADS provides a secure, federated, capability-driven discovery layer that makes them work, ensuring:
 
 - **No protocol lock-in for publishers.** A record pushed to ADS is reachable through AI Catalog resolution, an ARD search registry, or a direct gRPC query. The publisher does not need to worry.
 - **Security is solved once, at the bottom.** SPIFFE identity, HTTPS/DNS resolution, CID integrity, and signing available directly. Higher layers reference them through `trustManifest` fields instead of reinventing key management.
 - **Federation is real, not only desirable.** ARD's `referrals` and `auto` modes need a routing fabric to be more than a single registry. The DHT can be that fabric.
 
-The table below summarizes how the higher-level specification concepts map to the underlying ADS primitives and what is solved by ADS:
-
-| Spec concept       | Spec field                      | ADS primitives                       | Supported by ADS                                                |
-| ------------------ | ------------------------------- | ------------------------------------ | --------------------------------------------------------------- |
-| Artifact identity  | `identifier`                    | OASF record + verifiable domain name | ✅                                                               |
-| Content integrity  | `provenance.sourceDigest`       | CID (content addressing)             | ✅                                                               |
-| Publisher identity | `trustManifest.identity`        | SPIFFE + DNS/HTTPS identity          | ✅                                                               |
-| Authenticity       | `trustManifest.signature`       | OIDC / key-based sign + verify       | ✅                                                               |
-| Search             | ARD REST API                    | ARD REST API without `POST /search`  | ADS only supports deterministic search due to security concerns |
-| Federation         | `federation: referrals \| auto` | DHT two-phase routing + sync         | ✅                                                               |
-| Distribution       | OCI mapping                     | OCI v1.1 distribution spec           | ✅                                                               |
-
 ## What's Next
 
 The current ARD implementation in ADS is a reference implementation of the spec, but there are many features we plan to add in future releases of ADS:
 
-- **POST /search** endpoint with advanced query capabilities and relevance ranking as described in ARD.
-- **New artifact types** beyond agent skills, including tools, datasets, and full agentic systems.
+- **ARD POST /search** endpoint with advanced query capabilities and relevance ranking. Currently available through DIR MCP server only.
+- **DID-based identity** for decentralized identifiers and verifiable credentials.
 - **Client tooling and SDKs** for to simplify integration with ADS and ARD, both for publishers and consumers.
 
 If you're building multi-agent systems, we'd love to hear your use cases.
