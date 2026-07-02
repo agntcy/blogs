@@ -153,6 +153,7 @@
 <h3 id="distributed-dht-based-routing">Distributed DHT-Based Routing</h3>
 
 <p>Agent Directory uses <a href="https://github.com/libp2p/specs/tree/master/kad-dht">libp2p Kad-DHT</a> for both server and content discovery, providing a proven, scalable foundation for distributed routing. This architecture enables:</p>
+
 <ul>
   <li><strong>Decentralization</strong> - No single point of failure or central authority</li>
   <li><strong>Fault Tolerance</strong> - The DHT can handle node churn and network partitions gracefully</li>
@@ -166,6 +167,7 @@
 <p><strong>1. Capability-to-Record Mapping</strong></p>
 
 <p>When an agent publishes its capabilities, Agent Directory performs the following steps:</p>
+
 <ul>
   <li>Extract taxonomy data from the OASF record</li>
   <li>Announces the record’s CID associated with those taxonomies to the DHT</li>
@@ -175,6 +177,7 @@
 <p><strong>2. Record-to-Server Mapping</strong></p>
 
 <p>Agent Directory tracks which directory nodes store which records:</p>
+
 <ul>
   <li>When a node stores a record, it announces its availability to the DHT</li>
   <li>The DHT maintains mappings from CIDs to server addresses</li>
@@ -234,6 +237,7 @@
 <p>All records are identified by their CID, enabling anyone to verify that content hasn’t been tampered with by recomputing the hash. Records can be signed using OIDC flows or private keys, proving authorship and enabling trust decisions based on publisher reputation.</p>
 
 <p>Agent Directory supports local trust chain verification, allowing organizations to:</p>
+
 <ul>
   <li>Establish their own trust anchors</li>
   <li>Define verification policies for external records</li>
@@ -286,6 +290,7 @@ dirctl verify bafkreiabcd1234567890
 <p>While Agent Directory uses <a href="https://zotregistry.dev/">zot</a> as its reference OCI store, the system works with <strong>any server that implements the OCI distribution specification</strong>. This means you can use existing container registries like Docker Registry, Harbor, or cloud-provider managed registries as Directory storage backends.</p>
 
 <p>This OCI-based approach provides:</p>
+
 <ul>
   <li><strong>Interoperability</strong> - Leverage existing OCI tooling and infrastructure</li>
   <li><strong>Simplicity</strong> - Standard HTTP-based protocol without custom networking requirements</li>
@@ -456,70 +461,69 @@ local environments such as developer machines or edge devices.</p>
 <p>Publish and discover your first agent in minutes:</p>
 
 <ol>
-  <li>Deploy an Agent Directory node locally</li>
+  <li>
+    <p>Deploy an Agent Directory node locally</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> helm pull oci://ghcr.io/agntcy/dir/helm-charts/dir <span class="nt">--version</span> v1.0.0
+ helm upgrade <span class="nt">--install</span> <span class="nb">dir </span>oci://ghcr.io/agntcy/dir/helm-charts/dir <span class="nt">--version</span> v1.0.0
+ kubectl port-forward svc/dir-apiserver 8888:8888
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>Download a sample agent record</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> curl <span class="nt">-o</span> sample-record.json https://raw.githubusercontent.com/agntcy/dir/refs/heads/main/e2e/shared/testdata/record_100.json
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>Use CLI to publish and discover agents</p>
+
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># Push and sign the agent record to Agent Directory</span>
+ dirctl push sample-record.json <span class="nt">--sign</span>
+
+ <span class="c"># Search for agents with specific capabilities</span>
+ dirctl search <span class="nt">--skill</span> <span class="s2">"natural_language_processing/*"</span>
+
+ <span class="c"># Pull a specific record by CID</span>
+ dirctl pull baeareiabbog2umgduqhlcb64fzt6adn34kblzvru3fdzkl75hjhwt6h3da
+
+ <span class="c"># Verify a record's signature and trust chain</span>
+ dirctl verify baeareiabbog2umgduqhlcb64fzt6adn34kblzvru3fdzkl75hjhwt6h3da
+</code></pre></div>    </div>
+  </li>
+  <li>
+    <p>Use SDK to publish and discover agents</p>
+
+    <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="kn">from</span> <span class="nn">agntcy.dir_sdk.client</span> <span class="kn">import</span> <span class="n">Config</span><span class="p">,</span> <span class="n">Client</span>
+ <span class="kn">from</span> <span class="nn">agntcy.dir_sdk.models</span> <span class="kn">import</span> <span class="n">core_v1</span><span class="p">,</span> <span class="n">search_v1</span>
+
+ <span class="c1"># Connect to an Agent Directory node
+</span> <span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">Config</span><span class="p">(</span><span class="n">server_address</span><span class="o">=</span><span class="s">"localhost:8888"</span><span class="p">))</span>
+
+ <span class="c1"># Push an agent record (requires signing credentials)
+</span> <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">"sample-record.json"</span><span class="p">,</span> <span class="s">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+     <span class="n">record</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+ <span class="n">cid</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">records</span><span class="o">=</span><span class="p">[</span><span class="n">core_v1</span><span class="p">.</span><span class="n">Record</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">record</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
+ <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"Published agent with CID: </span><span class="si">{</span><span class="n">cid</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+
+ <span class="c1"># Search for agents by capability
+</span> <span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">search_records</span><span class="p">(</span><span class="n">search_v1</span><span class="p">.</span><span class="n">ListRequest</span><span class="p">(</span>
+     <span class="n">queries</span><span class="o">=</span><span class="p">[</span><span class="n">search_v1</span><span class="p">.</span><span class="n">RecordQuery</span><span class="p">(</span>
+         <span class="nb">type</span><span class="o">=</span><span class="n">search_v1</span><span class="p">.</span><span class="n">RECORD_QUERY_TYPE_SKILL_NAME</span><span class="p">,</span>
+         <span class="n">value</span><span class="o">=</span><span class="s">"natural_language_processing/*"</span><span class="p">,</span>
+     <span class="p">)],</span>
+     <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+ <span class="p">))</span>
+
+ <span class="c1"># Retrieve and inspect matching agents
+</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+     <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"Found: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s"> (CID: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">cid</span><span class="si">}</span><span class="s">)"</span><span class="p">)</span>
+     <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"  Skills: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'skills'</span><span class="p">,</span> <span class="p">[])</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+     <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"  Locator: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="s">'locators'</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">'url'</span><span class="p">]</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
+</code></pre></div>    </div>
+  </li>
 </ol>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>helm pull oci://ghcr.io/agntcy/dir/helm-charts/dir <span class="nt">--version</span> v1.0.0
-helm upgrade <span class="nt">--install</span> <span class="nb">dir </span>oci://ghcr.io/agntcy/dir/helm-charts/dir <span class="nt">--version</span> v1.0.0
-kubectl port-forward svc/dir-apiserver 8888:8888
-</code></pre></div></div>
-
-<ol>
-  <li>Download a sample agent record</li>
-</ol>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-o</span> sample-record.json https://raw.githubusercontent.com/agntcy/dir/refs/heads/main/e2e/shared/testdata/record_100.json
-</code></pre></div></div>
-
-<ol>
-  <li>Use CLI to publish and discover agents</li>
-</ol>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Push and sign the agent record to Agent Directory</span>
-dirctl push sample-record.json <span class="nt">--sign</span>
-
-<span class="c"># Search for agents with specific capabilities</span>
-dirctl search <span class="nt">--skill</span> <span class="s2">"natural_language_processing/*"</span>
-
-<span class="c"># Pull a specific record by CID</span>
-dirctl pull baeareiabbog2umgduqhlcb64fzt6adn34kblzvru3fdzkl75hjhwt6h3da
-
-<span class="c"># Verify a record's signature and trust chain</span>
-dirctl verify baeareiabbog2umgduqhlcb64fzt6adn34kblzvru3fdzkl75hjhwt6h3da
-</code></pre></div></div>
-
-<ol>
-  <li>Use SDK to publish and discover agents</li>
-</ol>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="nn">agntcy.dir_sdk.client</span> <span class="kn">import</span> <span class="n">Config</span><span class="p">,</span> <span class="n">Client</span>
-<span class="kn">from</span> <span class="nn">agntcy.dir_sdk.models</span> <span class="kn">import</span> <span class="n">core_v1</span><span class="p">,</span> <span class="n">search_v1</span>
-
-<span class="c1"># Connect to an Agent Directory node
-</span><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">Config</span><span class="p">(</span><span class="n">server_address</span><span class="o">=</span><span class="s">"localhost:8888"</span><span class="p">))</span>
-
-<span class="c1"># Push an agent record (requires signing credentials)
-</span><span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">"sample-record.json"</span><span class="p">,</span> <span class="s">"r"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">record</span> <span class="o">=</span> <span class="n">json</span><span class="p">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-
-<span class="n">cid</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">records</span><span class="o">=</span><span class="p">[</span><span class="n">core_v1</span><span class="p">.</span><span class="n">Record</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">record</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
-<span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"Published agent with CID: </span><span class="si">{</span><span class="n">cid</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
-
-<span class="c1"># Search for agents by capability
-</span><span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="p">.</span><span class="n">search_records</span><span class="p">(</span><span class="n">search_v1</span><span class="p">.</span><span class="n">ListRequest</span><span class="p">(</span>
-    <span class="n">queries</span><span class="o">=</span><span class="p">[</span><span class="n">search_v1</span><span class="p">.</span><span class="n">RecordQuery</span><span class="p">(</span>
-        <span class="nb">type</span><span class="o">=</span><span class="n">search_v1</span><span class="p">.</span><span class="n">RECORD_QUERY_TYPE_SKILL_NAME</span><span class="p">,</span>
-        <span class="n">value</span><span class="o">=</span><span class="s">"natural_language_processing/*"</span><span class="p">,</span>
-    <span class="p">)],</span>
-    <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
-<span class="p">))</span>
-
-<span class="c1"># Retrieve and inspect matching agents
-</span><span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
-    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"Found: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">name</span><span class="si">}</span><span class="s"> (CID: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">cid</span><span class="si">}</span><span class="s">)"</span><span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"  Skills: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">data</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">'skills'</span><span class="p">,</span> <span class="p">[])</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="sa">f</span><span class="s">"  Locator: </span><span class="si">{</span><span class="n">item</span><span class="p">.</span><span class="n">record</span><span class="p">.</span><span class="n">data</span><span class="p">[</span><span class="s">'locators'</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">'url'</span><span class="p">]</span><span class="si">}</span><span class="s">"</span><span class="p">)</span>
-</code></pre></div></div>
 
 <h2 id="why-agent-directory-matters">Why Agent Directory Matters</h2>
 
