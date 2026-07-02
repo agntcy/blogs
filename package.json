@@ -7,8 +7,5 @@
   "devDependencies": {
     "@slidev/cli": "^52.1.0",
     "@slidev/theme-default": "^0.25.0"
-  },
-  "dependencies": {
-    "@oxc-parser/binding-darwin-arm64": "^0.138.0"
   }
 }
