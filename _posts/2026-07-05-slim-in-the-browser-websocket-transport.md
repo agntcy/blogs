@@ -1,11 +1,12 @@
 ---
 layout: post
 title: "SLIM in the Browser: WebAssembly Bindings and a WebSocket Transport"
-date: 2026-05-17 07:00:00 +0000
+date: 2026-07-05 07:00:00 +0000
 author: Amit Kumar
 author_url: https://github.com/hackeramitkumar
 categories: technical
 tags: [slim, browser, webassembly, wasm, websocket, transport, agents]
+mermaid: true
 ---
 
 [SLIM (Secure Low-Latency Interactive Messaging)](https://docs.agntcy.org/slim/overview/)
@@ -23,6 +24,19 @@ SLIM node, so any modern browser tab can be a first-class participant
 in a SLIM channel: subscribing to names, joining multicast groups,
 exchanging end-to-end encrypted messages with MLS, and talking to
 native peers — all without a custom bridge or a separate web gateway.
+
+> **TL;DR**
+> - A new **WebSocket listener** on the SLIM data plane runs side-by-side
+>   with the existing gRPC listener — same node, same channels, same
+>   identities.
+> - **`slim-wasm`** compiles the SLIM client core to WebAssembly so a
+>   browser tab runs the *real* client — framing, sessions, retries, and
+>   MLS — not a thin shim.
+> - **Transport is an implementation detail**: gRPC agents and WebSocket
+>   browser tabs share one multicast channel and never know how the others
+>   connected.
+> - **No bridge, no gateway, no plaintext hop** — MLS encryption stays
+>   end-to-end, all the way into the JavaScript app.
 
 <!--more-->
 
@@ -58,6 +72,32 @@ There is no translation layer in the middle, no extra service to
 operate, and MLS-encrypted payloads stay encrypted from the publisher
 all the way into the JavaScript application that consumes them.
 
+```mermaid
+graph LR
+    subgraph BEFORE["❌ Before: bridge required"]
+        direction TB
+        B_AG["Native agents<br/>(gRPC)"] --> B_NODE["SLIM node"]
+        B_BR["Browser tab"] -->|"HTTP / SSE / WS shim"| B_BRIDGE["Custom bridge<br/>⚠️ MLS terminates here"]
+        B_BRIDGE -->|"gRPC"| B_NODE
+    end
+
+    subgraph AFTER["✅ After: browser is a first-class peer"]
+        direction TB
+        A_AG["Native agents<br/>(gRPC)"] --> A_NODE["SLIM node<br/>gRPC + WebSocket"]
+        A_BR["Browser tab<br/>slim-wasm"] -->|"WebSocket<br/>🔒 MLS end-to-end"| A_NODE
+    end
+
+    style BEFORE fill:#fdecea,stroke:#d1453b,color:#1c1e21
+    style AFTER fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style B_NODE fill:#0251af,color:#f3f6fd
+    style A_NODE fill:#0251af,color:#f3f6fd
+    style B_BRIDGE fill:#f4b6b0,stroke:#d1453b,color:#1c1e21
+    style B_AG fill:#cfe1fb,color:#1c1e21
+    style A_AG fill:#cfe1fb,color:#1c1e21
+    style B_BR fill:#cfe1fb,color:#1c1e21
+    style A_BR fill:#fbaf46,color:#1c1e21
+```
+
 ## What's new
 
 Two changes work together to make this possible.
@@ -89,6 +129,12 @@ dataplane:
 Same routing fabric, same identities, same channels — just a second
 way in.
 
+> The `insecure: true` flags above keep the local demo simple. In
+> production, terminate both listeners with TLS (so browsers connect
+> over `wss://`) and drive identities through your normal SLIM
+> auth setup — the WebSocket path is a transport, not a security
+> shortcut.
+
 ### 2. `slim-wasm`: SLIM's data-plane client as WebAssembly
 
 We compile the SLIM client core to WebAssembly with `wasm-pack`, and
@@ -107,6 +153,39 @@ runs *inside the WebAssembly module in the tab*, the JavaScript glue
 stays tiny, and end-to-end encryption is preserved all the way to the
 UI.
 
+Here is what actually lives inside a browser tab, and where the
+security boundary sits:
+
+```mermaid
+graph TB
+    subgraph TAB["🌐 Browser tab"]
+        direction TB
+        APP["Your web app<br/>(React / Vue / vanilla JS)"]
+        GLUE["slim_wasm.js<br/><i>thin JS glue &amp; async API</i>"]
+        subgraph WASM["slim-wasm (WebAssembly)"]
+            direction TB
+            CORE["SLIM client core<br/>framing · sessions · retries"]
+            MLS["🔒 MLS<br/>encrypt / decrypt"]
+        end
+        APP --> GLUE --> CORE
+        CORE --- MLS
+    end
+
+    CORE -->|"WebSocket<br/>(ciphertext on the wire)"| NODE["SLIM node<br/>WebSocket listener :46367"]
+
+    style TAB fill:#eff3fc,stroke:#0251af,color:#1c1e21
+    style WASM fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style APP fill:#cfe1fb,color:#1c1e21
+    style GLUE fill:#cfe1fb,color:#1c1e21
+    style CORE fill:#0251af,color:#f3f6fd
+    style MLS fill:#fbaf46,color:#1c1e21
+    style NODE fill:#023a7a,color:#f3f6fd
+```
+
+The node only ever sees ciphertext: payloads are encrypted and
+decrypted *inside the WASM module*, so the plaintext never leaves the
+tab.
+
 ## Mixed-transport, by design
 
 The most important property of this release is one that is easy to
@@ -117,6 +196,36 @@ component over gRPC, and a React app connected over WebSocket can all
 sit on the same SLIM multicast channel. Once they are members of the
 channel, they exchange messages exactly the same way. None of them
 knows or cares how the others got onto the bus.
+
+```mermaid
+graph TB
+    subgraph NODE["SLIM node — one channel: agntcy/demo/chat"]
+        direction LR
+        GRPC["gRPC listener<br/>:46357"]
+        WS["WebSocket listener<br/>:46367"]
+        FABRIC(("routing<br/>fabric"))
+        GRPC --- FABRIC
+        WS --- FABRIC
+    end
+
+    PY1["🐍 Python agent"] <-->|gRPC| GRPC
+    RUST["⚙️ Rust service"] <-->|gRPC| GRPC
+    B1["🌐 Browser tab<br/>slim-wasm"] <-->|WebSocket| WS
+    B2["🌐 Browser tab<br/>slim-wasm"] <-->|WebSocket| WS
+
+    style NODE fill:#eff3fc,stroke:#0251af,color:#1c1e21
+    style GRPC fill:#0251af,color:#f3f6fd
+    style WS fill:#0251af,color:#f3f6fd
+    style FABRIC fill:#023a7a,color:#f3f6fd
+    style PY1 fill:#cfe1fb,color:#1c1e21
+    style RUST fill:#cfe1fb,color:#1c1e21
+    style B1 fill:#fbaf46,color:#1c1e21
+    style B2 fill:#fbaf46,color:#1c1e21
+```
+
+A message published by any member fans out to every other member
+through the shared routing fabric — the transport each peer used to
+connect never enters the picture.
 
 We put together a demo specifically to make that point hard to argue
 with.
@@ -130,23 +239,53 @@ and the full setup, prerequisites, and troubleshooting are in its
 
 Topology:
 
-```text
-                          ┌──────────────────────────────────────┐
-                          │           slim data-plane            │
-                          │ • gRPC      listener  :46357         │
-                          │ • WebSocket listener  :46367         │
-                          └──────────────────────────────────────┘
-                                   ▲                ▲
-   ┌───────────────────────────────┘                └──────────────────────────────┐
-   │ gRPC                                                                    WebSocket
-   ▼                                                                                ▼
- python-grpc-1 (listener)                                              browser-a (MODERATOR)
- python-grpc-2 (listener)                                              browser-b (listener)
-                                                                       browser-c (listener)
-                                                                       python-ws-1 (listener)
-                                                                       python-ws-2 (listener)
+```mermaid
+graph TB
+    subgraph DP["slim data-plane (Docker)"]
+        direction LR
+        GRPC["gRPC listener<br/>:46357"]
+        WS["WebSocket listener<br/>:46367"]
+        CH(("group channel<br/>agntcy/demo/chat"))
+        GRPC --- CH
+        WS --- CH
+    end
 
-                                Group channel: agntcy/demo/chat
+    subgraph GCLIENTS["Native · gRPC"]
+        direction TB
+        PG1["🐍 python-grpc-1"]
+        PG2["🐍 python-grpc-2"]
+    end
+
+    subgraph WCLIENTS["WebSocket"]
+        direction TB
+        BA["🌐 browser-a — MODERATOR"]
+        BB["🌐 browser-b"]
+        BC["🌐 browser-c"]
+        PW1["🐍 python-ws-1"]
+        PW2["🐍 python-ws-2"]
+    end
+
+    PG1 --> GRPC
+    PG2 --> GRPC
+    BA --> WS
+    BB --> WS
+    BC --> WS
+    PW1 --> WS
+    PW2 --> WS
+
+    style DP fill:#eff3fc,stroke:#0251af,color:#1c1e21
+    style GCLIENTS fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style WCLIENTS fill:#e8eefb,stroke:#0251af,color:#1c1e21
+    style GRPC fill:#0251af,color:#f3f6fd
+    style WS fill:#0251af,color:#f3f6fd
+    style CH fill:#023a7a,color:#f3f6fd
+    style PG1 fill:#cfe1fb,color:#1c1e21
+    style PG2 fill:#cfe1fb,color:#1c1e21
+    style BB fill:#cfe1fb,color:#1c1e21
+    style BC fill:#cfe1fb,color:#1c1e21
+    style PW1 fill:#cfe1fb,color:#1c1e21
+    style PW2 fill:#cfe1fb,color:#1c1e21
+    style BA fill:#fbaf46,color:#1c1e21
 ```
 
 What this is showing:
@@ -169,6 +308,34 @@ fans out to all six other participants, regardless of whether they
 came in over gRPC or WebSocket, and regardless of whether they are a
 Python process on the host or a JavaScript application in a browser.
 
+Here is the full lifecycle, from the moderator creating the session to
+a message fanning out across both transports:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant BA as 🌐 browser-a (moderator)
+    participant N as SLIM node<br/>(gRPC + WebSocket)
+    participant PG as 🐍 python-grpc-1
+    participant BB as 🌐 browser-b
+
+    Note over BA,BB: All listeners subscribe to their own name and wait
+    BA->>N: Create group session (agntcy/demo/chat)
+    BA->>N: Invite python-grpc-1, browser-b, …
+    N->>PG: invite (over gRPC)
+    N->>BB: invite (over WebSocket)
+    PG-->>N: joined
+    BB-->>N: joined
+    Note over BA,BB: 🔒 MLS group established — keys never leave the peers
+
+    BA->>N: publish "hello" (MLS ciphertext)
+    par fan-out across both transports
+        N->>PG: deliver (gRPC)
+        N->>BB: deliver (WebSocket)
+    end
+    Note over PG,BB: Each peer decrypts locally — the node only saw ciphertext
+```
+
 Toggling **Enable MLS** in the moderator tab before creating the
 session shows the exact same flow with end-to-end encryption running
 across both transports — encrypted in the browser, decrypted in the
@@ -176,6 +343,14 @@ browser, never in plaintext on the wire or on the node.
 
 ### Watch the demo
 
+Rather than take our word for it, watch seven participants across two
+transports land on a single channel and start talking:
+
+<!--
+  📹 VIDEO PLACEHOLDER
+  Replace `IhQrhSs6izk` below (in both the iframe src and the link) with
+  the real YouTube ID once the demo recording is uploaded.
+-->
 <div class="video-embed" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;">
   <iframe
     src="https://www.youtube.com/embed/IhQrhSs6izk"
