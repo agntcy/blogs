@@ -416,23 +416,6 @@ has the copy-pasteable commands and default values.
 
 Watch on YouTube: [youtube.com/watch?v=YOUTUBE_VIDEO_ID](https://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID)
 
-## Where to look in the code
-
-- [`slim-bindings/react-native/web.ts`](https://github.com/agntcy/slim-bindings/blob/main/react-native/web.ts)
-  — browser entry point and WASM initialization.
-- [`slim/crates/slim-bindings/src/app.rs`](https://github.com/agntcy/slim/blob/main/crates/slim-bindings/src/app.rs)
-  — browser `App.connectWithSecret` and WebSocket bootstrap (under the
-  `web` feature).
-- [`slim-bindings/rust/Cargo.toml`](https://github.com/agntcy/slim-bindings/blob/main/rust/Cargo.toml)
-  — FFI wrapper enabling the `web` feature on `agntcy-slim-bindings`.
-- [`slim/crates/datapath/src/websocket.rs`](https://github.com/agntcy/slim/blob/main/crates/datapath/src/websocket.rs)
-  and [`websocket/stream_wasm.rs`](https://github.com/agntcy/slim/blob/main/crates/datapath/src/websocket/stream_wasm.rs)
-  — native and browser WebSocket stream implementations.
-- [`slim/crates/auth/src/utils.rs`](https://github.com/agntcy/slim/blob/main/crates/auth/src/utils.rs)
-  — WebCrypto-compatible MLS key encoding for the WASM target.
-- [`websocket-grpc-demo/src/main.ts`](https://github.com/agntcy/slim-bindings/blob/main/react-native/examples/websocket-grpc-demo/src/main.ts)
-  — connect, route, create, invite, and listen flow in the demo UI.
-
 ## Closing thoughts
 
 Cross-transport support removes a long-standing gap between browser clients
@@ -449,7 +432,7 @@ WebSocket or gRPC.
 ---
 
 *Have questions or want to show us what you're building? Join our
-[Slack community](https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ),
+[Discord community](https://discord.gg/FbEnSHXD34),
 read the [SLIM documentation](https://docs.agntcy.org/slim/overview/), or
 explore [SLIM](https://github.com/agntcy/slim) and
 [SLIM bindings](https://github.com/agntcy/slim-bindings) on GitHub.*
