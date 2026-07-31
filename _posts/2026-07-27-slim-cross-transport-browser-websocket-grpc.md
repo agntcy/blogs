@@ -37,7 +37,7 @@ In this post, you'll learn:
   `@agntcy/slim-bindings-react-native/web`
 - How cross-transport multicast and MLS sessions behave end to end
 - Practical use cases for browser-native SLIM participation
-- Where the browser bindings and cross-transport demo live, so you can run
+- Where the cross-transport demo application and browser bindings live, so you can run
   them yourself
 
 ## The integration problem
@@ -56,17 +56,20 @@ WebSocket clients. The node routes messages; it does not decrypt
 application data when MLS is enabled.
 
 ```mermaid
-%%{init: {"theme": "base", "themeVariables": {"primaryColor": "#ffffff", "primaryTextColor": "#1c1e21", "primaryBorderColor": "#0251af", "lineColor": "#555555", "edgeLabelBackground": "#ffffff"}}}%%
-graph LR
+graph TB
     subgraph BEFORE["Bridge-based integration"]
+        direction LR
         B1["Browser"] -->|"HTTP / SSE / custom WS"| BR["Application bridge"]
         BR -->|"gRPC"| N1["SLIM node"]
     end
 
     subgraph AFTER["Direct SLIM participation"]
+        direction LR
         B2["Browser + WASM"] -->|"ws:// or wss://"| N2["SLIM node"]
         NAT["Native client"] -->|"gRPC"| N2
     end
+
+    BEFORE ~~~ AFTER
 
     style BEFORE fill:#fdecea,stroke:#c0392b,color:#1c1e21
     style AFTER fill:#e8f5e9,stroke:#2e7d32,color:#1c1e21
@@ -149,11 +152,13 @@ For production, the WebSocket listener would typically look like:
             key_file: /path/to/server.key
 ```
 
-Browser code then connects with `App.connectWithSecret("wss://slim.example.com", …)`.
-The bindings validate that browser endpoints use `ws://` or `wss://` only.
+Browser code then connects with `service.connectAsync("wss://slim.example.com", …)`
+and `app.subscribeAsync(local, connId)`. The bindings validate that browser
+endpoints use `ws://` or `wss://` only.
 
 The full demo configuration is in
-[`configs/server-config.yaml`](https://github.com/agntcy/slim-bindings/blob/main/react-native/examples/websocket-grpc-demo/configs/server-config.yaml).
+[`slim-cross-transport/configs/server-config.yaml`](https://github.com/agntcy/agentic-apps/blob/main/slim-cross-transport/configs/server-config.yaml)
+in the [cross-transport demo application](https://github.com/agntcy/agentic-apps/tree/main/slim-cross-transport).
 
 ### Cross-transport routing on one fabric
 
@@ -196,9 +201,9 @@ package:
 
 ```typescript
 import {
-  App,
   Direction,
   Name,
+  Service,
   SessionType,
   uniffiInitAsync,
 } from "@agntcy/slim-bindings-react-native/web";
@@ -208,33 +213,40 @@ The initialization sequence is:
 
 1. **`uniffiInitAsync()`** loads the generated WASM module and validates
    UniFFI checksums.
-2. **`App.connectWithSecret(...)`** opens an outbound WebSocket to the SLIM
-   node (`ws://` or `wss://`), bootstraps the same core `App` used on native
-   platforms, and advertises the local SLIM name upstream.
-3. **Session operations** (`createSessionAndWaitAsync`, `inviteAndWaitAsync`,
-   `publish`, message listeners) follow the same API surface as native
-   bindings.
+2. **`Service.connectAsync(...)`** opens an outbound WebSocket to the SLIM
+   node (`ws://` or `wss://`) and returns a connection id for routing.
+3. **`Service.createAppWithDirectionAsync(...)`** creates the same core `App`
+   used on native platforms; **`App.subscribeAsync(...)`** advertises the
+   local SLIM name on that connection so the node can route messages back.
+4. **Session operations** (`createSessionAndWaitAsync`, `inviteAndWaitAsync`,
+   `publishAndWaitAsync`, message listeners) follow the same API surface as
+   native bindings.
 
 Example connection from a browser tab:
 
 ```typescript
 await uniffiInitAsync();
 
-const app = await App.connectWithSecret(
+const local = Name.fromString("org/default/browser-a");
+const service = new Service("browser-a");
+const connId = await service.connectAsync(
   "ws://127.0.0.1:46357",   // use wss:// in production
   undefined,                 // optional auth token query param
-  Name.fromString("org/default/browser-a"),
+);
+const app = await service.createAppWithDirectionAsync(
+  local,
   sharedSecret,
   Direction.Bidirectional,
 );
+await app.subscribeAsync(local, connId);
 ```
 
-For a multicast session, the moderator installs upstream routes, creates the
-group, and invites participants by name:
+For a multicast session, the moderator installs routes on the upstream
+connection, creates the group, and invites participants by name:
 
 ```typescript
 for (const participant of participants) {
-  await app.setRouteViaUpstreamAsync(participant);
+  await app.setRouteAsync(participant, connId);
 }
 
 const session = await app.createSessionAndWaitAsync(
@@ -348,15 +360,18 @@ does not need browser-specific cryptography logic.
 
 Everything above comes together in a runnable demo that places browser tabs,
 native WebSocket clients, and native gRPC clients in the same MLS-protected
-session on a single node. Rather than repeat the setup steps here, the demo
-ships with a README that covers prerequisites, the exact commands, and a
-step-by-step script — and the [video walkthrough](#video-walkthrough) below
-shows the full flow end to end.
+session on a single node. The reference implementation lives in the
+[`slim-cross-transport`](https://github.com/agntcy/agentic-apps/tree/main/slim-cross-transport)
+application within the
+[`agentic-apps`](https://github.com/agntcy/agentic-apps/tree/main)
+monorepo. Rather than repeat the setup steps here, the demo ships with a README
+that covers prerequisites, the exact commands, and a step-by-step script — and
+the [video walkthrough](#video-walkthrough) below shows the full flow end to end.
 
-- **Source:** [`slim-bindings/react-native/examples/websocket-grpc-demo`](https://github.com/agntcy/slim-bindings/tree/main/react-native/examples/websocket-grpc-demo)
-- **Setup and run instructions:** [demo README](https://github.com/agntcy/slim-bindings/blob/main/react-native/examples/websocket-grpc-demo/README.md)
+- **Cross-transport demo application:** [`agentic-apps/slim-cross-transport`](https://github.com/agntcy/agentic-apps/tree/main/slim-cross-transport) — browser UI plus native WebSocket and gRPC clients on one node (the app shown in the [video walkthrough](#video-walkthrough))
+- **Setup and run instructions:** [demo README](https://github.com/agntcy/agentic-apps/blob/main/slim-cross-transport/README.md)
 - **Simpler browser-only examples** (point-to-point, group, MLS variants):
-  [`react-native/examples/browser`](https://github.com/agntcy/slim-bindings/tree/main/react-native/examples/browser)
+  [`slim-bindings/react-native/examples/browser`](https://github.com/agntcy/slim-bindings/tree/main/react-native/examples/browser)
 
 The topology includes seven participants on one node:
 
@@ -401,20 +416,16 @@ The browser UI supports:
 - mid-session participant invitation on group sessions.
 
 The moderator/participant roles, session creation, and invitation flow are
-walked through in the video below; the [demo README](https://github.com/agntcy/slim-bindings/blob/main/react-native/examples/websocket-grpc-demo/README.md)
+walked through in the [video walkthrough](#video-walkthrough) below; the [demo README](https://github.com/agntcy/agentic-apps/blob/main/slim-cross-transport/README.md)
 has the copy-pasteable commands and default values.
 
 ### Video walkthrough
 
-<!--
-  Replace YOUTUBE_VIDEO_ID below with your uploaded demo video ID before
-  publishing. Example: https://www.youtube.com/watch?v=abc123 -> abc123
--->
 <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-bottom: 1.5em; border: 1px solid #d7dbe0; border-radius: 8px;">
-  <iframe src="https://www.youtube.com/embed/YOUTUBE_VIDEO_ID" title="SLIM cross-transport demo — WebSocket, gRPC, and the browser" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+  <iframe src="https://www.youtube.com/embed/e_iXhiHPfl8" title="SLIM cross-transport demo — WebSocket, gRPC, and the browser" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 </div>
 
-Watch on YouTube: [youtube.com/watch?v=YOUTUBE_VIDEO_ID](https://www.youtube.com/watch?v=YOUTUBE_VIDEO_ID)
+Watch on YouTube: [youtube.com/watch?v=e_iXhiHPfl8](https://www.youtube.com/watch?v=e_iXhiHPfl8)
 
 ## Closing thoughts
 
