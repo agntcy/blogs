@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "SLIM Cross-Transport: WebSocket, gRPC, and the Browser"
-date: 2026-07-22 07:00:00 +0000
+date: 2026-07-31 07:00:00 +0000
 author: Amit Kumar
 author_url: https://github.com/hackeramitkumar
 categories: technical
@@ -285,7 +285,7 @@ Browser-native SLIM participation is valuable whenever a human or a
 web-based UI must share a secure channel with backend agents — without
 standing up a custom gateway.
 
-### Human-in-the-loop agent workflows
+#### Human-in-the-loop agent workflows
 
 Approval gates, remediation confirmations, and policy exceptions often
 require a person on the same channel as the agents proposing an action. With
@@ -293,26 +293,26 @@ browser bindings, an operator UI joins the SLIM session directly, receives
 live agent messages, and responds in real time — including under MLS when
 required.
 
-### Operator consoles and observability surfaces
+#### Operator consoles and observability surfaces
 
 Dashboards that today poll REST endpoints can instead subscribe to SLIM
 sessions. An operator sees the same event stream as the agents, with lower
 latency and without duplicating message semantics in a separate API layer.
 
-### Cross-transport collaboration
+#### Cross-transport collaboration
 
 A typical deployment might run inference agents over gRPC inside a cluster
 while a browser-based copilot connects over `wss://` through an ingress
 controller. Both sides participate in one multicast room because SLIM routes
 by name, not by transport.
 
-### Interactive product demos and onboarding
+#### Interactive product demos and onboarding
 
 Demonstrating SLIM routing, session lifecycle, and MLS encryption is much
 clearer when a browser tab is a visible participant alongside terminal-based
 native clients. The included demo is designed for exactly this purpose.
 
-### React Native and web from one binding surface
+#### React Native and web from one binding surface
 
 The `@agntcy/slim-bindings-react-native` package targets React Native on
 mobile and the web through the same generated UniFFI surface. Teams building
