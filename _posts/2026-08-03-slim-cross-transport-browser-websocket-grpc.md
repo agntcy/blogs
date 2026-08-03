@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "SLIM Cross-Transport: WebSocket, gRPC, and the Browser"
-date: 2026-07-31 07:00:00 +0000
+date: 2026-08-03 07:00:00 +0000
 author: Amit Kumar
 author_url: https://github.com/hackeramitkumar
 categories: technical
@@ -110,7 +110,7 @@ The cross-transport demo uses this configuration:
 ```yaml
 services:
   slim/0:
-    node_id: slim-websocket-grpc-demo
+    node_id: slim-cross-transport
     dataplane:
       servers:
         # WebSocket listener — browsers and native WebSocket clients
@@ -265,16 +265,18 @@ for (const participant of participants) {
 }
 ```
 
-### Building the WASM bindings
+### Browser bindings on npm
 
-The web build uses `uniffi-bindgen-react-native` (`ubrn`) and `wasm-bindgen`
-to produce TypeScript bindings, a JavaScript loader, and the WASM binary under
-`react-native/generated/web/`. The stable package entry point is
-[`react-native/web.ts`](https://github.com/agntcy/slim-bindings/blob/main/react-native/web.ts).
-The exact build commands and toolchain versions are documented in the demo
-README linked below.
+Browser bindings ship in
+[`@agntcy/slim-bindings-react-native@2.0.0-alpha.7`](https://www.npmjs.com/package/@agntcy/slim-bindings-react-native/v/2.0.0-alpha.7)
+on npm, including the prebuilt WASM binary and the stable `/web` entry point
+([`web.ts`](https://github.com/agntcy/slim-bindings/blob/main/react-native/web.ts)).
+The cross-transport demo installs them with `npm install`.
 
-The WASM crate enables the `web` feature on
+Under the hood, the package is built with `uniffi-bindgen-react-native`
+(`ubrn`) and `wasm-bindgen`, producing TypeScript bindings, a JavaScript
+loader, and the WASM binary under `generated/web/`. The WASM crate enables
+the `web` feature on
 [`agntcy-slim-bindings`](https://github.com/agntcy/slim/tree/main/crates/slim-bindings),
 which compiles the browser WebSocket client and session layer while reusing
 the same MLS and messaging primitives as native builds.
@@ -377,7 +379,7 @@ The topology includes seven participants on one node:
 
 ```mermaid
 graph TB
-    subgraph NODE["SLIM node — slim-websocket-grpc-demo"]
+    subgraph NODE["SLIM node — slim-cross-transport"]
         WS["WebSocket :46357"]
         GRPC["gRPC :46358"]
         RF(("Shared fabric"))
