@@ -23,6 +23,9 @@ header_pages:
 show_excerpts: true
 excerpt_separator: <!--more-->
 
+# Reading time estimate
+reading_words_per_minute: 200
+
 # Build settings
 theme: minima
 plugins:

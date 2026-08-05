@@ -1,0 +1,8 @@
+{%- assign words_per_minute = site.reading_words_per_minute | default: 200 -%}
+{%- assign word_count = include.content | strip_html | number_of_words -%}
+{%- assign minutes = word_count | times: 1.0 | divided_by: words_per_minute | ceil -%}
+{%- if minutes < 1 -%}
+  {%- assign minutes = 1 -%}
+{%- endif -%}
+{%- assign reading_time_label = minutes | append: " min read" -%}
+{{- reading_time_label -}}
