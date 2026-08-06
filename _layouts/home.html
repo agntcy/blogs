@@ -13,7 +13,7 @@ layout: default
     <ul class="post-list">
       {%- for post in paginator.posts -%}
       <li>
-        <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
+        <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }} • {% include reading_time.html content=post.content -%}</span>
         <h3>
           <a class="post-link" href="{{ post.url | relative_url }}">
             {{ post.title | escape }}
