@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "SLIM Cross-Transport: WebSocket, gRPC, and the Browser"
-date: 2026-08-03 07:00:00 +0000
+date: 2026-08-11 07:00:00 +0000
 author: Amit Kumar
 author_url: https://github.com/hackeramitkumar
 categories: technical
@@ -268,7 +268,7 @@ for (const participant of participants) {
 ### Browser bindings on npm
 
 Browser bindings ship in
-[`@agntcy/slim-bindings-react-native@2.0.0-alpha.7`](https://www.npmjs.com/package/@agntcy/slim-bindings-react-native/v/2.0.0-alpha.7)
+[`@agntcy/slim-bindings-react-native@2.0.0`](https://www.npmjs.com/package/@agntcy/slim-bindings-react-native/v/2.0.0)
 on npm, including the prebuilt WASM binary and the stable `/web` entry point
 ([`web.ts`](https://github.com/agntcy/slim-bindings/blob/main/react-native/web.ts)).
 The cross-transport demo installs them with `npm install`.
