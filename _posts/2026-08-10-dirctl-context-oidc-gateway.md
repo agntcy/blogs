@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Switching Between Local and Hosted Directory with dirctl Contexts"
-date: 2026-05-13 09:00:00 +0000
+date: 2026-08-10 09:00:00 +0000
 author: Tibor Kircsi
 author_url: https://github.com/tkircsi
 categories: [technical, directory]
@@ -72,7 +72,7 @@ dirctl --server-addr ads.outshift.io:443 \
 
 That works, but it does not scale well once you have a local daemon, a staging Directory, a hosted testbed, and maybe a partner environment. Contexts give each target a short name.
 
-`dirctl context` is available starting with `dirctl` v1.4.0, which is planned for an upcoming release. If your local CLI does not recognize the `context` command yet, upgrade to v1.4.0 or newer when it is available.
+`dirctl context` is available starting with `dirctl` v1.4.0. If your local CLI does not recognize the `context` command, upgrade to v1.4.0 or newer.
 
 ## Step 1: Run a Local Directory Server
 
@@ -196,12 +196,16 @@ Directory supports several authentication modes:
 
 | Mode | Best for |
 |------|----------|
-| empty / auto | Let `dirctl` try SPIFFE, then cached OIDC, then local insecure mode |
+| empty | Auto-detect: let `dirctl` try SPIFFE, then cached OIDC, then local insecure mode |
 | `oidc` | Human login, CI workload identity, and external automation with bearer tokens |
 | `x509` | SPIFFE X.509-SVID clients using mTLS |
 | `jwt` | SPIFFE JWT-SVID or compatible JWT-based service identity |
+| `jwt-tls` | JWT-SVID bearer token over standard web PKI TLS |
+| `token` | Pre-issued SPIFFE X.509-SVID token loaded from a JSON file |
 | `tls` | Custom PKI and mTLS setups |
 | `insecure` / `none` | Local development and testing only |
+
+Leave `auth_mode` unset for auto-detection. There is no `auto` value, and an unrecognized mode is rejected rather than silently downgraded.
 
 For day-to-day use, keep the local context explicit with `auth_mode: insecure` and the hosted context explicit with `auth_mode: oidc`. That makes the intent obvious when you run `dirctl context show`.
 
