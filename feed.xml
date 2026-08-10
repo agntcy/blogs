@@ -1,4 +1,376 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-08-10T06:28:40+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">ARD over Agent Directory: Interoperability by Design</title><link href="https://blogs.agntcy.org/technical/2026/06/17/ai-catalog-over-directory.html" rel="alternate" type="text/html" title="ARD over Agent Directory: Interoperability by Design" /><published>2026-06-17T14:00:00+00:00</published><updated>2026-06-17T14:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/06/17/ai-catalog-over-directory</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/06/17/ai-catalog-over-directory.html"><![CDATA[<p>A developer integrating agentic capabilities today faces a discovery problem that looks deceptively like a solved one. We have standards, registries, catalogs, and well-knowns; surely finding the right tool is just a lookup? In practice it is not, because the ecosystem has fragmented into protocols that each describe the <em>same</em> artifact differently; be it a resource, tool, agent, or a full agentic system. And while the artifact is one thing; its discovery representations are many.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-08-10T14:22:38+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Switching Between Local and Hosted Directory with dirctl Contexts</title><link href="https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway.html" rel="alternate" type="text/html" title="Switching Between Local and Hosted Directory with dirctl Contexts" /><published>2026-08-10T09:00:00+00:00</published><updated>2026-08-10T09:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway</id><content type="html" xml:base="https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway.html"><![CDATA[<p>When you work with <a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a>, you often move between two worlds.</p>
+
+<p>On your laptop, you want a fast local Directory server where you can test records, validate metadata, and iterate without needing a cluster. When you are ready to search, publish, or interact with a shared environment, you want the hosted Directory testbed with real authentication at the edge.</p>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl context</code> makes that switch explicit. Instead of remembering a different <code class="language-plaintext highlighter-rouge">--server-addr</code>, <code class="language-plaintext highlighter-rouge">--auth-mode</code>, OIDC issuer, or TLS setting for every command, you can name each Directory target once and then move between them safely.</p>
+
+<!--more-->
+
+<p><strong>TL;DR:</strong> Run a local Directory daemon on <code class="language-plaintext highlighter-rouge">localhost:8888</code>, create a <code class="language-plaintext highlighter-rouge">dirctl</code> config with <code class="language-plaintext highlighter-rouge">local</code> and <code class="language-plaintext highlighter-rouge">prod</code> contexts, authenticate to the hosted testbed with OIDC, and show the active Directory context in your zsh or powerlevel10k prompt.</p>
+
+<h3 id="what-youll-learn">What You’ll Learn</h3>
+
+<p>In this post, you’ll learn:</p>
+
+<ul>
+  <li>How to run a local Directory server with <code class="language-plaintext highlighter-rouge">dirctl daemon</code></li>
+  <li>How to create a reusable <code class="language-plaintext highlighter-rouge">dirctl</code> client config</li>
+  <li>How to switch between local and hosted Directory contexts</li>
+  <li>How OIDC authentication works for the hosted testbed</li>
+  <li>What <code class="language-plaintext highlighter-rouge">oidc-gateway</code> does in a production-style deployment</li>
+  <li>How to show the active Directory context in zsh and powerlevel10k</li>
+</ul>
+
+<h2 id="the-workflow-one-cli-two-directories">The Workflow: One CLI, Two Directories</h2>
+
+<p>A typical developer workflow looks like this:</p>
+
+<ol>
+  <li>Start a local Directory server on your laptop.</li>
+  <li>Push, pull, search, and validate records locally.</li>
+  <li>Switch to the hosted testbed.</li>
+  <li>Authenticate with OIDC.</li>
+  <li>Run the same <code class="language-plaintext highlighter-rouge">dirctl</code> commands against the remote Directory.</li>
+</ol>
+
+<p>The commands are familiar in both places. The target and authentication are different.</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    developer["Developer laptop"]
+    dirctl["dirctl"]
+    localDaemon["Local Directory daemon"]
+    oidcGateway["oidc-gateway"]
+    prodDirectory["Hosted Directory"]
+    idp["OIDC provider"]
+
+    developer --&gt; dirctl
+    dirctl --&gt;|"local context"| localDaemon
+    dirctl --&gt;|"prod context + OIDC token"| oidcGateway
+    idp --&gt;|"issuer metadata and JWKS"| oidcGateway
+    oidcGateway --&gt;|"authorized request"| prodDirectory
+</code></pre>
+
+<p>Without contexts, you can still pass flags manually:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--server-addr</span> localhost:8888 search <span class="nt">--name</span> <span class="s2">"*"</span>
+
+dirctl <span class="nt">--server-addr</span> ads.outshift.io:443 <span class="se">\</span>
+  <span class="nt">--auth-mode</span> oidc <span class="se">\</span>
+  <span class="nt">--oidc-issuer</span> https://idp.ads.outshift.io <span class="se">\</span>
+  <span class="nt">--oidc-client-id</span> dirctl <span class="se">\</span>
+  search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
+</code></pre></div></div>
+
+<p>That works, but it does not scale well once you have a local daemon, a staging Directory, a hosted testbed, and maybe a partner environment. Contexts give each target a short name.</p>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl context</code> is available starting with <code class="language-plaintext highlighter-rouge">dirctl</code> v1.4.0. If your local CLI does not recognize the <code class="language-plaintext highlighter-rouge">context</code> command, upgrade to v1.4.0 or newer.</p>
+
+<h2 id="step-1-run-a-local-directory-server">Step 1: Run a Local Directory Server</h2>
+
+<p>For local development, the fastest path is the built-in daemon:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl daemon start
+</code></pre></div></div>
+
+<p>The daemon runs a self-contained Directory server in one process. It starts the gRPC API on <code class="language-plaintext highlighter-rouge">localhost:8888</code>, uses SQLite for persistence, and stores records in a local filesystem OCI store. By default, its state lives under:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/.agntcy/dir/
+</code></pre></div></div>
+
+<p>In another terminal, point <code class="language-plaintext highlighter-rouge">dirctl</code> at the local daemon:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--server-addr</span> localhost:8888 search <span class="nt">--name</span> <span class="s2">"*"</span>
+</code></pre></div></div>
+
+<p>This local mode is useful for quick experiments because it does not require Docker, Kubernetes, PostgreSQL, or an external registry. For a deeper comparison between the local daemon and Docker Compose deployment modes, see the <a href="https://docs.agntcy.org/dir/dir-deployment-local/">Local Deployment guide</a>.</p>
+
+<h2 id="step-2-create-a-dirctl-client-config">Step 2: Create a dirctl Client Config</h2>
+
+<p>Now let’s stop passing the server address every time.</p>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl</code> looks for reusable client contexts in:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>~/.config/dirctl/config.yaml
+</code></pre></div></div>
+
+<p>Create the directory and config file:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">mkdir</span> <span class="nt">-p</span> ~/.config/dirctl
+<span class="nv">$EDITOR</span> ~/.config/dirctl/config.yaml
+</code></pre></div></div>
+
+<p>Start with two contexts: one for the local daemon and one for the hosted testbed.</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">current_context</span><span class="pi">:</span> <span class="s">local</span>
+<span class="na">contexts</span><span class="pi">:</span>
+  <span class="na">local</span><span class="pi">:</span>
+    <span class="na">server_address</span><span class="pi">:</span> <span class="s">localhost:8888</span>
+    <span class="na">auth_mode</span><span class="pi">:</span> <span class="s">insecure</span>
+  <span class="na">prod</span><span class="pi">:</span>
+    <span class="na">server_address</span><span class="pi">:</span> <span class="s">ads.outshift.io:443</span>
+    <span class="na">auth_mode</span><span class="pi">:</span> <span class="s">oidc</span>
+    <span class="na">oidc_issuer</span><span class="pi">:</span> <span class="s">https://idp.ads.outshift.io</span>
+    <span class="na">oidc_client_id</span><span class="pi">:</span> <span class="s">dirctl</span>
+</code></pre></div></div>
+
+<p>The shape is intentionally small:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">current_context</code> is the default context used by <code class="language-plaintext highlighter-rouge">dirctl</code>.</li>
+  <li><code class="language-plaintext highlighter-rouge">contexts</code> contains named client configurations.</li>
+  <li><code class="language-plaintext highlighter-rouge">server_address</code> is the Directory endpoint for that context.</li>
+  <li><code class="language-plaintext highlighter-rouge">auth_mode</code> tells <code class="language-plaintext highlighter-rouge">dirctl</code> how to authenticate.</li>
+  <li><code class="language-plaintext highlighter-rouge">oidc_issuer</code> and <code class="language-plaintext highlighter-rouge">oidc_client_id</code> are used by <code class="language-plaintext highlighter-rouge">dirctl auth login</code> for OIDC-backed environments.</li>
+</ul>
+
+<p>Keep this file focused on configuration, not credentials. Do not paste bearer tokens into the file for normal interactive use. <code class="language-plaintext highlighter-rouge">dirctl auth login</code> stores the cached login token separately, and automation should prefer short-lived tokens from its identity provider.</p>
+
+<h2 id="step-3-use-dirctl-context">Step 3: Use dirctl context</h2>
+
+<p>Once the config exists, inspect it:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context list
+dirctl context current
+dirctl context show
+dirctl context validate
+</code></pre></div></div>
+
+<p>The most important command is <code class="language-plaintext highlighter-rouge">set</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set </span>prod
+</code></pre></div></div>
+
+<p>After that, ordinary commands use the <code class="language-plaintext highlighter-rouge">prod</code> context by default:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
+</code></pre></div></div>
+
+<p>You can switch back to your local daemon just as easily:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set local
+</span>dirctl search <span class="nt">--name</span> <span class="s2">"*"</span>
+</code></pre></div></div>
+
+<p>For one command only, use <code class="language-plaintext highlighter-rouge">--context</code>. This is handy when you want to query another Directory without changing your default:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--context</span> <span class="nb">local </span>search <span class="nt">--name</span> <span class="s2">"*"</span>
+dirctl <span class="nt">--context</span> prod search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
+</code></pre></div></div>
+
+<p>Use <code class="language-plaintext highlighter-rouge">dirctl context show</code> when you want to confirm what will be used. Sensitive values are redacted in the output, so it is safe to copy into a support thread when debugging configuration issues.</p>
+
+<h2 id="step-4-authenticate-to-the-hosted-testbed">Step 4: Authenticate to the Hosted Testbed</h2>
+
+<p>The local daemon is intentionally simple. It usually runs with <code class="language-plaintext highlighter-rouge">auth_mode: insecure</code> because it is bound to your laptop and used for development.</p>
+
+<p>The hosted testbed is different. It sits behind an authentication gateway and expects an authenticated identity. For a human operator, the normal flow is:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set </span>prod
+dirctl auth login
+dirctl auth status
+dirctl search <span class="nt">--skill</span> <span class="s2">"natural_language_processing"</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl auth login</code> starts the OIDC login flow for the active context. Depending on the environment, it can use a browser-based flow, a no-browser flow, or a device flow. Once complete, <code class="language-plaintext highlighter-rouge">dirctl</code> can reuse the cached token for later commands.</p>
+
+<p>Directory supports several authentication modes:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Mode</th>
+      <th>Best for</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>empty</td>
+      <td>Auto-detect: let <code class="language-plaintext highlighter-rouge">dirctl</code> try SPIFFE, then cached OIDC, then local insecure mode</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">oidc</code></td>
+      <td>Human login, CI workload identity, and external automation with bearer tokens</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">x509</code></td>
+      <td>SPIFFE X.509-SVID clients using mTLS</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">jwt</code></td>
+      <td>SPIFFE JWT-SVID or compatible JWT-based service identity</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">jwt-tls</code></td>
+      <td>JWT-SVID bearer token over standard web PKI TLS</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">token</code></td>
+      <td>Pre-issued SPIFFE X.509-SVID token loaded from a JSON file</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">tls</code></td>
+      <td>Custom PKI and mTLS setups</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">insecure</code> / <code class="language-plaintext highlighter-rouge">none</code></td>
+      <td>Local development and testing only</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Leave <code class="language-plaintext highlighter-rouge">auth_mode</code> unset for auto-detection. There is no <code class="language-plaintext highlighter-rouge">auto</code> value, and an unrecognized mode is rejected rather than silently downgraded.</p>
+
+<p>For day-to-day use, keep the local context explicit with <code class="language-plaintext highlighter-rouge">auth_mode: insecure</code> and the hosted context explicit with <code class="language-plaintext highlighter-rouge">auth_mode: oidc</code>. That makes the intent obvious when you run <code class="language-plaintext highlighter-rouge">dirctl context show</code>.</p>
+
+<h2 id="what-is-oidc-gateway">What is oidc-gateway?</h2>
+
+<p><code class="language-plaintext highlighter-rouge">oidc-gateway</code> is the edge component that enables users and automation access Directory from outside the cluster using standards-based identity.</p>
+
+<p>In a production-style deployment, the Directory backend can keep its internal trust model focused on SPIFFE/SPIRE while external callers authenticate through OIDC, JWT, or mTLS at the gateway. The gateway verifies the credential, asks an authorization service whether the principal is allowed, and forwards only authorized requests to Directory.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    participant User as User or automation
+    participant CLI as dirctl
+    participant IdP as OIDC provider
+    participant Gateway as oidc-gateway
+    participant Authz as ext_authz policy
+    participant Directory as Directory API
+
+    User-&gt;&gt;CLI: dirctl auth login
+    CLI-&gt;&gt;IdP: OIDC login
+    IdP--&gt;&gt;CLI: Short-lived token
+    CLI-&gt;&gt;Gateway: Directory request + bearer token
+    Gateway-&gt;&gt;Gateway: Validate JWT
+    Gateway-&gt;&gt;Authz: Check principal and action
+    Authz--&gt;&gt;Gateway: Allow
+    Gateway-&gt;&gt;Directory: Forward authorized request
+    Directory--&gt;&gt;Gateway: Response
+    Gateway--&gt;&gt;CLI: Response
+</code></pre>
+
+<p>This separation matters. The CLI gets a familiar login experience, operators can integrate with their existing identity provider, and backend services do not need to grow one-off authentication paths for every external client.</p>
+
+<p>With recent <code class="language-plaintext highlighter-rouge">oidc-gateway</code> deployments, operators may expose two hostnames:</p>
+
+<ul>
+  <li>An OIDC/JWT hostname for <code class="language-plaintext highlighter-rouge">auth_mode: oidc</code>, cached OIDC login, pre-issued JWTs, and CI workload identity.</li>
+  <li>An mTLS hostname for <code class="language-plaintext highlighter-rouge">auth_mode: x509</code> or <code class="language-plaintext highlighter-rouge">auth_mode: tls</code>, where the gateway validates the client certificate.</li>
+</ul>
+
+<p>Use the endpoint that matches the credential you send. If you use the OIDC context above, point it at the OIDC/JWT hostname. For operator-level setup, see <a href="https://docs.agntcy.org/dir/directory-oidc-authentication/">OIDC Authentication for Directory</a>.</p>
+
+<h2 id="step-5-show-the-directory-context-in-zsh">Step 5: Show the Directory Context in zsh</h2>
+
+<p>Contexts reduce typing, but they also introduce a new question: which Directory am I pointing at right now?</p>
+
+<p>If you use zsh, you can add a small helper that prints the active <code class="language-plaintext highlighter-rouge">dirctl</code> context. It fails quietly when <code class="language-plaintext highlighter-rouge">dirctl</code> is unavailable or no context is configured.</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function </span>dirctl_context_prompt<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span>ctx
+  <span class="nv">ctx</span><span class="o">=</span><span class="si">$(</span>dirctl context current <span class="nt">--quiet</span> 2&gt;/dev/null<span class="si">)</span> <span class="o">||</span> <span class="k">return</span>
+  <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$ctx</span><span class="s2">"</span> <span class="o">]]</span> <span class="o">&amp;&amp;</span> print <span class="nt">-r</span> <span class="nt">--</span> <span class="s2">"dir:</span><span class="nv">$ctx</span><span class="s2">"</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>You can try it directly:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl_context_prompt
+</code></pre></div></div>
+
+<p>If your current context is <code class="language-plaintext highlighter-rouge">prod</code>, it prints:</p>
+
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dir:prod
+</code></pre></div></div>
+
+<p>For a simple custom prompt, you can wire it into <code class="language-plaintext highlighter-rouge">PROMPT</code>:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>setopt PROMPT_SUBST
+<span class="nv">PROMPT</span><span class="o">=</span><span class="s1">'$(dirctl_context_prompt) %~ %# '</span>
+</code></pre></div></div>
+
+<p>That is enough to make the active Directory visible before every command.</p>
+
+<h2 id="powerlevel10k-integration">Powerlevel10k Integration</h2>
+
+<p>If you use <a href="https://github.com/romkatv/powerlevel10k">powerlevel10k</a>, define a custom prompt segment in <code class="language-plaintext highlighter-rouge">~/.p10k.zsh</code>:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">function </span>prompt_dirctl_context<span class="o">()</span> <span class="o">{</span>
+  <span class="nb">local </span>ctx
+  <span class="nv">ctx</span><span class="o">=</span><span class="si">$(</span>dirctl context current <span class="nt">--quiet</span> 2&gt;/dev/null<span class="si">)</span> <span class="o">||</span> <span class="k">return</span>
+  <span class="o">[[</span> <span class="nt">-n</span> <span class="s2">"</span><span class="nv">$ctx</span><span class="s2">"</span> <span class="o">]]</span> <span class="o">||</span> <span class="k">return
+
+  </span>p10k segment <span class="nt">-f</span> 39 <span class="nt">-i</span> <span class="s1">'DIR'</span> <span class="nt">-t</span> <span class="s2">"</span><span class="nv">$ctx</span><span class="s2">"</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Then add <code class="language-plaintext highlighter-rouge">dirctl_context</code> to one of your prompt element arrays:</p>
+
+<div class="language-zsh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">typeset</span> <span class="nt">-g</span> <span class="nv">POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS</span><span class="o">=(</span>
+  dirctl_context
+  status
+  command_execution_time
+  <span class="nb">time</span>
+<span class="o">)</span>
+</code></pre></div></div>
+
+<p>Now your prompt shows the active Directory context next to your other session state. When the prompt says <code class="language-plaintext highlighter-rouge">prod</code>, you know commands are going to the hosted testbed. When it says <code class="language-plaintext highlighter-rouge">local</code>, you know you are working against your daemon.</p>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3 id="dirctl-context-current---quiet-prints-nothing"><code class="language-plaintext highlighter-rouge">dirctl context current --quiet</code> prints nothing</h3>
+
+<p>No <code class="language-plaintext highlighter-rouge">current_context</code> is set, or the config file does not exist yet. Create <code class="language-plaintext highlighter-rouge">~/.config/dirctl/config.yaml</code>, then run:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set local</span>
+</code></pre></div></div>
+
+<h3 id="dirctl-context-validate-reports-an-unknown-field"><code class="language-plaintext highlighter-rouge">dirctl context validate</code> reports an unknown field</h3>
+
+<p>The client config parser validates known fields. Check for typos such as <code class="language-plaintext highlighter-rouge">server-addr</code> instead of <code class="language-plaintext highlighter-rouge">server_address</code>, or <code class="language-plaintext highlighter-rouge">authMode</code> instead of <code class="language-plaintext highlighter-rouge">auth_mode</code>.</p>
+
+<h3 id="server_address-is-required"><code class="language-plaintext highlighter-rouge">server_address is required</code></h3>
+
+<p>Every usable context needs a <code class="language-plaintext highlighter-rouge">server_address</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">contexts</span><span class="pi">:</span>
+  <span class="na">local</span><span class="pi">:</span>
+    <span class="na">server_address</span><span class="pi">:</span> <span class="s">localhost:8888</span>
+</code></pre></div></div>
+
+<h3 id="the-local-context-cannot-connect">The local context cannot connect</h3>
+
+<p>Make sure the daemon is running:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl daemon start
+</code></pre></div></div>
+
+<p>Then test the local context:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl <span class="nt">--context</span> <span class="nb">local </span>search <span class="nt">--name</span> <span class="s2">"*"</span>
+</code></pre></div></div>
+
+<h3 id="the-prod-context-says-you-are-not-authenticated">The prod context says you are not authenticated</h3>
+
+<p>Log in again:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dirctl context <span class="nb">set </span>prod
+dirctl auth login
+dirctl auth status
+</code></pre></div></div>
+
+<p>If login succeeds but API calls still fail, confirm that your user or organization is allowed by the hosted environment’s policy.</p>
+
+<h3 id="oidc-and-mtls-endpoints-are-easy-to-mix-up">OIDC and mTLS endpoints are easy to mix up</h3>
+
+<p>If your context uses <code class="language-plaintext highlighter-rouge">auth_mode: oidc</code>, use the OIDC/JWT gateway hostname. If your context uses <code class="language-plaintext highlighter-rouge">auth_mode: x509</code> or <code class="language-plaintext highlighter-rouge">auth_mode: tls</code>, use the mTLS gateway hostname.</p>
+
+<h2 id="wrap-up">Wrap-up</h2>
+
+<p><code class="language-plaintext highlighter-rouge">dirctl context</code> is a small feature with a big impact on day-to-day Directory usage.</p>
+
+<p>You can keep a local daemon for fast iteration, use the hosted testbed with OIDC when you need a shared Directory, and make the active target visible in your shell prompt. The result is less flag juggling, fewer accidental commands against the wrong environment, and a smoother path from local development to authenticated Directory access.</p>
+
+<p>For deeper reference material, continue with the <a href="https://docs.agntcy.org/dir/directory-cli/">Directory CLI guide</a>, the <a href="https://docs.agntcy.org/dir/dir-deployment-local/">Local Deployment guide</a>, and <a href="https://docs.agntcy.org/dir/directory-oidc-authentication/">OIDC Authentication for Directory</a>.</p>]]></content><author><name>Tibor Kircsi</name></author><category term="technical" /><category term="directory" /><category term="dirctl" /><category term="directory" /><category term="oidc" /><category term="oidc-gateway" /><category term="developer-experience" /><category term="zsh" /><summary type="html"><![CDATA[When you work with Agent Directory, you often move between two worlds. On your laptop, you want a fast local Directory server where you can test records, validate metadata, and iterate without needing a cluster. When you are ready to search, publish, or interact with a shared environment, you want the hosted Directory testbed with real authentication at the edge. dirctl context makes that switch explicit. Instead of remembering a different --server-addr, --auth-mode, OIDC issuer, or TLS setting for every command, you can name each Directory target once and then move between them safely.]]></summary></entry><entry><title type="html">ARD over Agent Directory: Interoperability by Design</title><link href="https://blogs.agntcy.org/technical/2026/06/17/ai-catalog-over-directory.html" rel="alternate" type="text/html" title="ARD over Agent Directory: Interoperability by Design" /><published>2026-06-17T14:00:00+00:00</published><updated>2026-06-17T14:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/06/17/ai-catalog-over-directory</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/06/17/ai-catalog-over-directory.html"><![CDATA[<p>A developer integrating agentic capabilities today faces a discovery problem that looks deceptively like a solved one. We have standards, registries, catalogs, and well-knowns; surely finding the right tool is just a lookup? In practice it is not, because the ecosystem has fragmented into protocols that each describe the <em>same</em> artifact differently; be it a resource, tool, agent, or a full agentic system. And while the artifact is one thing; its discovery representations are many.</p>
 
 <p>The question of discovery and interoperability is not achieved by picking a winning format or specification. <a href="https://agent-card.github.io/ai-catalog">AI Catalog</a> and <a href="https://agenticresourcediscovery.org/">Agentic Resource Discovery (ARD)</a> are not competing standards; they are complementary lenses on the same underlying problem. Each one tries to answers a shared set of questions - <em>what is this artifact</em>, <em>what can it do</em>, <em>how to use it</em>, <em>who published it</em>, and <em>can I trust it</em>.</p>
 
@@ -3734,791 +4106,4 @@ kind delete cluster <span class="nt">--name</span> partner
 
 <hr />
 
-<p><em>Have questions about Agent Directory federation or SPIFFE? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Tibor Kircsi</name></author><category term="technical" /><category term="security" /><category term="directory" /><category term="spiffe" /><category term="spire" /><category term="federation" /><category term="mTLS" /><category term="zero-trust" /><category term="kind" /><category term="kubernetes" /><summary type="html"><![CDATA[Agent Directory is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange. This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the https_spiffe profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you’re ready for production, see Getting Started and Partner Federation with Prod for the https_web profile and joining the public Directory.]]></summary></entry><entry><title type="html">Directory MCP Server: Bringing AI Agent Discovery to Your IDE</title><link href="https://blogs.agntcy.org/technical/2026/02/19/directory-mcp-server.html" rel="alternate" type="text/html" title="Directory MCP Server: Bringing AI Agent Discovery to Your IDE" /><published>2026-02-19T08:00:00+00:00</published><updated>2026-02-19T08:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/02/19/directory-mcp-server</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/02/19/directory-mcp-server.html"><![CDATA[<p>The Model Context Protocol (MCP) has emerged as a powerful standard for connecting AI assistants with external tools and data sources. In this post, we’ll explore the Directory MCP server—a feature that brings AI agent discovery and management directly into your IDE, enabling seamless interaction with the Directory ecosystem.</p>
-
-<!--more-->
-
-<p><strong>TL;DR:</strong> The Directory MCP server lets your AI-powered IDE discover, validate, and use AI agents from the Directory network—without leaving your editor. It bridges Directory’s decentralized agent registry with MCP-enabled tools like Cursor, VS Code, and Codex.</p>
-
-<h3 id="what-youll-learn">What You’ll Learn</h3>
-
-<p>In this post, you’ll learn:</p>
-
-<ul>
-  <li>What Directory is and why MCP matters</li>
-  <li>How to install and configure the Directory MCP server in your IDE</li>
-  <li>How to distribute and sign OASF agent records through CI/CD</li>
-  <li>How to discover, import, and audit agents using natural language inside your IDE</li>
-  <li>How Directory enables secure agent ecosystems</li>
-</ul>
-
-<h2 id="what-is-agent-directory">What is Agent Directory?</h2>
-
-<p><a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a> is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Directory provides a distributed peer-to-peer network for publishing, exchanging, and discovering information about AI agents. It uses <a href="https://github.com/agntcy/oasf">OASF (Open Agentic Schema Framework)</a> to describe AI agents with structured metadata, enabling:</p>
-
-<ul>
-  <li><strong>Capability-Based Discovery</strong>: Find agents based on their functional characteristics using hierarchical skill and domain taxonomies</li>
-  <li><strong>Verifiable Claims</strong>: Cryptographic mechanisms ensure data integrity and provenance tracking</li>
-  <li><strong>Distributed Architecture</strong>: Content-addressing and distributed hash tables (DHT) for scalable discovery across decentralized networks</li>
-  <li><strong>Multi-Format Support</strong>: Import and export between OASF, A2A (Agent-to-Agent), and MCP formats</li>
-</ul>
-
-<h2 id="why-an-mcp-server">Why an MCP Server?</h2>
-
-<p>While Directory provides CLI tools and SDKs for interacting with the network, developers increasingly work within AI-assisted IDEs like <a href="https://cursor.com">Cursor</a>, <a href="https://code.visualstudio.com">VS Code</a> or <a href="https://openai.com/codex/">Codex</a>. The MCP server bridges this gap by exposing Directory functionality directly to AI assistants, allowing you to:</p>
-
-<ul>
-  <li>Search for agents using natural language</li>
-  <li>Validate and push agent records without leaving your editor</li>
-  <li>Generate OASF records by analyzing your codebase</li>
-  <li>Import and export between different agent formats</li>
-</ul>
-
-<p>Instead of context-switching to the terminal, you can simply ask your AI assistant to perform these operations.</p>
-
-<h2 id="architecture">Architecture</h2>
-
-<p>The MCP server acts as a bridge between your AI assistant and the Directory ecosystem:</p>
-
-<pre><code class="language-mermaid">flowchart LR
-    classDef ide fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
-    classDef mcp fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
-    classDef external fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
-
-    subgraph IDE["IDE (Cursor, VS Code, Codex)"]
-        AI[AI Assistant]:::ide
-    end
-
-    subgraph MCP["MCP Server (dirctl mcp serve)"]
-        Tools[Tools]:::mcp
-        Prompts[Prompts]:::mcp
-    end
-
-    subgraph External["External Services"]
-        Dir[Directory Server&lt;br/&gt;Agent Records]:::external
-        Schema[OASF Schema Server&lt;br/&gt;Validation]:::external
-    end
-
-    AI --&gt;|"Tool calls&lt;br/&gt;(search, push, pull)"| Tools
-    AI --&gt;|"Prompt invocations&lt;br/&gt;(create_record, search_records)"| Prompts
-    Tools --&gt; Dir
-    Tools --&gt; Schema
-    Prompts --&gt; Tools
-</code></pre>
-
-<p>The server communicates via stdin/stdout or streamable HTTP using the MCP protocol, making it compatible with any MCP-enabled IDE.</p>
-
-<h2 id="prerequisites">Prerequisites</h2>
-
-<p>Before setting up the MCP server, you’ll need:</p>
-
-<ol>
-  <li>
-    <p><strong>dirctl CLI</strong> - Install via <a href="https://github.com/agntcy/dir/tree/main/HomebrewFormula">Homebrew</a> or download from <a href="https://github.com/agntcy/dir/releases">GitHub Releases</a>. Alternatively, use the Docker image.</p>
-  </li>
-  <li>
-    <p><strong>An MCP-enabled IDE</strong></p>
-  </li>
-  <li>
-    <p><strong>A running Directory server</strong> - Either:</p>
-    <ul>
-      <li><strong>Local development</strong>: Start one with <code class="language-plaintext highlighter-rouge">task server:start</code> in the <a href="https://github.com/agntcy/dir">Directory repository</a>, or use Docker Compose:
-        <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">cd install</span>/docker <span class="o">&amp;&amp;</span> docker compose up <span class="nt">-d</span>
-</code></pre></div>        </div>
-      </li>
-      <li><strong>Remote server</strong>: Use an existing Directory deployment (e.g., the <a href="https://blogs.agntcy.org/technical/2026/02/19/dir-v1.html">AGNTCY public testbed</a> at <code class="language-plaintext highlighter-rouge">prod.gateway.ads.outshift.io:443</code>)</li>
-    </ul>
-  </li>
-</ol>
-
-<h2 id="setup">Setup</h2>
-
-<p>The MCP server runs via the <code class="language-plaintext highlighter-rouge">dirctl</code> CLI tool. Below are configuration instructions for some AI IDEs, with both binary and Docker options.</p>
-
-<h3 id="cursor">Cursor</h3>
-
-<p>Add the MCP server to your Cursor configuration at <code class="language-plaintext highlighter-rouge">~/.cursor/mcp.json</code>:</p>
-
-<p><strong>Using the binary:</strong></p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nl">"dir-mcp-server"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/dirctl"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"mcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"serve"</span><span class="p">],</span><span class="w">
-      </span><span class="nl">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nl">"OASF_API_VALIDATION_SCHEMA_URL"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://schema.oasf.outshift.com"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"DIRECTORY_CLIENT_SERVER_ADDRESS"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost:8888"</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p><strong>Using Docker:</strong></p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nl">"dir-mcp-server"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"docker"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="s2">"run"</span><span class="p">,</span><span class="w"> </span><span class="s2">"--rm"</span><span class="p">,</span><span class="w"> </span><span class="s2">"-i"</span><span class="p">,</span><span class="w">
-        </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"OASF_API_VALIDATION_SCHEMA_URL=https://schema.oasf.outshift.com"</span><span class="p">,</span><span class="w">
-        </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888"</span><span class="p">,</span><span class="w">
-        </span><span class="s2">"ghcr.io/agntcy/dir-ctl:latest"</span><span class="p">,</span><span class="w">
-        </span><span class="s2">"mcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"serve"</span><span class="w">
-      </span><span class="p">]</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>After saving, restart Cursor for the changes to take effect.</p>
-
-<h3 id="vs-code">VS Code</h3>
-
-<p>For VS Code with GitHub Copilot, add the MCP server to your workspace configuration at <code class="language-plaintext highlighter-rouge">.vscode/mcp.json</code>, or to your user settings at <code class="language-plaintext highlighter-rouge">~/.vscode/mcp.json</code> for global availability:</p>
-
-<p><strong>Using the binary:</strong></p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"servers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nl">"dir-mcp-server"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/path/to/dirctl"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"mcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"serve"</span><span class="p">],</span><span class="w">
-      </span><span class="nl">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nl">"OASF_API_VALIDATION_SCHEMA_URL"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://schema.oasf.outshift.com"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"DIRECTORY_CLIENT_SERVER_ADDRESS"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost:8888"</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p><strong>Using Docker:</strong></p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"servers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nl">"dir-mcp-server"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"command"</span><span class="p">:</span><span class="w"> </span><span class="s2">"docker"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="s2">"run"</span><span class="p">,</span><span class="w"> </span><span class="s2">"--rm"</span><span class="p">,</span><span class="w"> </span><span class="s2">"-i"</span><span class="p">,</span><span class="w">
-        </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"OASF_API_VALIDATION_SCHEMA_URL=https://schema.oasf.outshift.com"</span><span class="p">,</span><span class="w">
-        </span><span class="s2">"-e"</span><span class="p">,</span><span class="w"> </span><span class="s2">"DIRECTORY_CLIENT_SERVER_ADDRESS=localhost:8888"</span><span class="p">,</span><span class="w">
-        </span><span class="s2">"ghcr.io/agntcy/dir-ctl:latest"</span><span class="p">,</span><span class="w">
-        </span><span class="s2">"mcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"serve"</span><span class="w">
-      </span><span class="p">]</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<h3 id="codex">Codex</h3>
-
-<p>For OpenAI’s Codex, you can also add the MCP server config to your workspace configuration at <code class="language-plaintext highlighter-rouge">.codex/config.toml</code> or to your settings at <code class="language-plaintext highlighter-rouge">~/.codex/config.toml</code>:</p>
-
-<p><strong>Using the binary:</strong></p>
-
-<div class="language-toml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[mcp_servers.dir-mcp-server]</span>
-<span class="py">command</span> <span class="p">=</span> <span class="s">"/path/to/dirctl"</span>
-<span class="py">args</span> <span class="p">=</span> <span class="p">[</span><span class="s">"mcp"</span><span class="p">,</span> <span class="s">"serve"</span><span class="p">]</span>
-
-<span class="nn">[mcp_servers.dir-mcp-server.env]</span>
-<span class="py">OASF_API_VALIDATION_SCHEMA_URL</span> <span class="p">=</span> <span class="s">"https://schema.oasf.outshift.com"</span>
-<span class="py">DIRECTORY_CLIENT_SERVER_ADDRESS</span> <span class="p">=</span> <span class="s">"localhost:8888"</span>
-</code></pre></div></div>
-
-<p><strong>Using Docker:</strong></p>
-
-<div class="language-toml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">[mcp_servers.dir-mcp-server]</span>
-<span class="py">command</span> <span class="p">=</span> <span class="s">"docker"</span>
-<span class="py">args</span> <span class="p">=</span> <span class="p">[</span>
-  <span class="s">"run"</span><span class="p">,</span> <span class="s">"--rm"</span><span class="p">,</span> <span class="s">"-i"</span><span class="p">,</span>
-  <span class="s">"-e"</span><span class="p">,</span> <span class="py">"OASF_API_VALIDATION_SCHEMA_URL</span><span class="p">=</span><span class="err">https://schema.oasf.outshift.com</span><span class="s">",</span><span class="err">
-</span>  <span class="s">"-e"</span><span class="p">,</span> <span class="py">"DIRECTORY_CLIENT_SERVER_ADDRESS</span><span class="p">=</span><span class="err">localhost:</span><span class="mi">8888</span><span class="s">",</span><span class="err">
-</span>  <span class="s">"ghcr.io/agntcy/dir-ctl:latest"</span><span class="p">,</span>
-  <span class="s">"mcp"</span><span class="p">,</span> <span class="s">"serve"</span>
-<span class="p">]</span>
-</code></pre></div></div>
-
-<p><strong>Note:</strong> When using Docker, environment variables must be passed via <code class="language-plaintext highlighter-rouge">-e</code> flags in the args array, not in the <code class="language-plaintext highlighter-rouge">env</code> section.</p>
-
-<h3 id="connecting-to-a-remote-directory-server">Connecting to a Remote Directory Server</h3>
-
-<p>To connect to a remote Directory server (e.g., the production gateway), update the environment variables to include the server address and GitHub authentication:</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Variable</th>
-      <th>Value</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">OASF_API_VALIDATION_SCHEMA_URL</code></td>
-      <td><code class="language-plaintext highlighter-rouge">https://schema.oasf.outshift.com</code></td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_SERVER_ADDRESS</code></td>
-      <td><code class="language-plaintext highlighter-rouge">prod.gateway.ads.outshift.io:443</code></td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_AUTH_MODE</code></td>
-      <td><code class="language-plaintext highlighter-rouge">github</code></td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_GITHUB_TOKEN</code></td>
-      <td>Your GitHub PAT</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>Generate a PAT at <a href="https://github.com/settings/tokens">GitHub Settings &gt; Developer settings &gt; Personal access tokens</a> with <code class="language-plaintext highlighter-rouge">user:email</code> and <code class="language-plaintext highlighter-rouge">read:org</code> scopes.</p>
-
-<h2 id="usage-examples">Usage Examples</h2>
-
-<p>Once the Directory MCP server is installed, you can use it for a variety of tasks. Here are three real-world scenarios covering the full lifecycle: distributing agents, discovering and installing them, and auditing their provenance.</p>
-
-<h3 id="scenario-1-distributing-your-agents-to-directory">Scenario 1: Distributing Your Agents to Directory</h3>
-
-<p>In this scenario, you’ve built a multi-agent system and want to distribute each agent to Directory so others can discover them. We’ll use <a href="https://github.com/agntcy/coffeeAgntcy">CoffeeAgntcy</a>—AGNTCY’s reference application demonstrating a coffee supply chain with multiple collaborating agents.</p>
-
-<p>For simplicity, we’ll use the <strong>Corto</strong> setup which has two agents:</p>
-<ul>
-  <li><strong>Exchange Agent</strong> - The coffee buyer that initiates purchases</li>
-  <li><strong>Farm Agent</strong> - The coffee farm that responds to purchase requests</li>
-</ul>
-
-<p><strong>Step 1: Generate OASF records for each agent</strong></p>
-
-<p>Open your project in Cursor and ask the AI to create records for each agent:</p>
-
-<blockquote>
-  <p>“Analyze the Exchange and Farm agents in coffeeAGNTCY/coffee_agents/corto/ and create OASF records (schema_version 1.0.0) for each. Use the Directory MCP tools to fetch valid skills and domains from the OASF schema. Save as agents/coffee-exchange-agent.json and agents/coffee-farm-agent.json”</p>
-</blockquote>
-
-<p>The AI analyzes your codebase, queries the OASF schema for valid skills and domains, and generates complete records.</p>
-
-<p><strong>Exchange Agent</strong> - The coffee buyer:</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"coffee-exchange-agent"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-18T10:00:00Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Coffee exchange agent that initiates purchases from farm agents. Orchestrates the buying workflow using LangGraph, communicates via A2A protocol over SLIM transport, and integrates with the Observe SDK for tracing."</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"authors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"AGNTCY Contributors"</span><span class="p">],</span><span class="w">
-  </span><span class="nl">"skills"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1004</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agent_orchestration/agent_coordination"</span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1005</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agent_orchestration/negotiation_resolution"</span><span class="p">}</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1801</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"retail_and_ecommerce/supply_chain_management"</span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2301</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agriculture/crop_management"</span><span class="p">}</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"locators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"source_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"urls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://github.com/agntcy/coffeeAgntcy/tree/main/coffeeAGNTCY/coffee_agents/corto/exchange"</span><span class="p">]}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p><strong>Farm Agent</strong> - The coffee seller:</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"schema_version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"coffee-farm-agent"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-18T10:00:00Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Coffee farm agent that responds to purchase requests from the exchange. Manages inventory, processes orders, and communicates via A2A protocol. Exposes an A2A server endpoint for incoming requests."</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"authors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"AGNTCY Contributors"</span><span class="p">],</span><span class="w">
-  </span><span class="nl">"skills"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1004</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agent_orchestration/agent_coordination"</span><span class="p">}</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">2301</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agriculture/crop_management"</span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1801</span><span class="p">,</span><span class="w"> </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"retail_and_ecommerce/supply_chain_management"</span><span class="p">}</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"locators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"source_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"urls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://github.com/agntcy/coffeeAgntcy/tree/main/coffeeAGNTCY/coffee_agents/corto/farm"</span><span class="p">]}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p><strong>Step 2: Set up GitHub Actions for CI/CD</strong></p>
-
-<p>Directory provides <a href="https://github.com/agntcy/dir/tree/main/.github/actions">GitHub Actions</a> that automate the entire distribution workflow: validation, pushing, signing, and DHT publication.</p>
-
-<p>Create <code class="language-plaintext highlighter-rouge">.github/workflows/publish-agents.yaml</code> in your repository:</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">name</span><span class="pi">:</span> <span class="s">Distributing Agents to Directory</span>
-
-<span class="na">on</span><span class="pi">:</span>
-  <span class="na">push</span><span class="pi">:</span>
-    <span class="na">branches</span><span class="pi">:</span> <span class="pi">[</span><span class="nv">main</span><span class="pi">]</span>
-    <span class="na">paths</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="s1">'</span><span class="s">agents/*.json'</span>
-
-<span class="na">permissions</span><span class="pi">:</span>
-  <span class="na">id-token</span><span class="pi">:</span> <span class="s">write</span>  <span class="c1"># Required for keyless signing</span>
-  <span class="na">contents</span><span class="pi">:</span> <span class="s">read</span>
-
-<span class="na">jobs</span><span class="pi">:</span>
-  <span class="na">publish</span><span class="pi">:</span>
-    <span class="na">runs-on</span><span class="pi">:</span> <span class="s">ubuntu-latest</span>
-    <span class="na">steps</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">uses</span><span class="pi">:</span> <span class="s">actions/checkout@v4</span>
-
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Setup dirctl</span>
-        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/setup-dirctl@main</span>
-        <span class="na">with</span><span class="pi">:</span>
-          <span class="na">version</span><span class="pi">:</span> <span class="s">latest</span>
-
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Validate OASF records</span>
-        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/validate-record@main</span>
-        <span class="na">with</span><span class="pi">:</span>
-          <span class="na">record_paths</span><span class="pi">:</span> <span class="pi">|</span>
-            <span class="s">agents/*.json</span>
-
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Push to Directory</span>
-        <span class="na">id</span><span class="pi">:</span> <span class="s">push</span>
-        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/push-record@main</span>
-        <span class="na">with</span><span class="pi">:</span>
-          <span class="na">record_paths</span><span class="pi">:</span> <span class="s">agents/*.json</span>
-          <span class="na">server_addr</span><span class="pi">:</span> <span class="s">${{ vars.DIRECTORY_ADDRESS }}</span>
-          <span class="na">github_token</span><span class="pi">:</span> <span class="s">${{ secrets.DIRECTORY_TOKEN }}</span>
-
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Sign records (keyless with GitHub OIDC)</span>
-        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/sign-record@main</span>
-        <span class="na">with</span><span class="pi">:</span>
-          <span class="na">cids</span><span class="pi">:</span> <span class="s">${{ steps.push.outputs.cids }}</span>
-          <span class="na">server_addr</span><span class="pi">:</span> <span class="s">${{ vars.DIRECTORY_ADDRESS }}</span>
-          <span class="na">github_token</span><span class="pi">:</span> <span class="s">${{ secrets.DIRECTORY_TOKEN }}</span>
-          <span class="na">oidc_client_id</span><span class="pi">:</span> <span class="s">https://github.com/${{ github.repository }}/.github/workflows/publish-agents.yaml@${{ github.ref }}</span>
-
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">Publish to DHT</span>
-        <span class="na">uses</span><span class="pi">:</span> <span class="s">agntcy/dir/.github/actions/publish-record@main</span>
-        <span class="na">with</span><span class="pi">:</span>
-          <span class="na">cids</span><span class="pi">:</span> <span class="s">${{ steps.push.outputs.cids }}</span>
-          <span class="na">server_addr</span><span class="pi">:</span> <span class="s">${{ vars.DIRECTORY_ADDRESS }}</span>
-          <span class="na">github_token</span><span class="pi">:</span> <span class="s">${{ secrets.DIRECTORY_TOKEN }}</span>
-</code></pre></div></div>
-
-<p>This workflow:</p>
-
-<ol>
-  <li><strong>Validates</strong> all agent records against the OASF schema, failing early if any record is invalid</li>
-  <li><strong>Pushes</strong> records to Directory, outputting CIDs for each file</li>
-  <li><strong>Signs</strong> records using GitHub OIDC (keyless)—no secrets to manage, signatures tied to your GitHub identity</li>
-  <li><strong>Publishes</strong> to the DHT, making agents discoverable across the Directory network</li>
-</ol>
-
-<p>The signing step uses <a href="https://www.sigstore.dev/">Sigstore</a> with GitHub’s OIDC tokens—Sigstore issues a short-lived certificate from <a href="https://docs.sigstore.dev/certificate_authority/overview/">Fulcio</a> tied to your workflow identity, signs the records, and logs signatures to the <a href="https://docs.sigstore.dev/logging/overview/">Rekor</a> transparency log.</p>
-
-<p><strong>Step 3: Commit and push</strong></p>
-
-<p>Once your records are ready, commit them to your repository:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git add agents/
-git commit <span class="nt">-m</span> <span class="s2">"Add OASF records for Exchange and Farm agents"</span>
-git push origin main
-</code></pre></div></div>
-
-<p>The GitHub Actions workflow triggers automatically and handles everything:</p>
-<ol>
-  <li><strong>Validates</strong> records against the OASF schema</li>
-  <li><strong>Pushes</strong> to Directory (outputs CIDs)</li>
-  <li><strong>Signs</strong> with GitHub OIDC (keyless)</li>
-  <li><strong>Publishes</strong> to the DHT</li>
-</ol>
-
-<p><strong>Step 4: Verify the distributed records</strong></p>
-
-<p>After the workflow completes, anyone can verify a record’s signature using the MCP server:</p>
-
-<blockquote>
-  <p>“Search Directory for coffee-exchange-agent, then verify its signature and show the signer identity”</p>
-</blockquote>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"success"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"trusted"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"signers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"identity"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://github.com/agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@refs/heads/main"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"issuer"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://token.actions.githubusercontent.com"</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>The signature shows it was signed by a specific GitHub Actions workflow, providing full provenance tracking:</p>
-<ul>
-  <li><strong>Who</strong> signed it (the workflow identity)</li>
-  <li><strong>When</strong> it was signed (Rekor transparency log)</li>
-  <li><strong>What</strong> was signed (content-addressed CID)</li>
-</ul>
-
-<p>Your agents are now fully distributed to the Directory network—signed, verified, and discoverable by anyone!</p>
-
-<blockquote>
-  <p>For a more complex multi-agent example, check out the <a href="https://github.com/agntcy/coffeeAgntcy/tree/main/coffeeAGNTCY/coffee_agents/lungo">Lungo setup</a> which includes farm agents for Brazil, Colombia, and Vietnam, plus logistics agents (shipper, accountant) and supervisor agents for auction orchestration.</p>
-</blockquote>
-
-<h3 id="scenario-2-discovering-and-installing-an-agent">Scenario 2: Discovering and Installing an Agent</h3>
-
-<p>You need GitHub integration in your IDE—listing issues, searching code, managing pull requests—without leaving your editor. Instead of manually configuring MCP servers, you ask your AI assistant to find one in Directory.</p>
-
-<p><strong>Step 1: Search for an agent with the capability you need</strong></p>
-
-<blockquote>
-  <p>“Search Directory for MCP servers with GitHub API integration skills”</p>
-</blockquote>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"count"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"has_more"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"record_cids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"baeareiarov6l6hcb274t5gxkwujbmcizi4ba5ullqoeyqrhlqc6ymz6fsm"</span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>Found a match! Let’s see what it offers.</p>
-
-<p><strong>Step 2: Pull the record to inspect it</strong></p>
-
-<blockquote>
-  <p>“Pull record baeareiarov6l6hcb274t5gxkwujbmcizi4ba5ullqoeyqrhlqc6ymz6fsm and show me its capabilities”</p>
-</blockquote>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"github-mcp"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.0.0"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Official GitHub MCP Server providing repository management, issue tracking, pull request workflows, code search, and GitHub API access for AI assistants."</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"authors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"GitHub"</span><span class="p">],</span><span class="w">
-  </span><span class="nl">"skills"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tool_interaction/api_schema_understanding"</span><span class="p">,</span><span class="w"> </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1401</span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tool_interaction/workflow_automation"</span><span class="p">,</span><span class="w"> </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1402</span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"devops_mlops/ci_cd_configuration"</span><span class="p">,</span><span class="w"> </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">1203</span><span class="p">}</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"domains"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"technology/software_engineering"</span><span class="p">,</span><span class="w"> </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="mi">102</span><span class="p">}</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"locators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"source_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"urls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://github.com/github/github-mcp-server"</span><span class="p">]}</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"modules"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"integration/mcp"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"data"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"github"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"GitHub API access for repository management, issues, PRs, and code search"</span><span class="p">,</span><span class="w">
-        </span><span class="nl">"connections"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-          </span><span class="p">{</span><span class="w">
-            </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"streamable-http"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://api.githubcopilot.com/mcp/"</span><span class="p">,</span><span class="w">
-            </span><span class="nl">"headers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-              </span><span class="nl">"Authorization"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Bearer ${GITHUB_PAT}"</span><span class="w">
-            </span><span class="p">}</span><span class="w">
-          </span><span class="p">}</span><span class="w">
-        </span><span class="p">],</span><span class="w">
-        </span><span class="nl">"tools"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"search_repositories"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Search for GitHub repositories"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"search_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Search code across repositories"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"get_file_contents"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Get contents of a file from a repository"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"list_issues"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"List issues in a repository"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"get_issue"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Get details of a specific issue"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"create_issue"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Create a new issue"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"list_pull_requests"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"List pull requests in a repository"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"get_pull_request"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Get details of a specific pull request"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"create_pull_request"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Create a new pull request"</span><span class="p">},</span><span class="w">
-          </span><span class="p">{</span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"get_me"</span><span class="p">,</span><span class="w"> </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Get the authenticated user's profile"</span><span class="p">}</span><span class="w">
-        </span><span class="p">]</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>This is exactly what we need—GitHub’s official MCP server. The <code class="language-plaintext highlighter-rouge">modules</code> field contains the MCP configuration: a remote server (<code class="language-plaintext highlighter-rouge">streamable-http</code>) requiring a GitHub Personal Access Token for authentication.</p>
-
-<p><strong>Step 3: Configure the MCP server in your IDE</strong></p>
-
-<p>Here’s the key insight: <strong>the AI assistant can update your IDE configuration directly</strong>. Ask it to add the MCP server:</p>
-
-<blockquote>
-  <p>“Add this GitHub MCP server to my Cursor configuration at ~/.cursor/mcp.json using the connection details from the record”</p>
-</blockquote>
-
-<p>The assistant reads the connection details from the OASF record and updates <code class="language-plaintext highlighter-rouge">~/.cursor/mcp.json</code>:</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"mcpServers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nl">"github"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://api.githubcopilot.com/mcp/"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"headers"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nl">"Authorization"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Bearer ${GITHUB_PAT}"</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>You’ll need a GitHub PAT with appropriate scopes (repo, read:user). Generate one at <a href="https://github.com/settings/tokens">GitHub Settings &gt; Developer settings &gt; Personal access tokens</a>.</p>
-
-<p><strong>Step 4: Start using the new capability</strong></p>
-
-<p>After restarting Cursor, you have full GitHub access. Let’s try it:</p>
-
-<blockquote>
-  <p>“List all open GitHub issues assigned to me across all repositories”</p>
-</blockquote>
-
-<p>The assistant uses the <code class="language-plaintext highlighter-rouge">search_issues</code> tool:</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"total_count"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"items"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">863</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Name resolution + verified record name on remote nodes"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"repository"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agntcy/dir"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"go"</span><span class="p">],</span><span class="w">
-      </span><span class="nl">"milestone"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DIR v1.1.0"</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">39</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Blog: How to use AGNTCY MCP server"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"repository"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agntcy/blogs"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Gather requirements for Migration SDK"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"repository"</span><span class="p">:</span><span class="w"> </span><span class="s2">"agntcy/oasf-sdk"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"enhancement"</span><span class="p">]</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="err">...</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<blockquote>
-  <p>“List the 5 most recent open issues in the agntcy/dir repository”</p>
-</blockquote>
-
-<p>The assistant uses the <code class="language-plaintext highlighter-rouge">list_issues</code> tool:</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"issues"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">942</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"[Feature]: Resolve and improve test coverage"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OPEN"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"kind/test"</span><span class="p">],</span><span class="w">
-      </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-12T13:59:57Z"</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">929</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"[Feature]: Remove sync monitor in favor of reconciler indexer task"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OPEN"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-10T15:59:58Z"</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">926</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Revisit local deployment configuration"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"OPEN"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-10T11:56:23Z"</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="err">...</span><span class="w">
-  </span><span class="p">],</span><span class="w">
-  </span><span class="nl">"totalCount"</span><span class="p">:</span><span class="w"> </span><span class="mi">29</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<blockquote>
-  <p>“Get the full details for issue #942 in agntcy/dir including the description and comments”</p>
-</blockquote>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">942</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"[Feature]: Resolve and improve test coverage"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"state"</span><span class="p">:</span><span class="w"> </span><span class="s2">"open"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"author"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ramizpolic"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"kind/test"</span><span class="p">],</span><span class="w">
-  </span><span class="nl">"milestone"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DIR v1.2.0"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-12T13:59:57Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"body"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Currently, the test coverage results are not properly covering certain components (e.g. for apiserver, we are dropping the unit test coverage for the sake of e2e test coverage). Proposed solution: Make sure that all test results are properly combined/merged across different test-cases (unit, e2e, ...)."</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>The assistant provides context about the work needed—all without leaving your IDE.</p>
-
-<p>This is the power of Directory: discoverable agents with standardized metadata that the AI assistant can use to <strong>automatically configure and start using new capabilities</strong>.</p>
-
-<h3 id="scenario-3-auditing-agent-provenance-itops">Scenario 3: Auditing Agent Provenance (ITOps)</h3>
-
-<p>As an IT operations or security team member, you need to audit the agents deployed in your environment to ensure they’re from trusted sources and properly signed. Directory’s verification capabilities make this straightforward.</p>
-
-<p><strong>Step 1: List all agents in your environment</strong></p>
-
-<blockquote>
-  <p>“Search Directory for all agent records and list their CIDs”</p>
-</blockquote>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"count"</span><span class="p">:</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"has_more"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"record_cids"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="s2">"baeareifmeckgczj35wcy6fpdhwttdbkjkskbcktarufpgfvc4xcmhjc2k4"</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"baeareiarov6l6hcb274t5gxkwujbmcizi4ba5ullqoeyqrhlqc6ymz6fsm"</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"baeareigdnp76ayuix5467b7ixjrwwfio2dhnusqxpafidie2py2yw7dwla"</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"baeareihg2hdnkfhdtkermrw7fohbgjffwx3c6jn3zqy4vwsbrru5vyj4tm"</span><span class="p">,</span><span class="w">
-    </span><span class="s2">"..."</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p><strong>Step 2: Verify signatures for each agent</strong></p>
-
-<blockquote>
-  <p>“For each of these CIDs, verify the signature and report which agents are signed vs unsigned”</p>
-</blockquote>
-
-<p>The assistant checks each record:</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>CID</th>
-      <th>Agent Name</th>
-      <th>Status</th>
-      <th>Signer</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">baeareifmeck...</code></td>
-      <td>coffee-exchange-agent</td>
-      <td>Signed</td>
-      <td><code class="language-plaintext highlighter-rouge">agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@main</code></td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">baeareicotuif...</code></td>
-      <td>coffee-farm-agent</td>
-      <td>Signed</td>
-      <td><code class="language-plaintext highlighter-rouge">agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@main</code></td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">baeareigdnp7...</code></td>
-      <td>fetch-mcp-server</td>
-      <td><strong>Not signed</strong></td>
-      <td>-</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">baeareihg2hd...</code></td>
-      <td>memory-mcp-server</td>
-      <td><strong>Not signed</strong></td>
-      <td>-</td>
-    </tr>
-  </tbody>
-</table>
-
-<p><strong>Step 3: Investigate unsigned agents</strong></p>
-
-<p>The audit reveals that <code class="language-plaintext highlighter-rouge">fetch-mcp-server</code> and <code class="language-plaintext highlighter-rouge">memory-mcp-server</code> are not signed. Let’s get more details:</p>
-
-<blockquote>
-  <p>“Pull record baeareigdnp76ayuix5467b7ixjrwwfio2dhnusqxpafidie2py2yw7dwla and show its authors and locators”</p>
-</blockquote>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fetch-mcp-server"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2025.3.28"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"authors"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"Anthropic"</span><span class="p">],</span><span class="w">
-  </span><span class="nl">"created_at"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2026-02-17T10:00:00Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"locators"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"source_code"</span><span class="p">,</span><span class="w"> </span><span class="nl">"urls"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://github.com/modelcontextprotocol/servers/tree/main/src/fetch"</span><span class="p">]}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>The record claims to be from Anthropic but has no cryptographic proof. This is a potential security risk—anyone could have pushed this record claiming to be from that organization.</p>
-
-<p><strong>Step 4: Compare with signed records</strong></p>
-
-<p>For comparison, let’s look at a properly signed record:</p>
-
-<blockquote>
-  <p>“Verify the signature for coffee-exchange-agent (CID baeareifmeck…) and show full signer details”</p>
-</blockquote>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nl">"success"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"trusted"</span><span class="p">,</span><span class="w">
-  </span><span class="nl">"signers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">{</span><span class="w">
-      </span><span class="nl">"identity"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://github.com/agntcy/coffeeAgntcy/.github/workflows/publish-agents.yaml@refs/heads/main"</span><span class="p">,</span><span class="w">
-      </span><span class="nl">"issuer"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://token.actions.githubusercontent.com"</span><span class="w">
-    </span><span class="p">}</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>This signature confirms:</p>
-<ul>
-  <li><strong>Identity</strong>: Signed by the <code class="language-plaintext highlighter-rouge">agntcy/coffeeAgntcy</code> CI/CD workflow</li>
-  <li><strong>Issuer</strong>: GitHub Actions OIDC provider</li>
-  <li><strong>Integrity</strong>: The record hasn’t been modified since signing</li>
-</ul>
-
-<p><strong>Audit recommendations</strong></p>
-
-<p>Based on this audit, you might:</p>
-
-<ol>
-  <li><strong>Flag unsigned agents</strong> for review before use in production</li>
-  <li><strong>Require signatures</strong> from specific identities (e.g., <code class="language-plaintext highlighter-rouge">@yourcompany.com</code> emails or <code class="language-plaintext highlighter-rouge">https://github.com/yourorg/...</code> workflows)</li>
-  <li><strong>Set up alerts</strong> for new unsigned records appearing in your environment</li>
-  <li><strong>Establish a policy</strong> that all production agents must be signed by CI/CD workflows (not individual developers)</li>
-</ol>
-
-<p>This provenance tracking is what makes Directory suitable for enterprise environments—you always know where an agent came from and whether you can trust it.</p>
-
-<h2 id="video-walkthrough">Video Walkthrough</h2>
-
-<p>If you prefer a visual demonstration, check out this video where I walk through the Directory MCP server in action:</p>
-
-<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-bottom: 1.5em;">
-  <iframe src="https://www.youtube.com/embed/pdVqhlyJHo4" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" frameborder="0" allowfullscreen=""></iframe>
-</div>
-
-<h2 id="the-bigger-picture">The Bigger Picture</h2>
-
-<p>The Directory MCP server is part of a broader vision for AI agent interoperability. By standardizing how agents describe their capabilities (OASF), how they’re discovered (Directory), and how they communicate (A2A), we’re building infrastructure for an ecosystem where:</p>
-
-<ul>
-  <li>Agents can find and collaborate with other agents</li>
-  <li>Developers can discover pre-built agents for their needs</li>
-  <li>Organizations can distribute and share agents securely</li>
-</ul>
-
-<p>The MCP server brings this infrastructure directly into developer workflows, reducing friction and enabling AI-assisted agent development.</p>
-
-<p>Check out the <a href="https://docs.agntcy.org/dir/overview/">Directory documentation</a> for a complete walkthrough, and the <a href="https://github.com/agntcy/dir/tree/main/mcp">MCP server README</a> for detailed configuration options.</p>
-
-<h2 id="references">References</h2>
-
-<ul>
-  <li><a href="https://github.com/agntcy/dir">Directory GitHub Repository</a></li>
-  <li><a href="https://github.com/agntcy/dir/tree/main/mcp">Directory MCP Server README</a></li>
-  <li><a href="https://docs.agntcy.org/dir/overview/">Directory Documentation</a></li>
-  <li><a href="https://github.com/agntcy/oasf">OASF (Open Agentic Schema Framework)</a></li>
-  <li><a href="https://modelcontextprotocol.io/">Model Context Protocol</a></li>
-  <li><a href="https://github.com/modelcontextprotocol/go-sdk">MCP Go SDK</a></li>
-</ul>
-
-<hr />
-
-<p><em>Have questions about Directory or the MCP server? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Adam Tagscherer</name></author><category term="technical" /><category term="mcp" /><category term="directory" /><category term="oasf" /><category term="ai-agents" /><category term="ide-integration" /><summary type="html"><![CDATA[The Model Context Protocol (MCP) has emerged as a powerful standard for connecting AI assistants with external tools and data sources. In this post, we’ll explore the Directory MCP server—a feature that brings AI agent discovery and management directly into your IDE, enabling seamless interaction with the Directory ecosystem.]]></summary></entry></feed>
+<p><em>Have questions about Agent Directory federation or SPIFFE? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Tibor Kircsi</name></author><category term="technical" /><category term="security" /><category term="directory" /><category term="spiffe" /><category term="spire" /><category term="federation" /><category term="mTLS" /><category term="zero-trust" /><category term="kind" /><category term="kubernetes" /><summary type="html"><![CDATA[Agent Directory is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange. This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the https_spiffe profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you’re ready for production, see Getting Started and Partner Federation with Prod for the https_web profile and joining the public Directory.]]></summary></entry></feed>
