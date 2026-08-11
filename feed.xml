@@ -1,4 +1,465 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-08-11T06:19:01+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Switching Between Local and Hosted Directory with dirctl Contexts</title><link href="https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway.html" rel="alternate" type="text/html" title="Switching Between Local and Hosted Directory with dirctl Contexts" /><published>2026-08-10T09:00:00+00:00</published><updated>2026-08-10T09:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway</id><content type="html" xml:base="https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway.html"><![CDATA[<p>When you work with <a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a>, you often move between two worlds.</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-08-11T07:57:11+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">SLIM Cross-Transport: WebSocket, gRPC, and the Browser</title><link href="https://blogs.agntcy.org/technical/2026/08/11/slim-cross-transport-browser-websocket-grpc.html" rel="alternate" type="text/html" title="SLIM Cross-Transport: WebSocket, gRPC, and the Browser" /><published>2026-08-11T07:00:00+00:00</published><updated>2026-08-11T07:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/2026/08/11/slim-cross-transport-browser-websocket-grpc</id><content type="html" xml:base="https://blogs.agntcy.org/technical/2026/08/11/slim-cross-transport-browser-websocket-grpc.html"><![CDATA[<p>Agentic systems increasingly span data centers, edge nodes, and browser-based
+operator interfaces. Those environments rarely share a single transport:
+backend services often connect over gRPC, while browsers can only speak
+WebSocket (or secure WebSocket) to the outside world.</p>
+
+<p><a href="https://docs.agntcy.org/slim/overview/">SLIM (Secure Low-Latency Interactive Messaging)</a>
+now addresses that gap directly. A single SLIM node can expose <strong>WebSocket and
+gRPC listeners on the same routing fabric</strong>, and browser applications can
+participate as first-class endpoints through <strong>WebAssembly bindings</strong> —
+without a custom HTTP bridge or a WebSocket-to-gRPC translation layer.</p>
+
+<p>This post explains how dual-transport configuration works, how browser
+bindings fit into the SLIM session model, and where this capability is most
+useful in production-style agent systems.</p>
+
+<!--more-->
+
+<h3 id="what-youll-learn">What you’ll learn</h3>
+
+<p>In this post, you’ll learn:</p>
+
+<ul>
+  <li>How to configure one SLIM node with multiple listeners (WebSocket + gRPC)</li>
+  <li>How SLIM infers transport from endpoint schemes, including <code class="language-plaintext highlighter-rouge">ws://</code> and
+<code class="language-plaintext highlighter-rouge">wss://</code></li>
+  <li>How browser applications connect through
+<code class="language-plaintext highlighter-rouge">@agntcy/slim-bindings-react-native/web</code></li>
+  <li>How cross-transport multicast and MLS sessions behave end to end</li>
+  <li>Practical use cases for browser-native SLIM participation</li>
+  <li>Where the cross-transport demo application and browser bindings live, so you can run
+them yourself</li>
+</ul>
+
+<h2 id="the-integration-problem">The integration problem</h2>
+
+<p>Many teams expose agent traffic to browsers through an application-specific
+bridge: the browser talks HTTP or a custom WebSocket protocol to a gateway,
+and the gateway translates requests onto gRPC or another backend transport.
+That approach works, but it adds operational surface area and often weakens
+security boundaries — the bridge becomes a trusted intermediary that sees
+application payloads.</p>
+
+<p>SLIM takes a different path. Browser tabs load the same Rust session and MLS
+stack (compiled to WebAssembly), connect outbound to a SLIM WebSocket
+listener, and participate in the same named sessions as native gRPC or
+WebSocket clients. The node routes messages; it does not decrypt
+application data when MLS is enabled.</p>
+
+<pre><code class="language-mermaid">graph TB
+    subgraph BEFORE["Bridge-based integration"]
+        direction LR
+        B1["Browser"] --&gt;|"HTTP / SSE / custom WS"| BR["Application bridge"]
+        BR --&gt;|"gRPC"| N1["SLIM node"]
+    end
+
+    subgraph AFTER["Direct SLIM participation"]
+        direction LR
+        B2["Browser + WASM"] --&gt;|"ws:// or wss://"| N2["SLIM node"]
+        NAT["Native client"] --&gt;|"gRPC"| N2
+    end
+
+    BEFORE ~~~ AFTER
+
+    style BEFORE fill:#fdecea,stroke:#c0392b,color:#1c1e21
+    style AFTER fill:#e8f5e9,stroke:#2e7d32,color:#1c1e21
+    style B1 fill:#fff3cd,stroke:#856404,color:#1c1e21
+    style BR fill:#f8d7da,stroke:#721c24,color:#1c1e21
+    style N1 fill:#e9ecef,stroke:#495057,color:#1c1e21
+    style B2 fill:#cfe1fb,stroke:#0251af,color:#1c1e21
+    style NAT fill:#cfe1fb,stroke:#0251af,color:#1c1e21
+    style N2 fill:#0251af,color:#f3f6fd
+</code></pre>
+
+<h2 id="how-dual-transport-configuration-works">How dual-transport configuration works</h2>
+
+<p>SLIM selects the transport <strong>from the endpoint string</strong>. There is no separate
+<code class="language-plaintext highlighter-rouge">transport:</code> field in the server configuration — the scheme (or its absence)
+determines the protocol:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Endpoint form</th>
+      <th>Transport</th>
+      <th>Typical use</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">ws://host:port</code></td>
+      <td>WebSocket (plaintext)</td>
+      <td>Local development</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">wss://host:port</code></td>
+      <td>WebSocket over TLS</td>
+      <td>Production browsers</td>
+    </tr>
+    <tr>
+      <td><code class="language-plaintext highlighter-rouge">host:port</code> or <code class="language-plaintext highlighter-rouge">http://…</code></td>
+      <td>gRPC</td>
+      <td>Native services, high-throughput backends</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Both WebSocket schemes are fully supported. Use <code class="language-plaintext highlighter-rouge">ws://</code> only on trusted local
+networks. Production browser applications served over HTTPS must connect to a
+<code class="language-plaintext highlighter-rouge">wss://</code> endpoint so the page remains mixed-content safe and the WebSocket
+upgrade is TLS-protected.</p>
+
+<h3 id="configuring-two-listeners-on-one-node">Configuring two listeners on one node</h3>
+
+<p>A SLIM data-plane node declares one or more <code class="language-plaintext highlighter-rouge">servers</code> entries under
+<code class="language-plaintext highlighter-rouge">services.&lt;service-id&gt;.dataplane</code>. Each entry becomes an independent listener
+on the <strong>same routing fabric</strong>. Messages published in a session reach every
+member regardless of which listener they connected through.</p>
+
+<p>The cross-transport demo uses this configuration:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">services</span><span class="pi">:</span>
+  <span class="na">slim/0</span><span class="pi">:</span>
+    <span class="na">node_id</span><span class="pi">:</span> <span class="s">slim-cross-transport</span>
+    <span class="na">dataplane</span><span class="pi">:</span>
+      <span class="na">servers</span><span class="pi">:</span>
+        <span class="c1"># WebSocket listener — browsers and native WebSocket clients</span>
+        <span class="pi">-</span> <span class="na">endpoint</span><span class="pi">:</span> <span class="s2">"</span><span class="s">ws://0.0.0.0:46357"</span>
+          <span class="na">tls</span><span class="pi">:</span>
+            <span class="na">insecure</span><span class="pi">:</span> <span class="no">true</span>
+
+        <span class="c1"># gRPC listener — native backend clients (bare host:port = gRPC)</span>
+        <span class="pi">-</span> <span class="na">endpoint</span><span class="pi">:</span> <span class="s2">"</span><span class="s">0.0.0.0:46358"</span>
+          <span class="na">tls</span><span class="pi">:</span>
+            <span class="na">insecure</span><span class="pi">:</span> <span class="no">true</span>
+
+      <span class="na">clients</span><span class="pi">:</span> <span class="pi">[]</span>
+</code></pre></div></div>
+
+<p>Reading the configuration line by line:</p>
+
+<ul>
+  <li><strong><code class="language-plaintext highlighter-rouge">node_id</code></strong> — Logical name of this node in the topology. Other
+participants and operators refer to it in logs and diagnostics.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">dataplane.servers</code></strong> — Inbound listeners. Add one block per transport
+you want the node to accept.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">endpoint: "ws://0.0.0.0:46357"</code></strong> — Opens a WebSocket listener on all
+interfaces, port 46357. Any client — browser WASM or native — that dials
+<code class="language-plaintext highlighter-rouge">ws://127.0.0.1:46357</code> (or <code class="language-plaintext highlighter-rouge">wss://…</code> in production) attaches here.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">endpoint: "0.0.0.0:46358"</code></strong> — Opens a gRPC listener on port 46358.
+Native clients configured with a bare <code class="language-plaintext highlighter-rouge">host:port</code> endpoint use this path.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">tls.insecure: true</code></strong> — Disables TLS verification for local demos only.
+<strong>Do not use this in production.</strong> For production, configure proper TLS
+material and use <code class="language-plaintext highlighter-rouge">wss://</code> for browser-facing WebSocket endpoints.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">clients: []</code></strong> — This node acts purely as a listener in the demo; it
+does not dial outbound to other nodes.</li>
+</ul>
+
+<p>For production, the WebSocket listener would typically look like:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="pi">-</span> <span class="na">endpoint</span><span class="pi">:</span> <span class="s2">"</span><span class="s">wss://0.0.0.0:443"</span>
+          <span class="na">tls</span><span class="pi">:</span>
+            <span class="na">cert_file</span><span class="pi">:</span> <span class="s">/path/to/server.crt</span>
+            <span class="na">key_file</span><span class="pi">:</span> <span class="s">/path/to/server.key</span>
+</code></pre></div></div>
+
+<p>Browser code then connects with <code class="language-plaintext highlighter-rouge">service.connectAsync("wss://slim.example.com", …)</code>
+and <code class="language-plaintext highlighter-rouge">app.subscribeAsync(local, connId)</code>. The bindings validate that browser
+endpoints use <code class="language-plaintext highlighter-rouge">ws://</code> or <code class="language-plaintext highlighter-rouge">wss://</code> only.</p>
+
+<p>The full demo configuration is in
+<a href="https://github.com/agntcy/agentic-apps/blob/main/slim-cross-transport/configs/server-config.yaml"><code class="language-plaintext highlighter-rouge">slim-cross-transport/configs/server-config.yaml</code></a>
+in the <a href="https://github.com/agntcy/agentic-apps/tree/main/slim-cross-transport">cross-transport demo application</a>.</p>
+
+<h3 id="cross-transport-routing-on-one-fabric">Cross-transport routing on one fabric</h3>
+
+<p>Once connected, participants are addressed by <strong>SLIM name</strong>
+(<code class="language-plaintext highlighter-rouge">org/namespace/application</code>), not by IP or port. A browser tab on WebSocket
+and a backend service on gRPC can join the same multicast session because the
+node forwards by name through a shared routing fabric.</p>
+
+<pre><code class="language-mermaid">graph TB
+    subgraph NODE["SLIM node — shared routing fabric"]
+        WS["WebSocket listener&lt;br/&gt;ws:// :46357"]
+        GRPC["gRPC listener&lt;br/&gt;:46358"]
+        FABRIC(("Routing fabric"))
+        WS --- FABRIC
+        GRPC --- FABRIC
+    end
+
+    BA["Browser + WASM&lt;br/&gt;browser-a"] &lt;--&gt;|"ws:// or wss://"| WS
+    NW["Native WebSocket&lt;br/&gt;native-ws-1"] &lt;--&gt;|WebSocket| WS
+    NG["Native gRPC&lt;br/&gt;native-grpc-1"] &lt;--&gt;|gRPC| GRPC
+
+    style NODE fill:#eff3fc,stroke:#0251af,color:#1c1e21
+    style FABRIC fill:#0251af,color:#f3f6fd
+    style WS fill:#cfe1fb,stroke:#0251af,color:#1c1e21
+    style GRPC fill:#cfe1fb,stroke:#0251af,color:#1c1e21
+    style BA fill:#d4edda,stroke:#2d6a4f,color:#1c1e21
+    style NW fill:#d4edda,stroke:#2d6a4f,color:#1c1e21
+    style NG fill:#fff3cd,stroke:#856404,color:#1c1e21
+</code></pre>
+
+<p>After a session is established, every participant uses the same SLIM session
+API — <code class="language-plaintext highlighter-rouge">createSession</code>, <code class="language-plaintext highlighter-rouge">invite</code>, <code class="language-plaintext highlighter-rouge">publish</code>, <code class="language-plaintext highlighter-rouge">subscribe</code> — regardless of
+transport. Transport is a connection detail; session semantics are not.</p>
+
+<h2 id="browser-bindings-architecture">Browser bindings architecture</h2>
+
+<p>The browser entry point is the web export of the React Native bindings
+package:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span>
+  <span class="nx">Direction</span><span class="p">,</span>
+  <span class="nx">Name</span><span class="p">,</span>
+  <span class="nx">Service</span><span class="p">,</span>
+  <span class="nx">SessionType</span><span class="p">,</span>
+  <span class="nx">uniffiInitAsync</span><span class="p">,</span>
+<span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">@agntcy/slim-bindings-react-native/web</span><span class="dl">"</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>The initialization sequence is:</p>
+
+<ol>
+  <li><strong><code class="language-plaintext highlighter-rouge">uniffiInitAsync()</code></strong> loads the generated WASM module and validates
+UniFFI checksums.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">Service.connectAsync(...)</code></strong> opens an outbound WebSocket to the SLIM
+node (<code class="language-plaintext highlighter-rouge">ws://</code> or <code class="language-plaintext highlighter-rouge">wss://</code>) and returns a connection id for routing.</li>
+  <li><strong><code class="language-plaintext highlighter-rouge">Service.createAppWithDirectionAsync(...)</code></strong> creates the same core <code class="language-plaintext highlighter-rouge">App</code>
+used on native platforms; <strong><code class="language-plaintext highlighter-rouge">App.subscribeAsync(...)</code></strong> advertises the
+local SLIM name on that connection so the node can route messages back.</li>
+  <li><strong>Session operations</strong> (<code class="language-plaintext highlighter-rouge">createSessionAndWaitAsync</code>, <code class="language-plaintext highlighter-rouge">inviteAndWaitAsync</code>,
+<code class="language-plaintext highlighter-rouge">publishAndWaitAsync</code>, message listeners) follow the same API surface as
+native bindings.</li>
+</ol>
+
+<p>Example connection from a browser tab:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">await</span> <span class="nx">uniffiInitAsync</span><span class="p">();</span>
+
+<span class="kd">const</span> <span class="nx">local</span> <span class="o">=</span> <span class="nx">Name</span><span class="p">.</span><span class="nx">fromString</span><span class="p">(</span><span class="dl">"</span><span class="s2">org/default/browser-a</span><span class="dl">"</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">service</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Service</span><span class="p">(</span><span class="dl">"</span><span class="s2">browser-a</span><span class="dl">"</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">connId</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">service</span><span class="p">.</span><span class="nx">connectAsync</span><span class="p">(</span>
+  <span class="dl">"</span><span class="s2">ws://127.0.0.1:46357</span><span class="dl">"</span><span class="p">,</span>   <span class="c1">// use wss:// in production</span>
+  <span class="kc">undefined</span><span class="p">,</span>                 <span class="c1">// optional auth token query param</span>
+<span class="p">);</span>
+<span class="kd">const</span> <span class="nx">app</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">service</span><span class="p">.</span><span class="nx">createAppWithDirectionAsync</span><span class="p">(</span>
+  <span class="nx">local</span><span class="p">,</span>
+  <span class="nx">sharedSecret</span><span class="p">,</span>
+  <span class="nx">Direction</span><span class="p">.</span><span class="nx">Bidirectional</span><span class="p">,</span>
+<span class="p">);</span>
+<span class="k">await</span> <span class="nx">app</span><span class="p">.</span><span class="nx">subscribeAsync</span><span class="p">(</span><span class="nx">local</span><span class="p">,</span> <span class="nx">connId</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>For a multicast session, the moderator installs routes on the upstream
+connection, creates the group, and invites participants by name:</p>
+
+<div class="language-typescript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">participant</span> <span class="k">of</span> <span class="nx">participants</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">await</span> <span class="nx">app</span><span class="p">.</span><span class="nx">setRouteAsync</span><span class="p">(</span><span class="nx">participant</span><span class="p">,</span> <span class="nx">connId</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="kd">const</span> <span class="nx">session</span> <span class="o">=</span> <span class="k">await</span> <span class="nx">app</span><span class="p">.</span><span class="nx">createSessionAndWaitAsync</span><span class="p">(</span>
+  <span class="p">{</span>
+    <span class="na">sessionType</span><span class="p">:</span> <span class="nx">SessionType</span><span class="p">.</span><span class="nx">Group</span><span class="p">,</span>
+    <span class="na">maxRetries</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="na">interval</span><span class="p">:</span> <span class="mi">1</span><span class="nx">_000</span><span class="p">,</span>
+    <span class="na">metadata</span><span class="p">:</span> <span class="k">new</span> <span class="nb">Map</span><span class="p">(),</span>
+    <span class="na">mlsSettings</span><span class="p">:</span> <span class="p">{</span> <span class="na">headerIntegrityValidationPercent</span><span class="p">:</span> <span class="mi">100</span> <span class="p">},</span>
+  <span class="p">},</span>
+  <span class="nx">Name</span><span class="p">.</span><span class="nx">fromString</span><span class="p">(</span><span class="dl">"</span><span class="s2">org/default/room-1</span><span class="dl">"</span><span class="p">),</span>
+<span class="p">);</span>
+
+<span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">participant</span> <span class="k">of</span> <span class="nx">participants</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">await</span> <span class="nx">session</span><span class="p">.</span><span class="nx">inviteAndWaitAsync</span><span class="p">(</span><span class="nx">participant</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h3 id="browser-bindings-on-npm">Browser bindings on npm</h3>
+
+<p>Browser bindings ship in
+<a href="https://www.npmjs.com/package/@agntcy/slim-bindings-react-native/v/2.0.0"><code class="language-plaintext highlighter-rouge">@agntcy/slim-bindings-react-native@2.0.0</code></a>
+on npm, including the prebuilt WASM binary and the stable <code class="language-plaintext highlighter-rouge">/web</code> entry point
+(<a href="https://github.com/agntcy/slim-bindings/blob/main/react-native/web.ts"><code class="language-plaintext highlighter-rouge">web.ts</code></a>).
+The cross-transport demo installs them with <code class="language-plaintext highlighter-rouge">npm install</code>.</p>
+
+<p>Under the hood, the package is built with <code class="language-plaintext highlighter-rouge">uniffi-bindgen-react-native</code>
+(<code class="language-plaintext highlighter-rouge">ubrn</code>) and <code class="language-plaintext highlighter-rouge">wasm-bindgen</code>, producing TypeScript bindings, a JavaScript
+loader, and the WASM binary under <code class="language-plaintext highlighter-rouge">generated/web/</code>. The WASM crate enables
+the <code class="language-plaintext highlighter-rouge">web</code> feature on
+<a href="https://github.com/agntcy/slim/tree/main/crates/slim-bindings"><code class="language-plaintext highlighter-rouge">agntcy-slim-bindings</code></a>,
+which compiles the browser WebSocket client and session layer while reusing
+the same MLS and messaging primitives as native builds.</p>
+
+<h2 id="where-browser-bindings-are-useful">Where browser bindings are useful</h2>
+
+<p>Browser-native SLIM participation is valuable whenever a human or a
+web-based UI must share a secure channel with backend agents — without
+standing up a custom gateway.</p>
+
+<h4 id="human-in-the-loop-agent-workflows">Human-in-the-loop agent workflows</h4>
+
+<p>Approval gates, remediation confirmations, and policy exceptions often
+require a person on the same channel as the agents proposing an action. With
+browser bindings, an operator UI joins the SLIM session directly, receives
+live agent messages, and responds in real time — including under MLS when
+required.</p>
+
+<h4 id="operator-consoles-and-observability-surfaces">Operator consoles and observability surfaces</h4>
+
+<p>Dashboards that today poll REST endpoints can instead subscribe to SLIM
+sessions. An operator sees the same event stream as the agents, with lower
+latency and without duplicating message semantics in a separate API layer.</p>
+
+<h4 id="cross-transport-collaboration">Cross-transport collaboration</h4>
+
+<p>A typical deployment might run inference agents over gRPC inside a cluster
+while a browser-based copilot connects over <code class="language-plaintext highlighter-rouge">wss://</code> through an ingress
+controller. Both sides participate in one multicast room because SLIM routes
+by name, not by transport.</p>
+
+<h4 id="interactive-product-demos-and-onboarding">Interactive product demos and onboarding</h4>
+
+<p>Demonstrating SLIM routing, session lifecycle, and MLS encryption is much
+clearer when a browser tab is a visible participant alongside terminal-based
+native clients. The included demo is designed for exactly this purpose.</p>
+
+<h4 id="react-native-and-web-from-one-binding-surface">React Native and web from one binding surface</h4>
+
+<p>The <code class="language-plaintext highlighter-rouge">@agntcy/slim-bindings-react-native</code> package targets React Native on
+mobile and the web through the same generated UniFFI surface. Teams building
+agent tooling that must run on desktop browsers and mobile clients can share
+TypeScript integration code and session logic.</p>
+
+<h2 id="mls-remains-end-to-end">MLS remains end to end</h2>
+
+<p>Enabling MLS does not change the routing topology. Browser and native
+participants negotiate group keys at the endpoints. The SLIM node forwards
+ciphertext; it does not hold MLS decryption keys for application payloads.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant A as browser-a (moderator)
+    participant N as SLIM node
+    participant B as browser-b
+    participant W as native-ws-1
+    participant G as native-grpc-1
+
+    Note over A,G: All participants connect and subscribe by SLIM name
+    A-&gt;&gt;N: Create session + invite
+    N-&gt;&gt;B: Invite over WebSocket
+    N-&gt;&gt;W: Invite over WebSocket
+    N-&gt;&gt;G: Invite over gRPC
+    B--&gt;&gt;A: Join + MLS key package
+    W--&gt;&gt;A: Join + MLS key package
+    G--&gt;&gt;A: Join + MLS key package
+    Note over A,G: MLS group established at endpoints
+    A-&gt;&gt;N: Publish MLS ciphertext
+    N-&gt;&gt;B: Forward ciphertext
+    N-&gt;&gt;W: Forward ciphertext
+    N-&gt;&gt;G: Forward ciphertext
+    Note over B,G: Each participant decrypts locally
+</code></pre>
+
+<p>On the WASM target, MLS uses WebCrypto with the P-256 ciphersuite. Browser
+private keys are encoded as PKCS#8 for WebCrypto compatibility; public keys
+use the uncompressed SEC1 representation. This encoding is handled in the
+Rust authentication layer before MLS operations begin, so application code
+does not need browser-specific cryptography logic.</p>
+
+<h2 id="the-cross-transport-demo">The cross-transport demo</h2>
+
+<p>Everything above comes together in a runnable demo that places browser tabs,
+native WebSocket clients, and native gRPC clients in the same MLS-protected
+session on a single node. The reference implementation lives in the
+<a href="https://github.com/agntcy/agentic-apps/tree/main/slim-cross-transport"><code class="language-plaintext highlighter-rouge">slim-cross-transport</code></a>
+application within the
+<a href="https://github.com/agntcy/agentic-apps/tree/main"><code class="language-plaintext highlighter-rouge">agentic-apps</code></a>
+monorepo. Rather than repeat the setup steps here, the demo ships with a README
+that covers prerequisites, the exact commands, and a step-by-step script — and
+the <a href="#video-walkthrough">video walkthrough</a> below shows the full flow end to end.</p>
+
+<ul>
+  <li><strong>Cross-transport demo application:</strong> <a href="https://github.com/agntcy/agentic-apps/tree/main/slim-cross-transport"><code class="language-plaintext highlighter-rouge">agentic-apps/slim-cross-transport</code></a> — browser UI plus native WebSocket and gRPC clients on one node (the app shown in the <a href="#video-walkthrough">video walkthrough</a>)</li>
+  <li><strong>Setup and run instructions:</strong> <a href="https://github.com/agntcy/agentic-apps/blob/main/slim-cross-transport/README.md">demo README</a></li>
+  <li><strong>Simpler browser-only examples</strong> (point-to-point, group, MLS variants):
+<a href="https://github.com/agntcy/slim-bindings/tree/main/react-native/examples/browser"><code class="language-plaintext highlighter-rouge">slim-bindings/react-native/examples/browser</code></a></li>
+</ul>
+
+<p>The topology includes seven participants on one node:</p>
+
+<pre><code class="language-mermaid">graph TB
+    subgraph NODE["SLIM node — slim-cross-transport"]
+        WS["WebSocket :46357"]
+        GRPC["gRPC :46358"]
+        RF(("Shared fabric"))
+        WS --- RF
+        GRPC --- RF
+    end
+
+    BA["browser-a&lt;br/&gt;moderator"] --&gt; WS
+    BB["browser-b"] --&gt; WS
+    BC["browser-c"] --&gt; WS
+    NW1["native-ws-1"] --&gt; WS
+    NW2["native-ws-2"] --&gt; WS
+    NG1["native-grpc-1"] --&gt; GRPC
+    NG2["native-grpc-2"] --&gt; GRPC
+
+    style NODE fill:#eff3fc,stroke:#0251af,color:#1c1e21
+    style RF fill:#0251af,color:#f3f6fd
+    style WS fill:#cfe1fb,stroke:#0251af,color:#1c1e21
+    style GRPC fill:#cfe1fb,stroke:#0251af,color:#1c1e21
+    style BA fill:#ffd166,stroke:#856404,color:#1c1e21
+    style BB fill:#d4edda,stroke:#2d6a4f,color:#1c1e21
+    style BC fill:#d4edda,stroke:#2d6a4f,color:#1c1e21
+    style NW1 fill:#d4edda,stroke:#2d6a4f,color:#1c1e21
+    style NW2 fill:#d4edda,stroke:#2d6a4f,color:#1c1e21
+    style NG1 fill:#fff3cd,stroke:#856404,color:#1c1e21
+    style NG2 fill:#fff3cd,stroke:#856404,color:#1c1e21
+</code></pre>
+
+<p>The browser UI supports:</p>
+
+<ul>
+  <li>multicast (group) and point-to-point (unicast) sessions;</li>
+  <li>MLS or plaintext, selected per session;</li>
+  <li>moderator and participant roles;</li>
+  <li>automatic acceptance of incoming invitations;</li>
+  <li>multiple concurrent session cards on one connection; and</li>
+  <li>mid-session participant invitation on group sessions.</li>
+</ul>
+
+<p>The moderator/participant roles, session creation, and invitation flow are
+walked through in the <a href="#video-walkthrough">video walkthrough</a> below; the <a href="https://github.com/agntcy/agentic-apps/blob/main/slim-cross-transport/README.md">demo README</a>
+has the copy-pasteable commands and default values.</p>
+
+<h3 id="video-walkthrough">Video walkthrough</h3>
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin-bottom: 1.5em; border: 1px solid #d7dbe0; border-radius: 8px;">
+  <iframe src="https://www.youtube.com/embed/e_iXhiHPfl8" title="SLIM cross-transport demo — WebSocket, gRPC, and the browser" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen=""></iframe>
+</div>
+
+<p>Watch on YouTube: <a href="https://www.youtube.com/watch?v=e_iXhiHPfl8">youtube.com/watch?v=e_iXhiHPfl8</a></p>
+
+<h2 id="closing-thoughts">Closing thoughts</h2>
+
+<p>Cross-transport support removes a long-standing gap between browser clients
+and backend agent infrastructure. A single SLIM node can accept WebSocket
+(<code class="language-plaintext highlighter-rouge">ws://</code> and <code class="language-plaintext highlighter-rouge">wss://</code>) and gRPC connections on one routing fabric; browser
+applications participate through the same session and MLS model as native
+clients; and teams no longer need a bespoke translation layer to put a human
+or web UI on an agent channel.</p>
+
+<p>Transport is a connection detail. Once participants join a SLIM session,
+they communicate through the same APIs — whether they arrived over
+WebSocket or gRPC.</p>
+
+<hr />
+
+<p><em>Have questions or want to show us what you’re building? Join our
+<a href="https://discord.gg/FbEnSHXD34">Discord community</a>,
+read the <a href="https://docs.agntcy.org/slim/overview/">SLIM documentation</a>, or
+explore <a href="https://github.com/agntcy/slim">SLIM</a> and
+<a href="https://github.com/agntcy/slim-bindings">SLIM bindings</a> on GitHub.</em></p>]]></content><author><name>Amit Kumar</name></author><category term="technical" /><category term="slim" /><category term="browser" /><category term="webassembly" /><category term="wasm" /><category term="websocket" /><category term="grpc" /><category term="transport" /><category term="agents" /><summary type="html"><![CDATA[Agentic systems increasingly span data centers, edge nodes, and browser-based operator interfaces. Those environments rarely share a single transport: backend services often connect over gRPC, while browsers can only speak WebSocket (or secure WebSocket) to the outside world. SLIM (Secure Low-Latency Interactive Messaging) now addresses that gap directly. A single SLIM node can expose WebSocket and gRPC listeners on the same routing fabric, and browser applications can participate as first-class endpoints through WebAssembly bindings — without a custom HTTP bridge or a WebSocket-to-gRPC translation layer. This post explains how dual-transport configuration works, how browser bindings fit into the SLIM session model, and where this capability is most useful in production-style agent systems.]]></summary></entry><entry><title type="html">Switching Between Local and Hosted Directory with dirctl Contexts</title><link href="https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway.html" rel="alternate" type="text/html" title="Switching Between Local and Hosted Directory with dirctl Contexts" /><published>2026-08-10T09:00:00+00:00</published><updated>2026-08-10T09:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway</id><content type="html" xml:base="https://blogs.agntcy.org/technical/directory/2026/08/10/dirctl-context-oidc-gateway.html"><![CDATA[<p>When you work with <a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a>, you often move between two worlds.</p>
 
 <p>On your laptop, you want a fast local Directory server where you can test records, validate metadata, and iterate without needing a cluster. When you are ready to search, publish, or interact with a shared environment, you want the hosted Directory testbed with real authentication at the edge.</p>
 
@@ -3426,684 +3887,4 @@ and call each other purely by SLIM name</li>
 
 <hr />
 
-<p><em>Interested in seeing Rust + UniFFI in action? Check out our <a href="https://blogs.agntcy.org/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html">complete guide to integrating Rust and Go</a> or explore the <a href="https://github.com/agntcy/slim">SLIM messaging library</a>. Have questions? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Sam Betts</name></author><category term="technical" /><category term="rust" /><category term="uniffi" /><category term="multilanguage" /><category term="bindings" /><category term="interop" /><category term="architecture" /><summary type="html"><![CDATA[Imagine writing your core business logic once and having it automatically available in Python, Swift, Kotlin, Ruby, and Go. No rewrites, no version drift, no maintaining parallel implementations. This isn’t a pipe dream—it’s exactly what Rust + UniFFI enables. In this post, we’ll explore why choosing Rust as your base language with UniFFI for language bindings is a game-changer for teams supporting multiple platforms.]]></summary></entry><entry><title type="html">Directory Federation Hands-On: SPIRE and SPIFFE in a Local Kind Environment</title><link href="https://blogs.agntcy.org/technical/security/directory/2026/02/25/directory-federation.html" rel="alternate" type="text/html" title="Directory Federation Hands-On: SPIRE and SPIFFE in a Local Kind Environment" /><published>2026-02-25T09:00:00+00:00</published><updated>2026-02-25T09:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/security/directory/2026/02/25/directory-federation</id><content type="html" xml:base="https://blogs.agntcy.org/technical/security/directory/2026/02/25/directory-federation.html"><![CDATA[<p><a href="https://docs.agntcy.org/dir/overview/">Agent Directory</a> is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange.</p>
-
-<p>This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the <code class="language-plaintext highlighter-rouge">https_spiffe</code> profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you’re ready for production, see <a href="https://docs.agntcy.org/dir/getting-started/">Getting Started</a> and <a href="https://docs.agntcy.org/dir/partner-prod-federation/">Partner Federation with Prod</a> for the <code class="language-plaintext highlighter-rouge">https_web</code> profile and joining the public Directory.</p>
-
-<!--more-->
-
-<p><strong>TL;DR:</strong> Run two Kind clusters with SPIRE federation (<code class="language-plaintext highlighter-rouge">https_spiffe</code>) and cross-cluster Directory + dirctl in about 15–20 minutes. No cert-manager or public DNS required—everything runs locally with MetalLB.</p>
-
-<h3 id="what-youll-learn">What You’ll Learn</h3>
-
-<p>In this post, you’ll learn:</p>
-
-<ul>
-  <li>How SPIRE servers exchange trust bundles for cross-cluster authentication</li>
-  <li>The difference between <code class="language-plaintext highlighter-rouge">https_spiffe</code> (local/air-gapped) and <code class="language-plaintext highlighter-rouge">https_web</code> (production) federation profiles</li>
-  <li>How the Directory and dirctl charts create <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code> automatically</li>
-  <li>How to verify mTLS-authenticated calls between dirctl (partner cluster) and the Directory API (testbed cluster)</li>
-</ul>
-
-<h2 id="why-try-federation-locally">Why Try Federation Locally?</h2>
-
-<ul>
-  <li><strong>Understand the flow</strong> — Trust bundle exchange, workload identity across clusters</li>
-  <li><strong>No production dependencies</strong> — MetalLB provides LoadBalancer IPs; no Let’s Encrypt or DNS</li>
-  <li><strong>Reproducible</strong> — Same steps work on any machine with Docker and kind</li>
-  <li><strong>Foundation for prod</strong> — Concepts transfer directly to production; profile differs (<code class="language-plaintext highlighter-rouge">https_web</code>)</li>
-</ul>
-
-<h2 id="federation-profiles-at-a-glance">Federation Profiles at a Glance</h2>
-
-<table>
-  <thead>
-    <tr>
-      <th>Profile</th>
-      <th>Certificates</th>
-      <th>Bootstrap</th>
-      <th>Best for</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><strong>https_spiffe</strong></td>
-      <td>SPIRE SVIDs</td>
-      <td>Manual exchange</td>
-      <td>Local Kind, air-gapped</td>
-    </tr>
-    <tr>
-      <td><strong>https_web</strong></td>
-      <td>Let’s Encrypt/CA</td>
-      <td>None</td>
-      <td>Production, public cloud</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>We use <code class="language-plaintext highlighter-rouge">https_spiffe</code> here because it needs no cert-manager or public DNS. For production federation with the public Directory, use <code class="language-plaintext highlighter-rouge">https_web</code>. See <a href="https://docs.agntcy.org/dir/federation-profiles/">Federation Profiles</a>.</p>
-
-<h2 id="prerequisites">Prerequisites</h2>
-
-<ul>
-  <li><a href="https://kind.sigs.k8s.io/">kind</a></li>
-  <li><a href="https://kubernetes.io/docs/tasks/tools/">kubectl</a></li>
-  <li><a href="https://helm.sh/">Helm</a> 3.x</li>
-  <li><a href="https://www.docker.com/">Docker</a> (with Buildx)</li>
-</ul>
-
-<h2 id="architecture-overview">Architecture Overview</h2>
-
-<pre><code class="language-mermaid">flowchart LR
-    classDef testbed fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
-    classDef partner fill:#03142b,stroke:#0251af,stroke-width:2px,color:#f3f6fd;
-    classDef feder fill:#0251af,stroke:#f3f6fd,stroke-width:2px,color:#f3f6fd;
-
-    subgraph Testbed["Testbed cluster"]
-        Dir[Directory API]:::testbed
-        Zot[Zot Registry]:::testbed
-        SPIRE_TB[SPIRE Server]:::testbed
-    end
-
-    subgraph Feder["Trust bundle exchange"]
-        TB[Trust bundles]:::feder
-    end
-
-    subgraph Partner["Partner cluster"]
-        Dirctl[dirctl]:::partner
-        SPIRE_PT[SPIRE Server]:::partner
-    end
-
-    SPIRE_TB --&gt; TB
-    TB --&gt; SPIRE_PT
-    SPIRE_PT --&gt; TB
-    TB --&gt; SPIRE_TB
-    Dirctl --&gt;|"mTLS (X.509-SVID)"| Dir
-</code></pre>
-
-<p><strong>Trust domains:</strong></p>
-<ul>
-  <li><code class="language-plaintext highlighter-rouge">testbed.internal.local</code> — Directory cluster</li>
-  <li><code class="language-plaintext highlighter-rouge">partner.testbed.local</code> — dirctl cluster</li>
-</ul>
-
-<hr />
-
-<h2 id="step-1-create-two-kind-clusters-and-install-metallb">Step 1: Create Two Kind Clusters and Install MetalLB</h2>
-
-<p>Create two Kind clusters and install MetalLB so LoadBalancer services receive stable IPs (required for SPIRE federation and the Directory API).</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kind create cluster <span class="nt">--name</span> testbed
-kind create cluster <span class="nt">--name</span> partner
-</code></pre></div></div>
-
-<p>MetalLB provides LoadBalancer IPs in Kind. Inspect your Docker network and pick IPs from the kind subnet:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>docker network inspect kind <span class="nt">--format</span> <span class="s1">'{{range .IPAM.Config}}{{.Subnet}} {{end}}'</span>
-</code></pre></div></div>
-
-<p><strong>Testbed</strong> (e.g. 172.18.255.1–172.18.255.9):</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-testbed
-helm repo add metallb https://metallb.github.io/metallb
-helm upgrade <span class="nt">--install</span> metallb metallb/metallb <span class="nt">-n</span> metallb-system <span class="nt">--create-namespace</span> <span class="nt">--wait</span>
-
-kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: testbed-pool
-  namespace: metallb-system
-spec:
-  addresses: ["172.18.255.1-172.18.255.9"]
----
-apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
-metadata:
-  name: testbed-l2
-  namespace: metallb-system
-spec:
-  ipAddressPools: [testbed-pool]
-</span><span class="no">EOF
-</span></code></pre></div></div>
-
-<p><strong>Partner</strong> (e.g. 172.18.255.11–172.18.255.19):</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
-helm upgrade <span class="nt">--install</span> metallb metallb/metallb <span class="nt">-n</span> metallb-system <span class="nt">--create-namespace</span> <span class="nt">--wait</span>
-
-kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: partner-pool
-  namespace: metallb-system
-spec:
-  addresses: ["172.18.255.11-172.18.255.19"]
----
-apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
-metadata:
-  name: partner-l2
-  namespace: metallb-system
-spec:
-  ipAddressPools: [partner-pool]
-</span><span class="no">EOF
-</span></code></pre></div></div>
-
-<hr />
-
-<h2 id="step-2-deploy-spire-on-both-clusters-https_spiffe">Step 2: Deploy SPIRE on Both Clusters (https_spiffe)</h2>
-
-<p><strong>Testbed:</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-testbed
-
-helm upgrade <span class="nt">--install</span> <span class="nt">-n</span> spire-server spire-crds spire-crds <span class="nt">--repo</span> https://spiffe.github.io/helm-charts-hardened/ <span class="nt">--create-namespace</span>
-helm upgrade <span class="nt">--install</span> <span class="nt">-n</span> spire-server spire spire <span class="nt">--repo</span> https://spiffe.github.io/helm-charts-hardened/ <span class="se">\</span>
-  <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
-global:
-  spire:
-    trustDomain: testbed.internal.local
-    clusterName: testbed
-    namespaces:
-      create: false
-    ingressControllerType: other
-  installAndUpgradeHooks:
-    enabled: false
-  deleteHooks:
-    enabled: false
-
-spire-server:
-  federation:
-    enabled: true
-    tls:
-      spire:
-        enabled: true
-      certManager:
-        enabled: false
-    ingress:
-      enabled: false
-  controllerManager:
-    watchClassless: true
-    className: spire
-    identities:
-      clusterFederatedTrustDomain:
-        enabled: true
-      clusterSPIFFEIDs:
-        default:
-          federatesWith: [partner.testbed.local]
-</span><span class="no">EOF
-</span></code></pre></div></div>
-
-<p>Create LoadBalancer for federation endpoint:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
-apiVersion: v1
-kind: Service
-metadata:
-  name: spire-server-federation
-  namespace: spire-server
-  annotations:
-    metallb.io/address-pool: testbed-pool
-spec:
-  type: LoadBalancer
-  selector:
-    app.kubernetes.io/name: server
-    app.kubernetes.io/instance: spire
-  ports:
-  - port: 8443
-    targetPort: 8443
-    name: federation
-</span><span class="no">EOF
-
-</span><span class="c"># Wait for SPIRE server, agent, and OIDC discovery provider (agent and OIDC are slowest)</span>
-kubectl <span class="nb">wait</span> <span class="nt">--for</span><span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready pod <span class="nt">-n</span> spire-server <span class="nt">-l</span> app.kubernetes.io/instance<span class="o">=</span>spire <span class="nt">--timeout</span><span class="o">=</span>300s
-</code></pre></div></div>
-
-<p><strong>Partner:</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
-
-helm upgrade <span class="nt">--install</span> <span class="nt">-n</span> spire-server spire-crds spire-crds <span class="nt">--repo</span> https://spiffe.github.io/helm-charts-hardened/ <span class="nt">--create-namespace</span>
-helm upgrade <span class="nt">--install</span> <span class="nt">-n</span> spire-server spire spire <span class="nt">--repo</span> https://spiffe.github.io/helm-charts-hardened/ <span class="se">\</span>
-  <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="sh">'</span><span class="no">EOF</span><span class="sh">'
-global:
-  spire:
-    trustDomain: partner.testbed.local
-    clusterName: partner
-    namespaces:
-      create: false
-    ingressControllerType: other
-  installAndUpgradeHooks:
-    enabled: false
-  deleteHooks:
-    enabled: false
-
-spire-server:
-  federation:
-    enabled: true
-    tls:
-      spire:
-        enabled: true
-      certManager:
-        enabled: false
-    ingress:
-      enabled: false
-  controllerManager:
-    watchClassless: true
-    className: spire
-    identities:
-      clusterFederatedTrustDomain:
-        enabled: true
-      clusterSPIFFEIDs:
-        default:
-          federatesWith: [testbed.internal.local]
-</span><span class="no">EOF
-</span></code></pre></div></div>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
-apiVersion: v1
-kind: Service
-metadata:
-  name: spire-server-federation
-  namespace: spire-server
-  annotations:
-    metallb.io/address-pool: partner-pool
-spec:
-  type: LoadBalancer
-  selector:
-    app.kubernetes.io/name: server
-    app.kubernetes.io/instance: spire
-  ports:
-  - port: 8443
-    targetPort: 8443
-    name: federation
-</span><span class="no">EOF
-
-</span><span class="c"># Wait for SPIRE server, agent, and OIDC discovery provider (agent and OIDC are slowest)</span>
-kubectl <span class="nb">wait</span> <span class="nt">--for</span><span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready pod <span class="nt">-n</span> spire-server <span class="nt">-l</span> app.kubernetes.io/instance<span class="o">=</span>spire <span class="nt">--timeout</span><span class="o">=</span>300s
-</code></pre></div></div>
-
-<p><strong>Verify:</strong></p>
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get svc <span class="nt">-n</span> spire-server spire-server-federation
-<span class="c"># testbed EXTERNAL-IP: 172.18.255.1, partner: 172.18.255.11</span>
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="step-3-export-trust-bundles">Step 3: Export Trust Bundles</h2>
-
-<p>With <code class="language-plaintext highlighter-rouge">https_spiffe</code>, each SPIRE server needs the other’s trust bundle to bootstrap the TLS connection. The <strong>Directory</strong> and <strong>dirctl</strong> charts create <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code> automatically from their <code class="language-plaintext highlighter-rouge">spire.federation</code> config—you don’t need to apply them manually. We export the bundles now so we can embed them in the Helm values.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
-kubectl <span class="nb">exec</span> <span class="nt">-n</span> spire-server spire-server-0 <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
-  spire-server bundle show <span class="nt">-format</span> spiffe <span class="o">&gt;</span> ./partner.bundle
-
-kubectl config use-context kind-testbed
-kubectl <span class="nb">exec</span> <span class="nt">-n</span> spire-server spire-server-0 <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
-  spire-server bundle show <span class="nt">-format</span> spiffe <span class="o">&gt;</span> ./testbed.bundle
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="step-4-deploy-directory-on-testbed">Step 4: Deploy Directory on Testbed</h2>
-
-<p>Deploy the Agent Directory chart (API server, Zot registry, PostgreSQL) with SPIRE enabled and federation to <code class="language-plaintext highlighter-rouge">partner.testbed.local</code>. The <strong>Directory chart creates <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code></strong> from <code class="language-plaintext highlighter-rouge">apiserver.spire.federation</code>, so the testbed SPIRE server fetches the partner bundle and the API server can verify dirctl’s X.509-SVID over mTLS.</p>
-
-<p>Ensure <code class="language-plaintext highlighter-rouge">./partner.bundle</code> exists before running (from Step 3).</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-testbed
-
-helm <span class="nb">install dir </span>oci://ghcr.io/agntcy/dir/helm-charts/dir <span class="se">\</span>
-  <span class="nt">--version</span> v1.0.0 <span class="se">\</span>
-  <span class="nt">--namespace</span> <span class="nb">dir</span> <span class="se">\</span>
-  <span class="nt">--create-namespace</span> <span class="se">\</span>
-  <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
-apiserver:
-  image:
-    repository: ghcr.io/agntcy/dir-apiserver
-    tag: v1.0.0
-    pullPolicy: IfNotPresent
-  service:
-    type: ClusterIP
-  metrics:
-    enabled: false
-  routingService:
-    type: NodePort
-    nodePort: 30555
-  spire:
-    enabled: true
-    className: spire
-    trustDomain: testbed.internal.local
-    useCSIDriver: true
-    federation:
-      - trustDomain: partner.testbed.local
-        className: spire
-        bundleEndpointURL: https://172.18.255.11:8443
-        bundleEndpointProfile:
-          type: https_spiffe
-          endpointSPIFFEID: spiffe://partner.testbed.local/spire/server
-        trustDomainBundle: |
-</span><span class="si">$(</span><span class="nb">cat</span> ./partner.bundle | <span class="nb">sed</span> <span class="s1">'s/^/          /'</span><span class="si">)</span><span class="sh">
-  config:
-    listen_address: "0.0.0.0:8888"
-    oasf_api_validation:
-      disable: true
-    authn:
-      enabled: true
-      mode: "x509"
-      socket_path: "unix:///run/spire/agent-sockets/api.sock"
-      audiences:
-        - "spiffe://testbed.internal.local/spire/server"
-    authz:
-      enabled: true
-      enforcer_policy_file_path: "/etc/agntcy/dir/authz_policies.csv"
-    ratelimit:
-      enabled: false
-    store:
-      provider: "oci"
-      oci:
-        registry_address: "dir-zot.dir.svc.cluster.local:5000"
-        auth_config:
-          insecure: "true"
-          username: "admin"
-          password: "admin"
-    routing:
-      listen_address: "/ip4/0.0.0.0/tcp/5555"
-      datastore_dir: /etc/routing/datastore
-      directory_api_address: "dir-apiserver.dir.svc.cluster.local:8888"
-      gossipsub:
-        enabled: false
-    sync:
-      auth_config:
-        username: "user"
-        password: "user"
-    publication:
-      scheduler_interval: "1h"
-      worker_count: 1
-      worker_timeout: "30m"
-    database:
-      type: "postgres"
-      postgres:
-        host: ""
-        port: 5432
-        database: "dir"
-        ssl_mode: "disable"
-  authz_policies_csv: |
-    p,testbed.internal.local,*
-    p,partner.testbed.local,*
-    p,*,/agntcy.dir.store.v1.StoreService/Push
-    p,*,/agntcy.dir.store.v1.StoreService/Pull
-    p,*,/agntcy.dir.store.v1.StoreService/PullReferrer
-    p,*,/agntcy.dir.store.v1.StoreService/Lookup
-    p,*,/agntcy.dir.store.v1.SyncService/RequestRegistryCredentials
-  secrets:
-    ociAuth:
-      username: "admin"
-      password: "admin"
-  reconciler:
-    config:
-      regsync:
-        enabled: false
-      indexer:
-        enabled: false
-  postgresql:
-    enabled: true
-    auth:
-      username: "dir"
-      password: "dir"
-      database: "dir"
-  strategy:
-    type: Recreate
-  extraVolumeMounts:
-    - name: dir-routing-storage
-      mountPath: /etc/routing
-  extraVolumes:
-    - name: dir-routing-storage
-      emptyDir: {}
-  zot:
-    resources: {}
-    mountSecret: true
-    authHeader: "admin:admin"
-    secretFiles:
-      htpasswd: |-
-        admin:</span><span class="se">\$</span><span class="sh">2y</span><span class="se">\$</span><span class="sh">05</span><span class="se">\$</span><span class="sh">vmiurPmJvHylk78HHFWuruFFVePlit9rZWGA/FbZfTEmNRneGJtha
-        user:</span><span class="se">\$</span><span class="sh">2y</span><span class="se">\$</span><span class="sh">05</span><span class="se">\$</span><span class="sh">L86zqQDfH5y445dcMlwu6uHv.oXFgT6AiJCwpv3ehr7idc0rI3S2G
-    mountConfig: true
-    configFiles:
-      config.json: |-
-        {
-          "distSpecVersion": "1.1.1",
-          "storage": {"rootDirectory": "/var/lib/registry"},
-          "http": {
-            "address": "0.0.0.0",
-            "port": "5000",
-            "auth": {"htpasswd": {"path": "/secret/htpasswd"}},
-            "accessControl": {
-              "adminPolicy": {"users": ["admin"], "actions": ["read", "create", "update", "delete"]},
-              "repositories": {"**": {"anonymousPolicy": [], "defaultPolicy": ["read"]}}
-            }
-          },
-          "log": {"level": "info"},
-          "extensions": {"search": {"enable": true}, "trust": {"enable": true, "cosign": true, "notation": false}}
-        }
-</span><span class="no">EOF
-</span></code></pre></div></div>
-
-<p>Wait for the API server:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">wait</span> <span class="nt">--for</span><span class="o">=</span><span class="nv">condition</span><span class="o">=</span>ready pod <span class="nt">-n</span> <span class="nb">dir</span> <span class="nt">-l</span> app.kubernetes.io/name<span class="o">=</span>apiserver <span class="nt">--timeout</span><span class="o">=</span>240s
-</code></pre></div></div>
-
-<p>Expose Directory API via LoadBalancer:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
-apiVersion: v1
-kind: Service
-metadata:
-  name: dir-apiserver-external
-  namespace: dir
-  annotations:
-    metallb.io/address-pool: testbed-pool
-spec:
-  type: LoadBalancer
-  selector:
-    app.kubernetes.io/name: apiserver
-    app.kubernetes.io/instance: dir
-  ports:
-  - port: 8888
-    targetPort: 8888
-    name: grpc
-</span><span class="no">EOF
-</span><span class="c"># EXTERNAL-IP will be 172.18.255.2</span>
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="step-5-deploy-dirctl-on-partner">Step 5: Deploy dirctl on Partner</h2>
-
-<p>Deploy the dirctl chart configured to call the testbed API at <code class="language-plaintext highlighter-rouge">172.18.255.2:8888</code>. The <strong>dirctl chart creates <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code></strong> from <code class="language-plaintext highlighter-rouge">spire.federation</code>, so the partner SPIRE server fetches the testbed bundle and dirctl can verify the API server’s certificate over mTLS. The search cronjob runs every minute to demonstrate cross-cluster connectivity.</p>
-
-<p>Ensure <code class="language-plaintext highlighter-rouge">./testbed.bundle</code> exists before running (from Step 3).</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
-
-helm <span class="nb">install </span>dirctl oci://ghcr.io/agntcy/dir/helm-charts/dirctl <span class="se">\</span>
-  <span class="nt">--version</span> v1.0.0 <span class="se">\</span>
-  <span class="nt">--namespace</span> dir-admin <span class="se">\</span>
-  <span class="nt">--create-namespace</span> <span class="se">\</span>
-  <span class="nt">-f</span> - <span class="o">&lt;&lt;</span><span class="no">EOF</span><span class="sh">
-global:
-  cronjob:
-    failedJobsHistoryLimit: 10
-    successfulJobsHistoryLimit: 10
-    concurrencyPolicy: "Forbid"
-
-image:
-  repository: ghcr.io/agntcy/dir-ctl
-  tag: v1.0.0
-  pullPolicy: IfNotPresent
-
-spire:
-  enabled: true
-  trustDomain: partner.testbed.local
-  useCSIDriver: true
-  className: spire
-  federation:
-    - trustDomain: testbed.internal.local
-      className: spire
-      bundleEndpointURL: https://172.18.255.1:8443
-      bundleEndpointProfile:
-        type: https_spiffe
-        endpointSPIFFEID: spiffe://testbed.internal.local/spire/server
-      trustDomainBundle: |
-</span><span class="si">$(</span><span class="nb">cat</span> ./testbed.bundle | <span class="nb">sed</span> <span class="s1">'s/^/        /'</span><span class="si">)</span><span class="sh">
-
-env:
-  - name: DIRECTORY_CLIENT_SERVER_ADDRESS
-    value: "172.18.255.2:8888"
-  - name: DIRECTORY_CLIENT_AUTH_MODE
-    value: "x509"
-  - name: DIRECTORY_CLIENT_TLS_SKIP_VERIFY
-    value: "true"
-
-cronjobs:
-  search:
-    enabled: true
-    schedule: "* * * * *"
-    args: ["search"]
-</span><span class="no">EOF
-</span></code></pre></div></div>
-
-<blockquote>
-  <p><strong>Note:</strong> <code class="language-plaintext highlighter-rouge">DIRECTORY_CLIENT_TLS_SKIP_VERIFY: "true"</code> is used because the API server is reached via MetalLB IP (no matching cert SAN). For production, use a proper DNS name and valid certificate.</p>
-</blockquote>
-
-<hr />
-
-<h2 id="step-6-verify">Step 6: Verify</h2>
-
-<p><strong>Optional: verify SPIRE federation first.</strong> Confirm each cluster has the other’s trust bundle—helps debug auth failures before running dirctl:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># On testbed – partner's bundle should appear</span>
-kubectl config use-context kind-testbed
-kubectl <span class="nb">exec</span> <span class="nt">-n</span> spire-server spire-server-0 <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
-  spire-server bundle list <span class="nt">-id</span> spiffe://partner.testbed.local <span class="nt">-format</span> spiffe
-
-<span class="c"># On partner – testbed's bundle should appear</span>
-kubectl config use-context kind-partner
-kubectl <span class="nb">exec</span> <span class="nt">-n</span> spire-server spire-server-0 <span class="nt">-c</span> spire-server <span class="nt">--</span> <span class="se">\</span>
-  spire-server bundle list <span class="nt">-id</span> spiffe://testbed.internal.local <span class="nt">-format</span> spiffe
-</code></pre></div></div>
-
-<p><strong>Verify dirctl can call the Directory API:</strong></p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl config use-context kind-partner
-kubectl create job <span class="nt">-n</span> dir-admin dirctl-verify <span class="nt">--from</span><span class="o">=</span>cronjob/dirctl-search <span class="nt">--dry-run</span><span class="o">=</span>client <span class="nt">-o</span> yaml | kubectl apply <span class="nt">-f</span> -
-kubectl <span class="nb">wait</span> <span class="nt">--for</span><span class="o">=</span><span class="nv">condition</span><span class="o">=</span><span class="nb">complete </span>job/dirctl-verify <span class="nt">-n</span> dir-admin <span class="nt">--timeout</span><span class="o">=</span>120s
-kubectl logs <span class="nt">-n</span> dir-admin job/dirctl-verify
-</code></pre></div></div>
-
-<p>Expected: successful <code class="language-plaintext highlighter-rouge">search</code> output (list of records or empty). If you see <code class="language-plaintext highlighter-rouge">remote error: tls: bad certificate</code>, ensure the Directory API server has <code class="language-plaintext highlighter-rouge">apiserver.spire.federation</code> for <code class="language-plaintext highlighter-rouge">partner.testbed.local</code> and <code class="language-plaintext highlighter-rouge">authz_policies_csv</code> includes <code class="language-plaintext highlighter-rouge">p,partner.testbed.local,*</code>.</p>
-
-<hr />
-
-<h2 id="cleanup">Cleanup</h2>
-
-<p>When finished, tear down both clusters:</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Testbed</span>
-kubectl config use-context kind-testbed
-helm uninstall <span class="nb">dir</span> <span class="nt">-n</span> <span class="nb">dir
-</span>helm uninstall spire <span class="nt">-n</span> spire-server
-helm uninstall spire-crds <span class="nt">-n</span> spire-server
-
-<span class="c"># Partner</span>
-kubectl config use-context kind-partner
-helm uninstall dirctl <span class="nt">-n</span> dir-admin
-helm uninstall spire <span class="nt">-n</span> spire-server
-helm uninstall spire-crds <span class="nt">-n</span> spire-server
-
-<span class="c"># Delete clusters</span>
-kind delete cluster <span class="nt">--name</span> testbed
-kind delete cluster <span class="nt">--name</span> partner
-</code></pre></div></div>
-
-<hr />
-
-<h2 id="troubleshooting">Troubleshooting</h2>
-
-<p>For federation-specific issues (trust bundles, certificates, SSL passthrough), see <a href="https://docs.agntcy.org/dir/federation-troubleshooting/">Federation Troubleshooting</a> in the docs.</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Issue</th>
-      <th>Check</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>dirctl auth failure</td>
-      <td><code class="language-plaintext highlighter-rouge">authz_policies_csv</code> has <code class="language-plaintext highlighter-rouge">p,partner.testbed.local,*</code>; dirctl pods get SVIDs</td>
-    </tr>
-    <tr>
-      <td>“no X.509 bundle for trust domain”</td>
-      <td>dirctl needs testbed bundle via <code class="language-plaintext highlighter-rouge">spire.federation</code>; reinstall and retry</td>
-    </tr>
-    <tr>
-      <td>“remote error: tls: bad certificate”</td>
-      <td>Directory needs <code class="language-plaintext highlighter-rouge">apiserver.spire.federation</code> for partner; restart apiserver</td>
-    </tr>
-    <tr>
-      <td>Connection refused</td>
-      <td>MetalLB pools; LoadBalancer selector; Docker network</td>
-    </tr>
-    <tr>
-      <td>Zot 401 / hash errors</td>
-      <td>Use <code class="language-plaintext highlighter-rouge">\$</code> in bcrypt hashes in heredocs to prevent shell expansion</td>
-    </tr>
-    <tr>
-      <td>Reconciler 503</td>
-      <td>Wait for PostgreSQL and Zot to be ready; reconciler needs both for readiness</td>
-    </tr>
-    <tr>
-      <td>SPIFFE CSI driver missing</td>
-      <td>SPIRE chart should provide it; if pods fail, check <code class="language-plaintext highlighter-rouge">spire.useCSIDriver</code> and agent</td>
-    </tr>
-  </tbody>
-</table>
-
-<hr />
-
-<h2 id="conclusion">Conclusion</h2>
-
-<p>This hands-on setup demonstrates that <strong>SPIFFE federation doesn’t require production infrastructure</strong>. With two Kind clusters, MetalLB, and the <code class="language-plaintext highlighter-rouge">https_spiffe</code> profile, you can run cross-cluster mTLS in under 20 minutes. The Agent Directory and dirctl charts handle trust bundle configuration automatically—no manual <code class="language-plaintext highlighter-rouge">ClusterFederatedTrustDomain</code> applies needed. The concepts (trust bundles, workload identity, federation profiles) transfer directly to production; only the profile (<code class="language-plaintext highlighter-rouge">https_web</code>) and infrastructure (Ingress, cert-manager, DNS) change.</p>
-
-<h2 id="next-steps-production-and-public-directory">Next Steps: Production and Public Directory</h2>
-
-<p>For <strong>production</strong> and joining the <strong>public Directory network</strong> at <code class="language-plaintext highlighter-rouge">prod.api.ads.outshift.io</code>:</p>
-
-<ol>
-  <li><strong><a href="https://docs.agntcy.org/dir/prod-deployment/">Production Deployment</a></strong> — EKS, NGINX Ingress, SSL passthrough, persistent storage, credential management.</li>
-  <li><strong><a href="https://docs.agntcy.org/dir/partner-prod-federation/">Partner Federation with Prod</a></strong> — Step-by-step guide using the <code class="language-plaintext highlighter-rouge">https_web</code> profile (Let’s Encrypt), public endpoints, and contributing your federation file to the Directory staging repository.</li>
-</ol>
-
-<h2 id="references">References</h2>
-
-<ul>
-  <li><a href="https://github.com/agntcy/dir">Directory GitHub Repository</a></li>
-  <li><a href="https://docs.agntcy.org/dir/getting-started/">Getting Started</a> — local Kind deployment</li>
-  <li><a href="https://docs.agntcy.org/dir/prod-deployment/">Production Deployment</a> — EKS, NGINX Ingress</li>
-  <li><a href="https://docs.agntcy.org/dir/partner-prod-federation/">Partner Federation with Prod</a> — join the public Directory</li>
-  <li><a href="https://docs.agntcy.org/dir/federation-profiles/">Federation Profiles</a> — https_web vs https_spiffe</li>
-  <li><a href="https://docs.agntcy.org/dir/federation-troubleshooting/">Federation Troubleshooting</a> — best practices and common errors</li>
-  <li><a href="https://spiffe.io">SPIFFE / SPIRE</a></li>
-  <li><a href="https://kind.sigs.k8s.io/">Kind</a></li>
-  <li><a href="https://metallb.org/">MetalLB</a></li>
-</ul>
-
-<hr />
-
-<p><em>Have questions about Agent Directory federation or SPIFFE? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Tibor Kircsi</name></author><category term="technical" /><category term="security" /><category term="directory" /><category term="spiffe" /><category term="spire" /><category term="federation" /><category term="mTLS" /><category term="zero-trust" /><category term="kind" /><category term="kubernetes" /><summary type="html"><![CDATA[Agent Directory is a secure, scalable, decentralized service that holds agent records. The software allows users to publish and discover agent records across the network of decentralized, federated directories. Agent Directory provides a cryptographic trust model that ensures authenticity and provenance of each record. This component is available as open-source software. The Agent Directory enables secure, decentralized agent discovery across organizational boundaries. To join the public Directory network or federate your own instance, you need SPIFFE federation: cryptographic trust between SPIRE servers through trust bundle exchange. This post walks you through a hands-on local setup using two Kind clusters: SPIRE federation with the https_spiffe profile, then Directory and dirctl deployed across clusters. No cert-manager or public DNS required—ideal for learning and experimentation. When you’re ready for production, see Getting Started and Partner Federation with Prod for the https_web profile and joining the public Directory.]]></summary></entry></feed>
+<p><em>Interested in seeing Rust + UniFFI in action? Check out our <a href="https://blogs.agntcy.org/technical/2026/01/27/integrating-rust-and-go-with-uniffi.html">complete guide to integrating Rust and Go</a> or explore the <a href="https://github.com/agntcy/slim">SLIM messaging library</a>. Have questions? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>]]></content><author><name>Sam Betts</name></author><category term="technical" /><category term="rust" /><category term="uniffi" /><category term="multilanguage" /><category term="bindings" /><category term="interop" /><category term="architecture" /><summary type="html"><![CDATA[Imagine writing your core business logic once and having it automatically available in Python, Swift, Kotlin, Ruby, and Go. No rewrites, no version drift, no maintaining parallel implementations. This isn’t a pipe dream—it’s exactly what Rust + UniFFI enables. In this post, we’ll explore why choosing Rust as your base language with UniFFI for language bindings is a game-changer for teams supporting multiple platforms.]]></summary></entry></feed>
