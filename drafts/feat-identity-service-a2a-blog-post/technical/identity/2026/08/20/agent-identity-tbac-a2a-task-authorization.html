@@ -99,7 +99,7 @@ autonomous agents.</li>
   <li>Exactly what A2A v1.0.0 standardizes around authorization — and the four
 places the specification says the rest is up to you.</li>
   <li>How AGNTCY Identity establishes who an agent is, using resolvable
-identifiers, <code class="language-plaintext highlighter-rouge">ResolverMetadata</code>, and W3C Verifiable Credential Agent Badges.</li>
+identifiers, <code class="language-plaintext highlighter-rouge">ResolverMetadata</code>, and a W3C Verifiable Credential Agent Badge.</li>
   <li>Why OAuth client identity is the sticking point at organizational
 boundaries, and how Client ID Metadata Documents change that.</li>
   <li>The difference between standing authority, which Task-Based Access Control
@@ -295,7 +295,7 @@ there is a <code class="language-plaintext highlighter-rouge">did:agntcy:</code>
     ID["AGNTCY ID&lt;br/&gt;open, collision-free, verifiable"]
 
     RM["ResolverMetadata, 1:1&lt;br/&gt;keys, assertion methods, endpoints"]
-    BADGE["Agent Badges, 1:many&lt;br/&gt;W3C VC wrapping an OASF document&lt;br/&gt;or an A2A Agent Card"]
+    BADGE["Agent Badge, 1:1&lt;br/&gt;W3C VC wrapping an OASF document&lt;br/&gt;or an A2A Agent Card"]
 
     NODE["Identity Node&lt;br/&gt;trust anchor"]
     RP["Relying party&lt;br/&gt;verifies with no prior relationship"]
@@ -327,12 +327,12 @@ take an agent’s self-description on faith. One caveat worth keeping straight:
 verifying a badge establishes provenance. Deciding you trust its issuer is a
 separate policy call.</p>
 
-<p>Each ID also maps 1:many to <strong>Agent Badges</strong>, <a href="https://www.w3.org/TR/vc-data-model-2.0/">W3C Verifiable
-Credentials</a> whose
+<p>Each ID also maps 1:1 to an <strong>Agent Badge</strong>, a <a href="https://www.w3.org/TR/vc-data-model-2.0/">W3C Verifiable
+Credential</a> whose
 <code class="language-plaintext highlighter-rouge">credentialSubject.badge</code> holds the agent’s real definition: an
 <a href="https://docs.agntcy.org/oasf/open-agentic-schema-framework/">OASF</a> schema document, or for A2A
-agents, the Agent Card itself. Badges get published to an Identity Node acting
-as a trust anchor, so any party can verify one without a prior relationship.</p>
+agents, the Agent Card itself. The badge is published to an Identity Node acting
+as a trust anchor, so any party can verify it without a prior relationship.</p>
 
 <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
   </span><span class="nl">"@context"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"https://www.w3.org/ns/credentials/v2"</span><span class="p">],</span><span class="w">
@@ -401,7 +401,11 @@ and deprecates dynamic client registration in its favor.</p>
 <p>The two models fit together. CIMD answers <em>which OAuth client is this</em>.
 <code class="language-plaintext highlighter-rouge">ResolverMetadata</code> and the Agent Badge can answer <em>who published that agent
 identity and what claims are attached to it</em>. In deployments that align their key
-material, both layers can be rooted in the same cryptographic control plane.</p>
+material, both layers can be rooted in the same cryptographic control plane. How
+that authorization information crosses organizational boundaries is the subject
+of <a href="https://datatracker.ietf.org/doc/draft-diaconu-agents-authz-info-sharing/">Cross-Domain AuthZ Information Sharing for
+Agents</a>,
+an Internet-Draft in progress.</p>
 
 <h2 id="from-identity-to-task-scoped-authorization">From Identity to Task-Scoped Authorization</h2>
 
@@ -410,7 +414,7 @@ specific A2A task authorizes the agent to do. The useful distinction is between
 standing authority and task-bound authority.</p>
 
 <p>Standing authority is what systems can enforce today. AGNTCY Identity
-establishes a verifiable agent identity through Agent Badges and
+establishes a verifiable agent identity through an Agent Badge and
 <code class="language-plaintext highlighter-rouge">ResolverMetadata</code>, and its TBAC policy model lets administrators decide which
 tasks or tools an Agentic Service may invoke, whether they are allowed or
 denied, and whether approval is required.</p>
@@ -474,7 +478,7 @@ domain, is addressed by the IETF’s <a href="https://datatracker.ietf.org/doc/d
 Tokens</a>
 draft.)</p>
 
-<h3 id="two-approval-mechanisms-not-yet-connected">Two approval mechanisms, not yet connected</h3>
+<h3 id="how-the-approval-mechanisms-work-together">How the Approval Mechanisms Work Together</h3>
 
 <p>A2A has <code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code>. An agent stops, says it needs authorization,
 and the request propagates up the chain of tasks until it reaches something,
@@ -482,18 +486,24 @@ ultimately someone, that can decide. AGNTCY’s TBAC has “Needs Approval”: a
 flag that halts an invocation, pushes a notification to a registered device
 showing the caller, the callee, and the tool, then waits on a human.</p>
 
-<p>Same intent, built at different layers, and today they don’t talk to each other.
-AGNTCY’s approval blocks synchronously inside a single hop, on a short timer.
-A2A’s is asynchronous and composes across multiple task hops, so a sub-agent’s
-request shows up as an interrupted state on the orchestrator’s task, and on the
-task above that.</p>
+<p>The two sit at different layers, which is exactly what makes them composable.
+TBAC’s approval blocks synchronously inside a single hop, on a short timer: it is
+where the policy decision is made and where the human is prompted. A2A’s is
+asynchronous and composes across task hops, so a sub-agent’s request surfaces as
+an interrupted state on the orchestrator’s task, and on the task above that.</p>
 
-<p>Connecting them is what pays off. A person sees the objective they delegated
-alongside the specific action now being requested against it, several agents
-down, and the authorization issued in response is scoped to both. A2A §7.6.4
-names three places where the meaning of such a credential can be defined: the
-agent’s implementation, the credential issuer, or an A2A extension. All three
-are open to the community.</p>
+<p>Wiring them together means treating the TBAC rule as the decision point and the
+A2A state transition as the transport. A Needs Approval hit moves the callee’s
+Task to <code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> instead of failing the call; the state
+propagates up the delegation chain under §7.6.2; the approving party resolves it;
+and the resulting authorization flows back down to the hop that asked.</p>
+
+<p>That gives the approver two pieces of context in a single decision: the objective
+they originally delegated, and the specific action now being requested against it
+several agents down. The authorization issued in response can be scoped to both.
+A2A §7.6.4 names three places where the meaning of that authorization may be
+defined: the agent’s implementation, the credential issuer, or an A2A extension.
+All three are open to the community.</p>
 
 <p>The example below is illustrative. It shows what such a task-scoped
 authorization object could carry; AGNTCY Identity does not issue this profile
@@ -684,6 +694,8 @@ connection, Agentic Service creation, Policies and TBAC, development guide.</li>
 OAuth working group.</li>
   <li><a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-transaction-tokens/">draft-ietf-oauth-transaction-tokens</a>,
 OAuth working group.</li>
+  <li><a href="https://datatracker.ietf.org/doc/draft-diaconu-agents-authz-info-sharing/">draft-diaconu-agents-authz-info-sharing</a>
+— Cross-Domain AuthZ Information Sharing for Agents.</li>
   <li><a href="https://modelcontextprotocol.io/specification/draft/basic/authorization">Model Context Protocol authorization
 specification</a>
 — client registration and Client ID Metadata Documents.</li>
