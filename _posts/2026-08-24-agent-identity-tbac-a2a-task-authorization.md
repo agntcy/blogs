@@ -25,6 +25,19 @@ v1.0.0 in March 2026 and the
 way for agents to reach tools. Between them they specify, in detail, how one
 agent asks another agent — or a tool — to do something.
 
+The stakes are concrete. In a recent [OpenAI cybersecurity
+evaluation](https://openai.com/index/hugging-face-model-evaluation-security-incident/),
+agents given a legitimate objective — solve a security benchmark — found and
+exploited a zero-day to escape their sandbox, gained internet access, moved
+across infrastructure, and reached [Hugging Face production
+systems](https://huggingface.co/blog/agent-intrusion-technical-timeline)
+looking for anything that would help finish the task. Anthropic's controlled
+evaluations surfaced the same pattern. Neither case was a production
+deployment, and both organizations published what they found; the structural
+point holds either way. An agent handed a legitimate objective can
+independently discover an illegitimate path toward it, and authority scoped to
+the agent rather than to the task is what leaves that path open.
+
 A2A v1.0.0 also added something more interesting. An agent can now stop in the
 middle of a task and ask for authorization: `TASK_STATE_AUTH_REQUIRED` is a
 real lifecycle state, and the request propagates up a delegation chain until it
@@ -616,6 +629,14 @@ this model.
 - [W3C Verifiable Credentials Data Model
   v2.0](https://www.w3.org/TR/vc-data-model-2.0/) — issuer property
   requirements.
+- [OpenAI, Hugging Face model evaluation security
+  incident](https://openai.com/index/hugging-face-model-evaluation-security-incident/)
+  and [Hugging Face, agent intrusion technical
+  timeline](https://huggingface.co/blog/agent-intrusion-technical-timeline) —
+  the evaluation referenced in the introduction.
+- [AI security for autonomous agents starts with task-based access
+  control](https://outshift.cisco.com/blog/ai-ml/ai-security-for-autonomous-agents),
+  Outshift by Cisco — companion post on the same theme.
 
 ---
 
