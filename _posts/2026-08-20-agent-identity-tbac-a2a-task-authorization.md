@@ -41,7 +41,7 @@ In this post, you'll learn:
 - Exactly what A2A v1.0.0 standardizes around authorization — and the four
   places the specification says the rest is up to you.
 - How AGNTCY Identity establishes who an agent is, using resolvable
-  identifiers, `ResolverMetadata`, and W3C Verifiable Credential Agent Badges.
+  identifiers, `ResolverMetadata`, and a W3C Verifiable Credential Agent Badge.
 - Why OAuth client identity is the sticking point at organizational
   boundaries, and how Client ID Metadata Documents change that.
 - The difference between standing authority, which Task-Based Access Control
@@ -193,7 +193,7 @@ flowchart LR
     ID["AGNTCY ID<br/>open, collision-free, verifiable"]
 
     RM["ResolverMetadata, 1:1<br/>keys, assertion methods, endpoints"]
-    BADGE["Agent Badges, 1:many<br/>W3C VC wrapping an OASF document<br/>or an A2A Agent Card"]
+    BADGE["Agent Badge, 1:1<br/>W3C VC wrapping an OASF document<br/>or an A2A Agent Card"]
 
     NODE["Identity Node<br/>trust anchor"]
     RP["Relying party<br/>verifies with no prior relationship"]
@@ -225,12 +225,12 @@ take an agent's self-description on faith. One caveat worth keeping straight:
 verifying a badge establishes provenance. Deciding you trust its issuer is a
 separate policy call.
 
-Each ID also maps 1:many to **Agent Badges**, [W3C Verifiable
-Credentials](https://www.w3.org/TR/vc-data-model-2.0/) whose
+Each ID also maps 1:1 to an **Agent Badge**, a [W3C Verifiable
+Credential](https://www.w3.org/TR/vc-data-model-2.0/) whose
 `credentialSubject.badge` holds the agent's real definition: an
 [OASF](https://docs.agntcy.org/oasf/open-agentic-schema-framework/) schema document, or for A2A
-agents, the Agent Card itself. Badges get published to an Identity Node acting
-as a trust anchor, so any party can verify one without a prior relationship.
+agents, the Agent Card itself. The badge is published to an Identity Node acting
+as a trust anchor, so any party can verify it without a prior relationship.
 
 ```json
 {
@@ -300,7 +300,11 @@ and deprecates dynamic client registration in its favor.
 The two models fit together. CIMD answers *which OAuth client is this*.
 `ResolverMetadata` and the Agent Badge can answer *who published that agent
 identity and what claims are attached to it*. In deployments that align their key
-material, both layers can be rooted in the same cryptographic control plane.
+material, both layers can be rooted in the same cryptographic control plane. How
+that authorization information crosses organizational boundaries is the subject
+of [Cross-Domain AuthZ Information Sharing for
+Agents](https://datatracker.ietf.org/doc/draft-diaconu-agents-authz-info-sharing/),
+an Internet-Draft in progress.
 
 ## From Identity to Task-Scoped Authorization
 
@@ -309,7 +313,7 @@ specific A2A task authorizes the agent to do. The useful distinction is between
 standing authority and task-bound authority.
 
 Standing authority is what systems can enforce today. AGNTCY Identity
-establishes a verifiable agent identity through Agent Badges and
+establishes a verifiable agent identity through an Agent Badge and
 `ResolverMetadata`, and its TBAC policy model lets administrators decide which
 tasks or tools an Agentic Service may invoke, whether they are allowed or
 denied, and whether approval is required.
@@ -374,7 +378,7 @@ domain, is addressed by the IETF's [Transaction
 Tokens](https://datatracker.ietf.org/doc/draft-ietf-oauth-transaction-tokens/)
 draft.)
 
-### Two approval mechanisms, not yet connected
+### How the Approval Mechanisms Work Together
 
 A2A has `TASK_STATE_AUTH_REQUIRED`. An agent stops, says it needs authorization,
 and the request propagates up the chain of tasks until it reaches something,
@@ -382,18 +386,24 @@ ultimately someone, that can decide. AGNTCY's TBAC has "Needs Approval": a rule
 flag that halts an invocation, pushes a notification to a registered device
 showing the caller, the callee, and the tool, then waits on a human.
 
-Same intent, built at different layers, and today they don't talk to each other.
-AGNTCY's approval blocks synchronously inside a single hop, on a short timer.
-A2A's is asynchronous and composes across multiple task hops, so a sub-agent's
-request shows up as an interrupted state on the orchestrator's task, and on the
-task above that.
+The two sit at different layers, which is exactly what makes them composable.
+TBAC's approval blocks synchronously inside a single hop, on a short timer: it is
+where the policy decision is made and where the human is prompted. A2A's is
+asynchronous and composes across task hops, so a sub-agent's request surfaces as
+an interrupted state on the orchestrator's task, and on the task above that.
 
-Connecting them is what pays off. A person sees the objective they delegated
-alongside the specific action now being requested against it, several agents
-down, and the authorization issued in response is scoped to both. A2A §7.6.4
-names three places where the meaning of such a credential can be defined: the
-agent's implementation, the credential issuer, or an A2A extension. All three
-are open to the community.
+Wiring them together means treating the TBAC rule as the decision point and the
+A2A state transition as the transport. A Needs Approval hit moves the callee's
+Task to `TASK_STATE_AUTH_REQUIRED` instead of failing the call; the state
+propagates up the delegation chain under §7.6.2; the approving party resolves it;
+and the resulting authorization flows back down to the hop that asked.
+
+That gives the approver two pieces of context in a single decision: the objective
+they originally delegated, and the specific action now being requested against it
+several agents down. The authorization issued in response can be scoped to both.
+A2A §7.6.4 names three places where the meaning of that authorization may be
+defined: the agent's implementation, the credential issuer, or an A2A extension.
+All three are open to the community.
 
 The example below is illustrative. It shows what such a task-scoped
 authorization object could carry; AGNTCY Identity does not issue this profile
@@ -581,6 +591,8 @@ this model.
   OAuth working group.
 - [draft-ietf-oauth-transaction-tokens](https://datatracker.ietf.org/doc/draft-ietf-oauth-transaction-tokens/),
   OAuth working group.
+- [draft-diaconu-agents-authz-info-sharing](https://datatracker.ietf.org/doc/draft-diaconu-agents-authz-info-sharing/)
+  — Cross-Domain AuthZ Information Sharing for Agents.
 - [Model Context Protocol authorization
   specification](https://modelcontextprotocol.io/specification/draft/basic/authorization)
   — client registration and Client ID Metadata Documents.
