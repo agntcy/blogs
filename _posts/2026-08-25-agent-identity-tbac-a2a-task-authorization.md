@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together"
-date: 2026-08-24 08:00:00 +0000
+date: 2026-08-25 08:00:00 +0000
 author: Jean Diaconu
 author_url: https://github.com/jdiaconu
 categories: [technical, identity]
