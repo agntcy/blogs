@@ -62,7 +62,7 @@ In this post, you'll learn:
 
 - Why traditional IAM assumptions break down for ephemeral, polymorphic,
   autonomous agents.
-- Exactly what A2A v1.0.0 standardizes around authorization — and where the
+- Exactly what A2A v1.0.1 standardizes around authorization — and where the
   specification says the rest is up to you.
 - How AGNTCY Identity establishes who an agent is, using resolvable
   identifiers, `ResolverMetadata`, and a W3C Verifiable Credential Agent Badge.
@@ -161,7 +161,7 @@ The client then owns the job of obtaining that authorization. If the client is
 itself an agent servicing an upstream task, §7.6.2 lets it flip its own task to
 `TASK_STATE_AUTH_REQUIRED` as well, so a chain of paused tasks reaches a person.
 
-§7.6.4 sets the limits of that state:
+§7.6.4 sets the limits of that state (current draft):
 
 > The A2A protocol does not define the scope, representation, validity, or
 > revocation semantics of the authorization decision or credential obtained in
@@ -171,13 +171,11 @@ itself an agent servicing an upstream task, §7.6.2 lets it flip its own task to
 > authorization decision or credential MUST be defined by the agent's
 > implementation, by the credential issuer, or by an A2A extension.
 
-The section was added in July 2026, after v1.0.1, and sits in the working draft
-rather than a tagged release: the maintainers went back and wrote the boundary
-down. It also rules out the obvious shortcut. A credential obtained in that
-state must not be assumed to authorize later messages on the same task, unless
-the implementation, the issuer, or an extension says it does.
+It also rules out the obvious shortcut. A credential obtained in that state must
+not be assumed to authorize later messages on the same task, unless the
+implementation, the issuer, or an extension says it does.
 
-The tagged releases agree. §7.5 leaves authorization logic
+In the current release, §7.5 leaves authorization logic
 "implementation-specific," listing what it _may_ consider: "specific skills
 requested," "actions attempted within tasks," data access policies, and OAuth
 scopes. §13.1: "Authorization boundaries are defined by each agent's
@@ -315,24 +313,15 @@ partner, per agent.
 
 The IETF is standardizing an alternative. **[Client ID Metadata
 Documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/)**
-(`draft-ietf-oauth-client-id-metadata-document`, adopted by the OAuth working
-group) let a client use an HTTPS URL as its `client_id`, and the authorization
-server dereferences that URL to pull the client's metadata. No prior
-registration transaction required. In deployments that resolve those documents
-dynamically, there is no mandatory per-authorization-server registration
-transaction and no durable client record, though the draft still permits
-preregistration and expects
-it to stay common in enterprise environments. Authorization servers may still
-cache metadata, store grants, record consent, or pre-register CIMD URLs.
-Shared-secret client
-authentication is ruled out for these clients in favor of public-key methods
-like `private_key_jwt`, with key material published through `jwks` or
-`jwks_uri`, so the identity ends up key-bound and rooted in a domain someone
-demonstrably controls. It is an Internet-Draft rather than a finished RFC, but
-[MCP's authorization
+let a client use an HTTPS URL as its `client_id`, which the authorization server
+dereferences to pull the client's metadata. No prior registration transaction
+required. Authentication is public-key rather than shared-secret, with the keys
+published at that URL, so the client identity stays key-bound and rooted in a
+domain someone demonstrably controls. It is still an Internet-Draft, but [MCP's
+authorization
 specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)
-(revision 2026-07-28) already recommends it for client onboarding where no prior
-registration exists, and deprecates dynamic client registration in its favor.
+(revision 2026-07-28) already recommends it where no prior registration exists,
+and deprecates dynamic client registration in its favor.
 
 The two models fit together. CIMD answers _which OAuth client is this_.
 `ResolverMetadata` and the Agent Badge can answer _who published that agent
@@ -450,10 +439,6 @@ A2A §7.6.4 names three places where the meaning of that authorization may be
 defined: the agent's implementation, the credential issuer, or an A2A extension.
 All three are open to the community.
 
-The example below is illustrative. It shows what such a task-scoped
-authorization object could carry; AGNTCY Identity does not issue this profile
-today.
-
 ```json
 {
   "iss": "https://identity.example.com",
@@ -479,16 +464,8 @@ today.
 }
 ```
 
-_The `act` chain follows RFC 8693 §4.1: `sub` is the person the work is for, the
-outer `act` the specialist presenting the credential, and the nested `act` the
-orchestrator that delegated to it, with the resource server deciding on the
-top-level claims and the current actor alone. Existing standards supply reusable
-building blocks for structured authorization, delegation provenance, and proof
-of possession, but they do not define this task-scoped model. The profile work is
-to specify issuance and validation, how authority narrows through delegation, how
-the agent proves
-possession of the authorized key, and how task-bound authority expires or is
-revoked._
+_The example is illustrative: it shows what such a task-scoped authorization
+object could carry. AGNTCY Identity does not issue this profile today._
 
 ### Naming the Operation at an A2A Hop
 
@@ -736,9 +713,6 @@ this model.
   §8.4 Agent Card signing.
 - [§7.6.4 In-Task Authorization
   Scope](https://a2a-protocol.org/latest/specification/#764-in-task-authorization-scope)
-  — added to the specification in July 2026, after the v1.0.1 release. It appears
-  in the working draft and is not part of a tagged version; the pinned v1.0.0 and
-  v1.0.1 documents do not contain it.
 - [A2A extensions
   guide](https://github.com/a2aproject/A2A/blob/main/docs/topics/extensions.md)
   — extension security considerations, including untrusted-input handling and the
