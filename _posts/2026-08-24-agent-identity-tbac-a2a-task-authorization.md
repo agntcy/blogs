@@ -41,8 +41,8 @@ the agent rather than to the task is what leaves that path open.
 
 A2A v1.0.0 also added something more interesting. An agent can now stop in the
 middle of a task and ask for authorization: `TASK_STATE_AUTH_REQUIRED` is a
-real lifecycle state, and the request propagates up a delegation chain until it
-reaches something, ultimately someone, that can decide. What the specification
+real lifecycle state, and the request propagates along a delegation chain until
+it reaches something, ultimately someone, that can decide. What the specification
 then does is decline, explicitly, to define what the resulting permission
 covers, how long it lasts, or how it is revoked.
 
@@ -51,8 +51,8 @@ things the protocol does not supply: a cryptographically verifiable identity for
 the agent, and permissions
 scoped to the task rather than to the agent. AGNTCY Identity provides the first
 half today. This post walks through what A2A standardizes, what it leaves to
-implementers, what the two layers give you together right now, and what is still
-being designed in the open.
+implementers, which building blocks exist today and how they compose, and what
+is still being designed in the open.
 
 <!--more-->
 
@@ -69,7 +69,7 @@ In this post, you'll learn:
 - Why OAuth client identity is the sticking point at organizational
   boundaries, and how Client ID Metadata Documents change that.
 - The difference between standing authority, which Task-Based Access Control
-  enforces today, and task-bound authority, which is still profile work.
+  (TBAC) enforces today, and task-bound authority, which is still profile work.
 - Why an A2A Task carries no declared intent, what that costs you when policy
   keys on tool names, and how an extension could close the gap without becoming
   a bypass.
@@ -97,8 +97,8 @@ So an agent has to answer three questions with cryptography, not assertion:
 
 - Who created me, and what organization do I represent?
 - What am I authorized to do, right now, for this specific piece of work?
-- Can another system verify both before extending trust, without the two of us
-  sharing a central authority?
+- Can another system verify both before extending trust, without a shared
+  central issuer?
 
 ## What A2A 1.0 Actually Standardizes
 
@@ -109,9 +109,9 @@ Three parts of the specification matter if you are designing the security model.
 
 **Task operations are authorization-scoped.** §13.1 requires authorization
 checks on every A2A operation, scoped to the caller's boundaries. `ListTasks`
-returns only tasks that caller can see. `GetTask`, cancellation, and
-subscription each verify access first, before any query that might leak whether
-a resource exists.
+returns only tasks that caller can see. `GetTask`, `CancelTask`, and
+`SubscribeToTask` each verify access first, before any query that might leak
+whether a resource exists.
 
 **Agent Cards are discoverable and signable.** An agent can publish its
 capabilities at the well-known location `/.well-known/agent-card.json`, though
@@ -195,39 +195,39 @@ The released spec says compatible things elsewhere. §7.5 leaves authorization
 logic "implementation-specific," listing what it _may_ consider: "specific
 skills requested," "actions attempted within tasks," data access policies, and
 OAuth scopes. §13.1: "Authorization boundaries are defined by each agent's
-authorization model, not prescribed by the protocol."
+authorization model, not prescribed by the protocol".
 
 A2A standardizes _when_ an agent asks for authorization. What the answer means
 is defined outside the protocol: by the implementation, by the credential
 issuer, or by an extension.
 
-| Capability                                                     | Status in A2A v1.0.0, or the working draft where noted                                            |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Access check for a specific Task                               | Required (§13.1)                                                                                  |
-| Authorization checks on task operations                        | Required; the model itself is left to the implementation                                          |
-| Pause a task to request approval or credentials                | Standardized (`TASK_STATE_AUTH_REQUIRED`)                                                         |
-| Propagate that request up a delegation chain                   | Standardized (§7.6.2)                                                                             |
-| Declare which scopes a skill requires                          | Declarative only (`AgentSkill.securityRequirements`)                                              |
-| Authorization based on the action attempted within a task      | Supported as implementation policy (§7.5)                                                         |
-| Credential cryptographically bound to a `taskId`               | Not standardized                                                                                  |
-| A wire field naming the skill or operation a request invokes    | Not present; the callee infers it from `Message.parts`                                            |
-| Deriving a permitted tool set from a task's objective           | No structured objective exists in the data model to derive from                                   |
-| Task-scoped validity and revocation semantics                  | Not standardized (§7.6.4, working draft)                                                          |
-| A sanctioned place to carry structured authorization semantics | Standardized (`metadata` + `AgentExtension`); sensitive credentials preferably travel out-of-band |
+| Capability                                                                   | Status in A2A v1.0.0, or the working draft where noted                                        |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Authorization checks on task operations, including access to a specific Task | Required (§13.1); the model itself is left to the implementation                              |
+| Pause a task to request approval or credentials                              | Standardized (`TASK_STATE_AUTH_REQUIRED`)                                                     |
+| Propagate that request along a delegation chain                              | Standardized (§7.6.2)                                                                         |
+| Declare which scopes a skill requires                                        | Declarative only (`AgentSkill.securityRequirements`)                                          |
+| Authorization based on the action attempted within a task                    | Supported as implementation policy (§7.5)                                                     |
+| Credential cryptographically bound to a `taskId`                             | Not standardized                                                                              |
+| A wire field naming the skill or operation a request invokes                 | Not present; the callee infers it from `Message.parts`                                        |
+| Deriving a permitted tool set from a task's objective                        | No structured objective exists in the data model to derive from                               |
+| Task-scoped validity and revocation semantics                                | Not standardized (§7.6.4, working draft)                                                      |
+| A standard extension point for structured authorization semantics            | Standardized (`metadata` + `AgentExtension`); sensitive credentials should travel out-of-band |
 
 ## Identity First: Establishing Who the Agent Is
 
 Before you can scope an agent's authority, you need to know whose agent it is.
 [AGNTCY Identity](https://spec.identity.agntcy.org) gives every entity, whether
 that's an Agent, an MCP Server, or a Multi-Agent System, an identifier with
-three properties: open, so no central issuing authority is required;
+three properties: open, so no single central issuing authority is required;
 collision-free; and verifiable by cryptographic proof instead of by claim.
 
 Those identifiers root in whatever the organization already trusts. Connect Duo,
 Microsoft Entra ID, Okta, Ory, or Ping, and the Identity Service derives the
 agent's ID from its registration in that provider. Organizations that would
-rather skip an external IdP can register a self-issued identity instead, and
-there is a `did:agntcy:` method for decentralized deployments.
+rather skip an external identity provider (IdP) can register a self-issued
+identity instead, and there is a `did:agntcy:` method for decentralized
+deployments.
 
 ```mermaid
 flowchart LR
@@ -276,9 +276,11 @@ separate policy call.
 Each ID also maps 1:1 to an **Agent Badge**, a [W3C Verifiable
 Credential](https://www.w3.org/TR/vc-data-model-2.0/) whose
 `credentialSubject.badge` holds the agent's real definition: an
-[OASF](https://docs.agntcy.org/oasf/open-agentic-schema-framework/) schema document, or for A2A
-agents, the Agent Card itself. The badge is published to an Identity Node acting
-as a trust anchor, so any party can verify it without a prior relationship.
+[Open Agentic Schema Framework
+(OASF)](https://docs.agntcy.org/oasf/open-agentic-schema-framework/) schema
+document, or for A2A agents, the Agent Card itself. The badge is published to an
+Identity Node acting as a trust anchor, so any party can verify it without a
+prior relationship.
 
 ```json
 {
@@ -306,9 +308,9 @@ as a trust anchor, so any party can verify it without a prior relationship.
 ```
 
 _An A2A Agent Badge, abridged, in the form published in the AGNTCY Verifiable
-Credential specification. The current Identity Service signs badges as
-JOSE-enveloped credentials, meaning a JWS over the credential, and verification
-accepts either form._
+Credential specification. The current Identity Service signs badges as JSON
+Object Signing and Encryption (JOSE)-enveloped credentials, meaning a JWS over
+the credential, and verification accepts either form._
 
 ## Where the Agent's OAuth Client Identity Comes From
 
@@ -330,9 +332,10 @@ Documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-
 (`draft-ietf-oauth-client-id-metadata-document`, adopted by the OAuth working
 group) let a client use an HTTPS URL as its `client_id`, and the authorization
 server dereferences that URL to pull the client's metadata. No prior
-relationship required. In deployments that resolve those documents dynamically,
-there is no mandatory per-authorization-server registration transaction and no
-durable client record, though the draft still permits preregistration and expects
+registration transaction required. In deployments that resolve those documents
+dynamically, there is no mandatory per-authorization-server registration
+transaction and no durable client record, though the draft still permits
+preregistration and expects
 it to stay common in enterprise environments. Authorization servers may still
 cache metadata, store grants, record consent, or pre-register CIMD URLs.
 Shared-secret client
@@ -341,9 +344,9 @@ like `private_key_jwt`, with key material published through `jwks` or
 `jwks_uri`, so the identity ends up key-bound and rooted in a domain someone
 demonstrably controls. It is an Internet-Draft rather than a finished RFC, but
 [MCP's authorization
-specification](https://modelcontextprotocol.io/specification/draft/basic/authorization)
-already recommends it for client onboarding where no prior registration exists,
-and deprecates dynamic client registration in its favor.
+specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)
+(revision 2026-07-28) already recommends it for client onboarding where no prior
+registration exists, and deprecates dynamic client registration in its favor.
 
 The two models fit together. CIMD answers _which OAuth client is this_.
 `ResolverMetadata` and the Agent Badge can answer _who published that agent
@@ -406,14 +409,13 @@ Concretely, administrators write policy against the agent's real tool names
 rather than abstract scopes — the Identity Service documentation's own example
 of a rule target is `gmail_find_email`. Policies attach to the _calling_ service
 and hold Rules whose `Tasks` field lists the permitted tool names, alongside an
-Allow or Deny action and a "Needs Approval" flag. Because authorization is
-decided when the call happens rather than fixed
-when the token was issued, a policy change can take effect on the next call
-instead of the next token refresh.
+Allow or Deny action and a "Needs Approval" flag. Because policy is evaluated
+when the call happens rather than fixed when the token was issued, a policy
+change can take effect on the next call instead of the next token refresh.
 
 That is already valuable, but it is not the same as task-bound authorization.
 A2A can pause a task with `TASK_STATE_AUTH_REQUIRED`; it can propagate that
-pause up a delegation chain; it can carry extension metadata. What it does not
+pause along a delegation chain; it can carry extension metadata. What it does not
 define is the authorization object that comes back: its scope, lifetime,
 revocation rules, delegation limits, or whether it is cryptographically bound to
 the `taskId`.
@@ -447,8 +449,8 @@ an interrupted state on the orchestrator's task, and on the task above that.
 Wiring them together means treating the TBAC rule as the decision point and the
 A2A state transition as the transport. A Needs Approval hit moves the callee's
 Task to `TASK_STATE_AUTH_REQUIRED` instead of failing the call; the state
-propagates up the delegation chain under §7.6.2; the approving party resolves it;
-and the resulting authorization flows back down to the hop that asked.
+propagates along the delegation chain under §7.6.2; the approving party resolves
+it; and the resulting authorization flows back down to the hop that asked.
 
 That gives the approver two pieces of context in a single decision: the objective
 they originally delegated, and the specific action now being requested against it
@@ -469,12 +471,12 @@ today.
 ```json
 {
   "iss": "https://identity.example.com",
-  "sub": "OKTA-0oa9z8y7x6w5V4u3t2s1",
-  "exp": 1786012800,
+  "sub": "alex@example.com",
+  "exp": 1786459927,
   "cnf": { "jkt": "0ZcOCORZNYy-DWpqq30jZyJGHTN0d2HglBV3uiguA4I" },
   "act": {
-    "sub": "OKTA-0oa1b2c3d4e5F6g7h8i9",
-    "act": { "sub": "alex@example.com" }
+    "sub": "OKTA-0oa9z8y7x6w5V4u3t2s1",
+    "act": { "sub": "OKTA-0oa1b2c3d4e5F6g7h8i9" }
   },
   "a2a": {
     "taskId": "5c2a9e10-3f42-4c8b-9d71-6f0b2a7e4c19",
@@ -655,10 +657,19 @@ attempted.
 ## What Exists Today, and What Comes Next
 
 Verifiable agent identity is released: badges, resolvable identifiers, and
-cryptographic verification that works across organizational boundaries. So is
+provenance verification that operates across organizational boundaries. So is
 tool-level authorization with continuous re-evaluation and human-in-the-loop
 approval. A2A supplies the task lifecycle, the interruption state, the
-propagation semantics, and a sanctioned place to carry extension data.
+propagation semantics, and a standard extension point for carrying extension
+data.
+
+MCP covers adjacent ground, though not in its core protocol: the [Tasks
+extension](https://modelcontextprotocol.io/extensions/tasks) carries a durable
+`taskId` and an `input_required` status, requires opt-in from both client and
+server, and reaches the core specification only if the roadmap work behind it
+lands. If it does, one approval decision would surface as `input_required` on one
+hop and `TASK_STATE_AUTH_REQUIRED` on the next — the same question asked twice,
+which is an argument for answering it once.
 
 What remains is the binding between them: connecting an approval decision to
 A2A's authorization-required state, defining what a task-scoped authorization
@@ -693,8 +704,8 @@ designed to complement existing protocols instead of replacing them:
   registry for publishing and discovering agents across frameworks and
   organizational boundaries.
 - **[SLIM](https://docs.agntcy.org/slim/overview/)**, secure agent-to-agent
-  messaging with pub/sub and MLS encryption, protecting the communication itself
-  and not just the endpoints.
+  messaging with pub/sub and Messaging Layer Security (MLS) encryption,
+  protecting the communication itself and not just the endpoints.
 - **[Identity](https://spec.identity.agntcy.org)**, the identifier,
   `ResolverMetadata`, Agent Badge, and policy model described above.
 
@@ -712,8 +723,8 @@ evolves.
 
 Together, they're the foundation for multi-agent systems that can operate across
 organizational boundaries — not because every party trusts every agent by
-default, but because trust itself has become something that can be verified,
-scoped, and revoked.
+default, but because provenance can be verified, and authority scoped,
+re-evaluated, and revoked.
 
 The future of AI won't depend solely on more capable agents. It will depend on
 agents whose identity and authorization can be checked, not assumed. A2A 1.0
@@ -760,8 +771,8 @@ this model.
   OAuth working group.
 - [draft-diaconu-agents-authz-info-sharing](https://datatracker.ietf.org/doc/draft-diaconu-agents-authz-info-sharing/)
   — Cross-Domain AuthZ Information Sharing for Agents.
-- [Model Context Protocol authorization
-  specification](https://modelcontextprotocol.io/specification/draft/basic/authorization)
+- [Model Context Protocol authorization specification, revision
+  2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization)
   — client registration and Client ID Metadata Documents.
 - [RFC 9396](https://www.rfc-editor.org/rfc/rfc9396.html) (Rich Authorization
   Requests), [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693.html#section-4.1)
