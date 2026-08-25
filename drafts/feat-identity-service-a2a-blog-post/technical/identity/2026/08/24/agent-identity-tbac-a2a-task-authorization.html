@@ -8,8 +8,8 @@
 <meta property="og:title" content="Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together" />
 <meta name="author" content="Jean Diaconu" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="Agent2Agent (A2A) reached v1.0.0 in March 2026 and the Model Context Protocol has become a common way for agents to reach tools. Between them they specify, in detail, how one agent asks another agent — or a tool — to do something. A recent OpenAI cybersecurity evaluation shows what the gap costs in practice. In it, agents given a legitimate objective — solve a security benchmark — found and exploited a zero-day to escape their sandbox, gained internet access, moved across infrastructure, and reached Hugging Face production systems looking for anything that would help finish the task. Anthropic’s controlled evaluations surfaced the same pattern. Neither case was a production deployment, and both organizations published what they found; the structural point holds either way. An agent handed a legitimate objective can independently discover an illegitimate path toward it, and authority scoped to the agent rather than to the task is what leaves that path open. A2A v1.0.0 also added something more interesting. An agent can now stop in the middle of a task and ask for authorization: TASK_STATE_AUTH_REQUIRED is a real lifecycle state, and the request propagates along a delegation chain until it reaches something, ultimately someone, that can decide. What the specification then does is decline, explicitly, to define what the resulting permission covers, how long it lasts, or how it is revoked. That is a deliberate boundary rather than an oversight. Filling it in takes two things the protocol does not supply: a cryptographically verifiable identity for the agent, and permissions scoped to the task rather than to the agent. AGNTCY Identity provides the first half today. This post walks through what A2A standardizes, what it leaves to implementers, which building blocks exist today and how they compose, and what is still being designed in the open." />
-<meta property="og:description" content="Agent2Agent (A2A) reached v1.0.0 in March 2026 and the Model Context Protocol has become a common way for agents to reach tools. Between them they specify, in detail, how one agent asks another agent — or a tool — to do something. A recent OpenAI cybersecurity evaluation shows what the gap costs in practice. In it, agents given a legitimate objective — solve a security benchmark — found and exploited a zero-day to escape their sandbox, gained internet access, moved across infrastructure, and reached Hugging Face production systems looking for anything that would help finish the task. Anthropic’s controlled evaluations surfaced the same pattern. Neither case was a production deployment, and both organizations published what they found; the structural point holds either way. An agent handed a legitimate objective can independently discover an illegitimate path toward it, and authority scoped to the agent rather than to the task is what leaves that path open. A2A v1.0.0 also added something more interesting. An agent can now stop in the middle of a task and ask for authorization: TASK_STATE_AUTH_REQUIRED is a real lifecycle state, and the request propagates along a delegation chain until it reaches something, ultimately someone, that can decide. What the specification then does is decline, explicitly, to define what the resulting permission covers, how long it lasts, or how it is revoked. That is a deliberate boundary rather than an oversight. Filling it in takes two things the protocol does not supply: a cryptographically verifiable identity for the agent, and permissions scoped to the task rather than to the agent. AGNTCY Identity provides the first half today. This post walks through what A2A standardizes, what it leaves to implementers, which building blocks exist today and how they compose, and what is still being designed in the open." />
+<meta name="description" content="Agent2Agent (A2A) reached v1.0.0 in March 2026, with v1.0.1 following in May, and the Model Context Protocol has become a common way for agents to reach tools. Between them they specify, in detail, how one agent asks another agent — or a tool — to do something. What neither specifies is what happens when the agent needs authority it does not have. A recent OpenAI cybersecurity evaluation shows what that gap costs in practice. In it, agents given a legitimate objective — solve a security benchmark — found and exploited a zero-day to escape their sandbox, gained internet access, moved across infrastructure, and reached Hugging Face production systems looking for anything that would help finish the task. Anthropic’s controlled evaluations surfaced the same pattern. Neither case was a production deployment, and both organizations published what they found; the structural point holds either way. An agent handed a legitimate objective can independently discover an illegitimate path toward it, and authority scoped to the agent rather than to the task is what leaves that path open. A2A v1.0.0 also added something more interesting. An agent can now stop in the middle of a task and ask for authorization: TASK_STATE_AUTH_REQUIRED is a real lifecycle state, and the request propagates along a delegation chain until it reaches something, ultimately someone, that can decide. What the specification then does is decline, explicitly, to define what the resulting permission covers, how long it lasts, or how it is revoked. The boundary is deliberate. Filling it in takes two things the protocol does not supply: a cryptographically verifiable identity for the agent, and permissions scoped to the task rather than to the agent. AGNTCY Identity provides the first half today. This post walks through what A2A standardizes, what it leaves to implementers, which building blocks exist today and how they compose, and what is still being designed in the open." />
+<meta property="og:description" content="Agent2Agent (A2A) reached v1.0.0 in March 2026, with v1.0.1 following in May, and the Model Context Protocol has become a common way for agents to reach tools. Between them they specify, in detail, how one agent asks another agent — or a tool — to do something. What neither specifies is what happens when the agent needs authority it does not have. A recent OpenAI cybersecurity evaluation shows what that gap costs in practice. In it, agents given a legitimate objective — solve a security benchmark — found and exploited a zero-day to escape their sandbox, gained internet access, moved across infrastructure, and reached Hugging Face production systems looking for anything that would help finish the task. Anthropic’s controlled evaluations surfaced the same pattern. Neither case was a production deployment, and both organizations published what they found; the structural point holds either way. An agent handed a legitimate objective can independently discover an illegitimate path toward it, and authority scoped to the agent rather than to the task is what leaves that path open. A2A v1.0.0 also added something more interesting. An agent can now stop in the middle of a task and ask for authorization: TASK_STATE_AUTH_REQUIRED is a real lifecycle state, and the request propagates along a delegation chain until it reaches something, ultimately someone, that can decide. What the specification then does is decline, explicitly, to define what the resulting permission covers, how long it lasts, or how it is revoked. The boundary is deliberate. Filling it in takes two things the protocol does not supply: a cryptographically verifiable identity for the agent, and permissions scoped to the task rather than to the agent. AGNTCY Identity provides the first half today. This post walks through what A2A standardizes, what it leaves to implementers, which building blocks exist today and how they compose, and what is still being designed in the open." />
 <link rel="canonical" href="https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/technical/identity/2026/08/24/agent-identity-tbac-a2a-task-authorization.html" />
 <meta property="og:url" content="https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/technical/identity/2026/08/24/agent-identity-tbac-a2a-task-authorization.html" />
 <meta property="og:site_name" content="AGNTCY Blogs" />
@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Jean Diaconu"},"dateModified":"2026-08-24T08:00:00+00:00","datePublished":"2026-08-24T08:00:00+00:00","description":"Agent2Agent (A2A) reached v1.0.0 in March 2026 and the Model Context Protocol has become a common way for agents to reach tools. Between them they specify, in detail, how one agent asks another agent — or a tool — to do something. A recent OpenAI cybersecurity evaluation shows what the gap costs in practice. In it, agents given a legitimate objective — solve a security benchmark — found and exploited a zero-day to escape their sandbox, gained internet access, moved across infrastructure, and reached Hugging Face production systems looking for anything that would help finish the task. Anthropic’s controlled evaluations surfaced the same pattern. Neither case was a production deployment, and both organizations published what they found; the structural point holds either way. An agent handed a legitimate objective can independently discover an illegitimate path toward it, and authority scoped to the agent rather than to the task is what leaves that path open. A2A v1.0.0 also added something more interesting. An agent can now stop in the middle of a task and ask for authorization: TASK_STATE_AUTH_REQUIRED is a real lifecycle state, and the request propagates along a delegation chain until it reaches something, ultimately someone, that can decide. What the specification then does is decline, explicitly, to define what the resulting permission covers, how long it lasts, or how it is revoked. That is a deliberate boundary rather than an oversight. Filling it in takes two things the protocol does not supply: a cryptographically verifiable identity for the agent, and permissions scoped to the task rather than to the agent. AGNTCY Identity provides the first half today. This post walks through what A2A standardizes, what it leaves to implementers, which building blocks exist today and how they compose, and what is still being designed in the open.","headline":"Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/technical/identity/2026/08/24/agent-identity-tbac-a2a-task-authorization.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/assets/images/logo-light.svg"},"name":"Jean Diaconu"},"url":"https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/technical/identity/2026/08/24/agent-identity-tbac-a2a-task-authorization.html"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Jean Diaconu"},"dateModified":"2026-08-24T08:00:00+00:00","datePublished":"2026-08-24T08:00:00+00:00","description":"Agent2Agent (A2A) reached v1.0.0 in March 2026, with v1.0.1 following in May, and the Model Context Protocol has become a common way for agents to reach tools. Between them they specify, in detail, how one agent asks another agent — or a tool — to do something. What neither specifies is what happens when the agent needs authority it does not have. A recent OpenAI cybersecurity evaluation shows what that gap costs in practice. In it, agents given a legitimate objective — solve a security benchmark — found and exploited a zero-day to escape their sandbox, gained internet access, moved across infrastructure, and reached Hugging Face production systems looking for anything that would help finish the task. Anthropic’s controlled evaluations surfaced the same pattern. Neither case was a production deployment, and both organizations published what they found; the structural point holds either way. An agent handed a legitimate objective can independently discover an illegitimate path toward it, and authority scoped to the agent rather than to the task is what leaves that path open. A2A v1.0.0 also added something more interesting. An agent can now stop in the middle of a task and ask for authorization: TASK_STATE_AUTH_REQUIRED is a real lifecycle state, and the request propagates along a delegation chain until it reaches something, ultimately someone, that can decide. What the specification then does is decline, explicitly, to define what the resulting permission covers, how long it lasts, or how it is revoked. The boundary is deliberate. Filling it in takes two things the protocol does not supply: a cryptographically verifiable identity for the agent, and permissions scoped to the task rather than to the agent. AGNTCY Identity provides the first half today. This post walks through what A2A standardizes, what it leaves to implementers, which building blocks exist today and how they compose, and what is still being designed in the open.","headline":"Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/technical/identity/2026/08/24/agent-identity-tbac-a2a-task-authorization.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/assets/images/logo-light.svg"},"name":"Jean Diaconu"},"url":"https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/technical/identity/2026/08/24/agent-identity-tbac-a2a-task-authorization.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="icon" type="image/x-icon" href="/drafts/feat-identity-service-a2a-blog-post/assets/images/favicon.ico">
   <link rel="stylesheet" href="/drafts/feat-identity-service-a2a-blog-post/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/drafts/feat-identity-service-a2a-blog-post/feed.xml" title="AGNTCY Blogs" /><script>
@@ -62,19 +62,20 @@
     <p class="post-meta">
       <time class="dt-published" datetime="2026-08-24T08:00:00+00:00" itemprop="datePublished">
         August 24, 2026
-      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/jdiaconu" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Jean Diaconu</a></span>• 27 min read</p>
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/jdiaconu" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Jean Diaconu</a></span>• 26 min read</p>
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
     <p><a href="https://a2a-protocol.org/v1.0.0/specification/">Agent2Agent (A2A)</a> reached
-v1.0.0 in March 2026 and the
+v1.0.0 in March 2026, with v1.0.1 following in May, and the
 <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> has become a common
 way for agents to reach tools. Between them they specify, in detail, how one
-agent asks another agent — or a tool — to do something.</p>
+agent asks another agent — or a tool — to do something. What neither specifies
+is what happens when the agent needs authority it does not have.</p>
 
 <p>A recent <a href="https://openai.com/index/hugging-face-model-evaluation-security-incident/">OpenAI cybersecurity
 evaluation</a>
-shows what the gap costs in practice. In it,
+shows what that gap costs in practice. In it,
 agents given a legitimate objective — solve a security benchmark — found and
 exploited a zero-day to escape their sandbox, gained internet access, moved
 across infrastructure, and reached <a href="https://huggingface.co/blog/agent-intrusion-technical-timeline">Hugging Face production
@@ -93,9 +94,8 @@ it reaches something, ultimately someone, that can decide. What the specificatio
 then does is decline, explicitly, to define what the resulting permission
 covers, how long it lasts, or how it is revoked.</p>
 
-<p>That is a deliberate boundary rather than an oversight. Filling it in takes two
-things the protocol does not supply: a cryptographically verifiable identity for
-the agent, and permissions
+<p>The boundary is deliberate. Filling it in takes two things the protocol does not
+supply: a cryptographically verifiable identity for the agent, and permissions
 scoped to the task rather than to the agent. AGNTCY Identity provides the first
 half today. This post walks through what A2A standardizes, what it leaves to
 implementers, which building blocks exist today and how they compose, and what
@@ -201,23 +201,17 @@ controls.”</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre></div></div>
 
-<p><em>An A2A Task interrupted for authorization. One migration note: v1.0 serializes
-lifecycle states in SCREAMING_SNAKE_CASE on the JSON wire, so
-<code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> replaces the <code class="language-plaintext highlighter-rouge">auth-required</code> of v0.3. This post cites
-v1.0.0 as the release that introduced the state; v1.0.1 followed in May 2026 and
-changes nothing discussed here.</em></p>
+<p><em>An A2A Task interrupted for authorization.</em></p>
 
 <h2 id="what-a2a-deliberately-leaves-to-implementers">What A2A Deliberately Leaves to Implementers</h2>
 
-<p><code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> is where an agent lands when it hits a step it can’t
-take on its own authority. Maybe it needs a token it doesn’t hold. Maybe a human
-has to approve something destructive. Either way, the client picks up
-responsibility for getting that authorization. And if the client is itself an
-agent servicing an upstream task, §7.6.2 lets it flip its own task to
-<code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> too, so a chain of paused tasks propagates up to a
-person.</p>
+<p><code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> is where an agent lands when a step exceeds its own
+authority: a token it does not hold, or a destructive action that needs a human.
+The client then owns the job of obtaining that authorization. If the client is
+itself an agent servicing an upstream task, §7.6.2 lets it flip its own task to
+<code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> as well, so a chain of paused tasks reaches a person.</p>
 
-<p>§7.6.4 bounds what that state does and does not establish:</p>
+<p>§7.6.4 sets the limits of that state:</p>
 
 <blockquote>
   <p>The A2A protocol does not define the scope, representation, validity, or
@@ -229,26 +223,16 @@ authorization decision or credential MUST be defined by the agent’s
 implementation, by the credential issuer, or by an A2A extension.</p>
 </blockquote>
 
-<p>That section is newer than the release the rest of this post tracks. It was
-added to the specification in July 2026, after v1.0.1, and currently lives in
-the working draft rather than in a tagged release. Read it as the direction the
-protocol is settling on rather than as text you can pin a version number to; what
-it does is make explicit what v1.0.0 left unstated.</p>
+<p>The section was added in July 2026, after v1.0.1, and sits in the working draft
+rather than a tagged release: the maintainers went back and wrote the boundary
+down. It also rules out the obvious shortcut. A credential obtained in that
+state must not be assumed to authorize later messages on the same task, unless
+the implementation, the issuer, or an extension says it does.</p>
 
-<p>The same section also closes off the obvious shortcut — treating one approval as
-a standing grant for the rest of the task:</p>
-
-<blockquote>
-  <p>A credential or authorization decision obtained while a Task is in
-<code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> MUST NOT be assumed to authorize subsequent
-messages on the Task unless that behavior is explicitly defined by the
-implementation, credential issuer, or extension.</p>
-</blockquote>
-
-<p>The released spec says compatible things elsewhere. §7.5 leaves authorization
-logic “implementation-specific,” listing what it <em>may</em> consider: “specific
-skills requested,” “actions attempted within tasks,” data access policies, and
-OAuth scopes. §13.1: “Authorization boundaries are defined by each agent’s
+<p>The tagged releases agree. §7.5 leaves authorization logic
+“implementation-specific,” listing what it <em>may</em> consider: “specific skills
+requested,” “actions attempted within tasks,” data access policies, and OAuth
+scopes. §13.1: “Authorization boundaries are defined by each agent’s
 authorization model, not prescribed by the protocol”.</p>
 
 <p>A2A standardizes <em>when</em> an agent asks for authorization. What the answer means
@@ -502,22 +486,21 @@ Allow or Deny action and a “Needs Approval” flag. Because policy is evaluate
 when the call happens rather than fixed when the token was issued, a policy
 change can take effect on the next call instead of the next token refresh.</p>
 
-<p>That is already valuable, but it is not the same as task-bound authorization.
-A2A can pause a task with <code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code>; it can propagate that
-pause along a delegation chain; it can carry extension metadata. What it does not
-define is the authorization object that comes back: its scope, lifetime,
-revocation rules, delegation limits, or whether it is cryptographically bound to
-the <code class="language-plaintext highlighter-rouge">taskId</code>.</p>
+<p>That is valuable, but it is not task-bound authorization. A2A can pause a task
+with <code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code>; it can propagate that pause along a delegation
+chain; it can carry extension metadata. What it does not define is the
+authorization object that comes back: its scope, lifetime, revocation rules,
+delegation limits, or whether it is cryptographically bound to the <code class="language-plaintext highlighter-rouge">taskId</code>.</p>
 
-<p>So the missing layer is not more authentication. It is a task authorization
-profile: a verifiable object that binds the agent identity, the A2A <code class="language-plaintext highlighter-rouge">taskId</code>,
-permitted actions and resources, delegation constraints, proof of possession,
-and a short lifetime into something resource servers can actually evaluate. It
-also has to say when the thing may be reused — §7.6.4 forbids assuming that one
-approval covers subsequent messages on the same task, so the profile owes an
-answer on reuse across a task’s lifetime, not just an expiry timestamp.
-(A related problem, carrying immutable call-chain context inside a single trust
-domain, is addressed by the IETF’s <a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-transaction-tokens/">Transaction
+<p>The missing layer is not more authentication but a task authorization profile: a
+verifiable object that binds the agent identity, the A2A <code class="language-plaintext highlighter-rouge">taskId</code>, permitted
+actions and resources, delegation constraints, proof of possession, and a short
+lifetime into something resource servers can actually evaluate. It also has to
+say when the thing may be reused — §7.6.4 forbids assuming that one approval
+covers subsequent messages on the same task, so the profile owes an answer on
+reuse across a task’s lifetime, not just an expiry timestamp. (A related
+problem, carrying immutable call-chain context inside a single trust domain, is
+addressed by the IETF’s <a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-transaction-tokens/">Transaction
 Tokens</a>
 draft.)</p>
 
@@ -529,11 +512,11 @@ ultimately someone, that can decide. AGNTCY’s TBAC has “Needs Approval”: a
 flag that halts an invocation, pushes a notification to a registered device
 showing the caller, the callee, and the tool, then waits on a human.</p>
 
-<p>The two sit at different layers, which is what makes them composable. TBAC’s
-approval blocks synchronously inside a single hop, on a short timer: it is
-where the policy decision is made and where the human is prompted. A2A’s is
-asynchronous and composes across task hops, so a sub-agent’s request surfaces as
-an interrupted state on the orchestrator’s task, and on the task above that.</p>
+<p>The two sit at different layers, so they compose. TBAC’s approval blocks
+synchronously inside a single hop, on a short timer: it is where the policy
+decision is made and where the human is prompted. A2A’s is asynchronous and
+composes across task hops, so a sub-agent’s request surfaces as an interrupted
+state on the orchestrator’s task, and on the task above that.</p>
 
 <p>Wiring them together means treating the TBAC rule as the decision point and the
 A2A state transition as the transport. A Needs Approval hit moves the callee’s
@@ -541,13 +524,14 @@ Task to <code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUI
 propagates along the delegation chain under §7.6.2; the approving party resolves
 it; and the resulting authorization flows back down to the hop that asked.</p>
 
-<p>That gives the approver two pieces of context in a single decision: the objective
-they originally delegated, and the specific action now being requested against it
-several agents down. Seeing both is what makes the decision meaningful. What the
-resulting authorization can actually <em>constrain</em> is narrower, though: the named
-action, the resource it targets, and the <code class="language-plaintext highlighter-rouge">taskId</code> it is bound to. The objective
-is context for the person deciding, not a scope a resource server can evaluate —
-it is free-form prose, and nothing downstream can check a call against it.</p>
+<p>That gives the approver two pieces of context in a single decision: the
+objective they originally delegated, and the specific action now being requested
+against it several agents down. Neither one alone is enough to judge by. What
+the resulting authorization can actually <em>constrain</em> is narrower, though: the
+named action, the resource it targets, and the <code class="language-plaintext highlighter-rouge">taskId</code> it is bound to. The
+objective is context for the person deciding, not a scope a resource server can
+evaluate — it is free-form prose, and nothing downstream can check a call
+against it.</p>
 
 <p>A2A §7.6.4 names three places where the meaning of that authorization may be
 defined: the agent’s implementation, the credential issuer, or an A2A extension.
@@ -581,10 +565,14 @@ today.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre></div></div>
 
-<p><em>Existing standards supply reusable building blocks for structured
-authorization, delegation provenance, and proof of possession, but they do not
-define this task-scoped model. The profile work is to specify issuance and
-validation, how authority narrows through delegation, how the agent proves
+<p><em>The <code class="language-plaintext highlighter-rouge">act</code> chain follows RFC 8693 §4.1: <code class="language-plaintext highlighter-rouge">sub</code> is the person the work is for, the
+outer <code class="language-plaintext highlighter-rouge">act</code> the specialist presenting the credential, and the nested <code class="language-plaintext highlighter-rouge">act</code> the
+orchestrator that delegated to it, with the resource server deciding on the
+top-level claims and the current actor alone. Existing standards supply reusable
+building blocks for structured authorization, delegation provenance, and proof
+of possession, but they do not define this task-scoped model. The profile work is
+to specify issuance and validation, how authority narrows through delegation, how
+the agent proves
 possession of the authorized key, and how task-bound authority expires or is
 revoked.</em></p>
 
@@ -640,7 +628,7 @@ protocol surface required.</p>
 <p><em>Illustrative only. No such extension is registered, and the URI is a
 placeholder.</em></p>
 
-<p>The soundness of this depends on one rule. A declaration supplied by the caller
+<p>This holds only under one rule. A declaration supplied by the caller
 is untrusted input, and per the extensions guide an extension must never become a
 way around the agent’s primary security controls. A declared operation may
 therefore only <em>narrow</em> what the caller was already permitted to do, never widen
@@ -757,9 +745,9 @@ data.</p>
 extension</a> carries a durable
 <code class="language-plaintext highlighter-rouge">taskId</code> and an <code class="language-plaintext highlighter-rouge">input_required</code> status, requires opt-in from both client and
 server, and reaches the core specification only if the roadmap work behind it
-lands. If it does, one approval decision would surface as <code class="language-plaintext highlighter-rouge">input_required</code> on one
-hop and <code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> on the next — the same question asked twice,
-which is an argument for answering it once.</p>
+lands. If it does, one approval decision would surface as <code class="language-plaintext highlighter-rouge">input_required</code> on
+one hop and <code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> on the next: one decision under two
+names, which the profile would have to reconcile.</p>
 
 <p>What remains is the binding between them: connecting an approval decision to
 A2A’s authorization-required state, defining what a task-scoped authorization
@@ -782,10 +770,10 @@ ignores it and behaves as it does today, while one that does gains a stable name
 to write policy against. This requires no protocol revision, which is the case
 §7.6.4 anticipates.</p>
 
-<p>A trust layer is only worth something if it is interoperable, and
-the mechanisms deciding whether one system should trust another have to be
-inspectable. That is why AGNTCY’s components are built as open infrastructure,
-designed to complement existing protocols instead of replacing them:</p>
+<p>A trust layer has to be interoperable, and the mechanisms deciding whether one
+system should trust another have to be inspectable. AGNTCY’s components are
+built as open infrastructure for that reason, designed to complement existing
+protocols instead of replacing them:</p>
 
 <ul>
   <li><strong><a href="https://docs.agntcy.org/oasf/open-agentic-schema-framework/">OASF</a></strong> (Open Agentic Schema
@@ -818,9 +806,9 @@ organizational boundaries — not because every party trusts every agent by
 default, but because provenance can be verified, and authority scoped,
 re-evaluated, and revoked.</p>
 
-<p>The future of AI won’t depend solely on more capable agents. It will depend on
-agents whose identity and authorization can be checked, not assumed. A2A 1.0
-made that possible by defining exactly where the check belongs.</p>
+<p>What comes next depends less on more capable agents than on agents whose
+identity and authorization can be checked rather than assumed. A2A 1.0 made that
+possible by defining exactly where the check belongs.</p>
 
 <p><strong>Next steps:</strong> the task authorization profile is being specified in the
 <a href="https://github.com/agntcy/governance/blob/main/working-groups/identity/CHARTER.md">AGNTCY Agent Identity Working
