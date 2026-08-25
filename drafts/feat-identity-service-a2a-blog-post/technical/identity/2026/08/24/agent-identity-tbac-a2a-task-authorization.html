@@ -62,7 +62,7 @@
     <p class="post-meta">
       <time class="dt-published" datetime="2026-08-24T08:00:00+00:00" itemprop="datePublished">
         August 24, 2026
-      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/jdiaconu" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Jean Diaconu</a></span>• 26 min read</p>
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><a href="https://github.com/jdiaconu" class="p-author h-card" itemprop="name" target="_blank" rel="noopener">Jean Diaconu</a></span>• 25 min read</p>
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
@@ -110,7 +110,7 @@ is still being designed in the open.</p>
 <ul>
   <li>Why traditional IAM assumptions break down for ephemeral, polymorphic,
 autonomous agents.</li>
-  <li>Exactly what A2A v1.0.0 standardizes around authorization — and where the
+  <li>Exactly what A2A v1.0.1 standardizes around authorization — and where the
 specification says the rest is up to you.</li>
   <li>How AGNTCY Identity establishes who an agent is, using resolvable
 identifiers, <code class="language-plaintext highlighter-rouge">ResolverMetadata</code>, and a W3C Verifiable Credential Agent Badge.</li>
@@ -211,7 +211,7 @@ The client then owns the job of obtaining that authorization. If the client is
 itself an agent servicing an upstream task, §7.6.2 lets it flip its own task to
 <code class="language-plaintext highlighter-rouge">TASK_STATE_AUTH_REQUIRED</code> as well, so a chain of paused tasks reaches a person.</p>
 
-<p>§7.6.4 sets the limits of that state:</p>
+<p>§7.6.4 sets the limits of that state (current draft):</p>
 
 <blockquote>
   <p>The A2A protocol does not define the scope, representation, validity, or
@@ -223,13 +223,11 @@ authorization decision or credential MUST be defined by the agent’s
 implementation, by the credential issuer, or by an A2A extension.</p>
 </blockquote>
 
-<p>The section was added in July 2026, after v1.0.1, and sits in the working draft
-rather than a tagged release: the maintainers went back and wrote the boundary
-down. It also rules out the obvious shortcut. A credential obtained in that
-state must not be assumed to authorize later messages on the same task, unless
-the implementation, the issuer, or an extension says it does.</p>
+<p>It also rules out the obvious shortcut. A credential obtained in that state must
+not be assumed to authorize later messages on the same task, unless the
+implementation, the issuer, or an extension says it does.</p>
 
-<p>The tagged releases agree. §7.5 leaves authorization logic
+<p>In the current release, §7.5 leaves authorization logic
 “implementation-specific,” listing what it <em>may</em> consider: “specific skills
 requested,” “actions attempted within tasks,” data access policies, and OAuth
 scopes. §13.1: “Authorization boundaries are defined by each agent’s
@@ -403,24 +401,15 @@ partner, per agent.</p>
 
 <p>The IETF is standardizing an alternative. <strong><a href="https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/">Client ID Metadata
 Documents</a></strong>
-(<code class="language-plaintext highlighter-rouge">draft-ietf-oauth-client-id-metadata-document</code>, adopted by the OAuth working
-group) let a client use an HTTPS URL as its <code class="language-plaintext highlighter-rouge">client_id</code>, and the authorization
-server dereferences that URL to pull the client’s metadata. No prior
-registration transaction required. In deployments that resolve those documents
-dynamically, there is no mandatory per-authorization-server registration
-transaction and no durable client record, though the draft still permits
-preregistration and expects
-it to stay common in enterprise environments. Authorization servers may still
-cache metadata, store grants, record consent, or pre-register CIMD URLs.
-Shared-secret client
-authentication is ruled out for these clients in favor of public-key methods
-like <code class="language-plaintext highlighter-rouge">private_key_jwt</code>, with key material published through <code class="language-plaintext highlighter-rouge">jwks</code> or
-<code class="language-plaintext highlighter-rouge">jwks_uri</code>, so the identity ends up key-bound and rooted in a domain someone
-demonstrably controls. It is an Internet-Draft rather than a finished RFC, but
-<a href="https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization">MCP’s authorization
+let a client use an HTTPS URL as its <code class="language-plaintext highlighter-rouge">client_id</code>, which the authorization server
+dereferences to pull the client’s metadata. No prior registration transaction
+required. Authentication is public-key rather than shared-secret, with the keys
+published at that URL, so the client identity stays key-bound and rooted in a
+domain someone demonstrably controls. It is still an Internet-Draft, but <a href="https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization">MCP’s
+authorization
 specification</a>
-(revision 2026-07-28) already recommends it for client onboarding where no prior
-registration exists, and deprecates dynamic client registration in its favor.</p>
+(revision 2026-07-28) already recommends it where no prior registration exists,
+and deprecates dynamic client registration in its favor.</p>
 
 <p>The two models fit together. CIMD answers <em>which OAuth client is this</em>.
 <code class="language-plaintext highlighter-rouge">ResolverMetadata</code> and the Agent Badge can answer <em>who published that agent
@@ -537,10 +526,6 @@ against it.</p>
 defined: the agent’s implementation, the credential issuer, or an A2A extension.
 All three are open to the community.</p>
 
-<p>The example below is illustrative. It shows what such a task-scoped
-authorization object could carry; AGNTCY Identity does not issue this profile
-today.</p>
-
 <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
   </span><span class="nl">"iss"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://identity.example.com"</span><span class="p">,</span><span class="w">
   </span><span class="nl">"sub"</span><span class="p">:</span><span class="w"> </span><span class="s2">"alex@example.com"</span><span class="p">,</span><span class="w">
@@ -565,16 +550,8 @@ today.</p>
 </span><span class="p">}</span><span class="w">
 </span></code></pre></div></div>
 
-<p><em>The <code class="language-plaintext highlighter-rouge">act</code> chain follows RFC 8693 §4.1: <code class="language-plaintext highlighter-rouge">sub</code> is the person the work is for, the
-outer <code class="language-plaintext highlighter-rouge">act</code> the specialist presenting the credential, and the nested <code class="language-plaintext highlighter-rouge">act</code> the
-orchestrator that delegated to it, with the resource server deciding on the
-top-level claims and the current actor alone. Existing standards supply reusable
-building blocks for structured authorization, delegation provenance, and proof
-of possession, but they do not define this task-scoped model. The profile work is
-to specify issuance and validation, how authority narrows through delegation, how
-the agent proves
-possession of the authorized key, and how task-bound authority expires or is
-revoked.</em></p>
+<p><em>The example is illustrative: it shows what such a task-scoped authorization
+object could carry. AGNTCY Identity does not issue this profile today.</em></p>
 
 <h3 id="naming-the-operation-at-an-a2a-hop">Naming the Operation at an A2A Hop</h3>
 
@@ -826,10 +803,7 @@ responsibilities, §7.6.2 client responsibilities, §7.6.3 security
 considerations), §13.1 data access and authorization scoping, §4.6 extensions,
 §8.4 Agent Card signing.</li>
   <li><a href="https://a2a-protocol.org/latest/specification/#764-in-task-authorization-scope">§7.6.4 In-Task Authorization
-Scope</a>
-— added to the specification in July 2026, after the v1.0.1 release. It appears
-in the working draft and is not part of a tagged version; the pinned v1.0.0 and
-v1.0.1 documents do not contain it.</li>
+Scope</a></li>
   <li><a href="https://github.com/a2aproject/A2A/blob/main/docs/topics/extensions.md">A2A extensions
 guide</a>
 — extension security considerations, including untrusted-input handling and the
