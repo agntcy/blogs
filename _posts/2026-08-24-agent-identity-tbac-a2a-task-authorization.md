@@ -20,14 +20,15 @@ mermaid: true
 ---
 
 [Agent2Agent (A2A)](https://a2a-protocol.org/v1.0.0/specification/) reached
-v1.0.0 in March 2026 and the
+v1.0.0 in March 2026, with v1.0.1 following in May, and the
 [Model Context Protocol](https://modelcontextprotocol.io/) has become a common
 way for agents to reach tools. Between them they specify, in detail, how one
-agent asks another agent — or a tool — to do something.
+agent asks another agent — or a tool — to do something. What neither specifies
+is what happens when the agent needs authority it does not have.
 
 A recent [OpenAI cybersecurity
 evaluation](https://openai.com/index/hugging-face-model-evaluation-security-incident/)
-shows what the gap costs in practice. In it,
+shows what that gap costs in practice. In it,
 agents given a legitimate objective — solve a security benchmark — found and
 exploited a zero-day to escape their sandbox, gained internet access, moved
 across infrastructure, and reached [Hugging Face production
@@ -46,9 +47,8 @@ it reaches something, ultimately someone, that can decide. What the specificatio
 then does is decline, explicitly, to define what the resulting permission
 covers, how long it lasts, or how it is revoked.
 
-That is a deliberate boundary rather than an oversight. Filling it in takes two
-things the protocol does not supply: a cryptographically verifiable identity for
-the agent, and permissions
+The boundary is deliberate. Filling it in takes two things the protocol does not
+supply: a cryptographically verifiable identity for the agent, and permissions
 scoped to the task rather than to the agent. AGNTCY Identity provides the first
 half today. This post walks through what A2A standardizes, what it leaves to
 implementers, which building blocks exist today and how they compose, and what
@@ -151,23 +151,17 @@ And in v1.0, an agent can stop mid-task and ask for authorization.
 }
 ```
 
-_An A2A Task interrupted for authorization. One migration note: v1.0 serializes
-lifecycle states in SCREAMING_SNAKE_CASE on the JSON wire, so
-`TASK_STATE_AUTH_REQUIRED` replaces the `auth-required` of v0.3. This post cites
-v1.0.0 as the release that introduced the state; v1.0.1 followed in May 2026 and
-changes nothing discussed here._
+_An A2A Task interrupted for authorization._
 
 ## What A2A Deliberately Leaves to Implementers
 
-`TASK_STATE_AUTH_REQUIRED` is where an agent lands when it hits a step it can't
-take on its own authority. Maybe it needs a token it doesn't hold. Maybe a human
-has to approve something destructive. Either way, the client picks up
-responsibility for getting that authorization. And if the client is itself an
-agent servicing an upstream task, §7.6.2 lets it flip its own task to
-`TASK_STATE_AUTH_REQUIRED` too, so a chain of paused tasks propagates up to a
-person.
+`TASK_STATE_AUTH_REQUIRED` is where an agent lands when a step exceeds its own
+authority: a token it does not hold, or a destructive action that needs a human.
+The client then owns the job of obtaining that authorization. If the client is
+itself an agent servicing an upstream task, §7.6.2 lets it flip its own task to
+`TASK_STATE_AUTH_REQUIRED` as well, so a chain of paused tasks reaches a person.
 
-§7.6.4 bounds what that state does and does not establish:
+§7.6.4 sets the limits of that state:
 
 > The A2A protocol does not define the scope, representation, validity, or
 > revocation semantics of the authorization decision or credential obtained in
@@ -177,24 +171,16 @@ person.
 > authorization decision or credential MUST be defined by the agent's
 > implementation, by the credential issuer, or by an A2A extension.
 
-That section is newer than the release the rest of this post tracks. It was
-added to the specification in July 2026, after v1.0.1, and currently lives in
-the working draft rather than in a tagged release. Read it as the direction the
-protocol is settling on rather than as text you can pin a version number to; what
-it does is make explicit what v1.0.0 left unstated.
+The section was added in July 2026, after v1.0.1, and sits in the working draft
+rather than a tagged release: the maintainers went back and wrote the boundary
+down. It also rules out the obvious shortcut. A credential obtained in that
+state must not be assumed to authorize later messages on the same task, unless
+the implementation, the issuer, or an extension says it does.
 
-The same section also closes off the obvious shortcut — treating one approval as
-a standing grant for the rest of the task:
-
-> A credential or authorization decision obtained while a Task is in
-> `TASK_STATE_AUTH_REQUIRED` MUST NOT be assumed to authorize subsequent
-> messages on the Task unless that behavior is explicitly defined by the
-> implementation, credential issuer, or extension.
-
-The released spec says compatible things elsewhere. §7.5 leaves authorization
-logic "implementation-specific," listing what it _may_ consider: "specific
-skills requested," "actions attempted within tasks," data access policies, and
-OAuth scopes. §13.1: "Authorization boundaries are defined by each agent's
+The tagged releases agree. §7.5 leaves authorization logic
+"implementation-specific," listing what it _may_ consider: "specific skills
+requested," "actions attempted within tasks," data access policies, and OAuth
+scopes. §13.1: "Authorization boundaries are defined by each agent's
 authorization model, not prescribed by the protocol".
 
 A2A standardizes _when_ an agent asks for authorization. What the answer means
@@ -413,22 +399,21 @@ Allow or Deny action and a "Needs Approval" flag. Because policy is evaluated
 when the call happens rather than fixed when the token was issued, a policy
 change can take effect on the next call instead of the next token refresh.
 
-That is already valuable, but it is not the same as task-bound authorization.
-A2A can pause a task with `TASK_STATE_AUTH_REQUIRED`; it can propagate that
-pause along a delegation chain; it can carry extension metadata. What it does not
-define is the authorization object that comes back: its scope, lifetime,
-revocation rules, delegation limits, or whether it is cryptographically bound to
-the `taskId`.
+That is valuable, but it is not task-bound authorization. A2A can pause a task
+with `TASK_STATE_AUTH_REQUIRED`; it can propagate that pause along a delegation
+chain; it can carry extension metadata. What it does not define is the
+authorization object that comes back: its scope, lifetime, revocation rules,
+delegation limits, or whether it is cryptographically bound to the `taskId`.
 
-So the missing layer is not more authentication. It is a task authorization
-profile: a verifiable object that binds the agent identity, the A2A `taskId`,
-permitted actions and resources, delegation constraints, proof of possession,
-and a short lifetime into something resource servers can actually evaluate. It
-also has to say when the thing may be reused — §7.6.4 forbids assuming that one
-approval covers subsequent messages on the same task, so the profile owes an
-answer on reuse across a task's lifetime, not just an expiry timestamp.
-(A related problem, carrying immutable call-chain context inside a single trust
-domain, is addressed by the IETF's [Transaction
+The missing layer is not more authentication but a task authorization profile: a
+verifiable object that binds the agent identity, the A2A `taskId`, permitted
+actions and resources, delegation constraints, proof of possession, and a short
+lifetime into something resource servers can actually evaluate. It also has to
+say when the thing may be reused — §7.6.4 forbids assuming that one approval
+covers subsequent messages on the same task, so the profile owes an answer on
+reuse across a task's lifetime, not just an expiry timestamp. (A related
+problem, carrying immutable call-chain context inside a single trust domain, is
+addressed by the IETF's [Transaction
 Tokens](https://datatracker.ietf.org/doc/draft-ietf-oauth-transaction-tokens/)
 draft.)
 
@@ -440,11 +425,11 @@ ultimately someone, that can decide. AGNTCY's TBAC has "Needs Approval": a rule
 flag that halts an invocation, pushes a notification to a registered device
 showing the caller, the callee, and the tool, then waits on a human.
 
-The two sit at different layers, which is what makes them composable. TBAC's
-approval blocks synchronously inside a single hop, on a short timer: it is
-where the policy decision is made and where the human is prompted. A2A's is
-asynchronous and composes across task hops, so a sub-agent's request surfaces as
-an interrupted state on the orchestrator's task, and on the task above that.
+The two sit at different layers, so they compose. TBAC's approval blocks
+synchronously inside a single hop, on a short timer: it is where the policy
+decision is made and where the human is prompted. A2A's is asynchronous and
+composes across task hops, so a sub-agent's request surfaces as an interrupted
+state on the orchestrator's task, and on the task above that.
 
 Wiring them together means treating the TBAC rule as the decision point and the
 A2A state transition as the transport. A Needs Approval hit moves the callee's
@@ -452,13 +437,14 @@ Task to `TASK_STATE_AUTH_REQUIRED` instead of failing the call; the state
 propagates along the delegation chain under §7.6.2; the approving party resolves
 it; and the resulting authorization flows back down to the hop that asked.
 
-That gives the approver two pieces of context in a single decision: the objective
-they originally delegated, and the specific action now being requested against it
-several agents down. Seeing both is what makes the decision meaningful. What the
-resulting authorization can actually _constrain_ is narrower, though: the named
-action, the resource it targets, and the `taskId` it is bound to. The objective
-is context for the person deciding, not a scope a resource server can evaluate —
-it is free-form prose, and nothing downstream can check a call against it.
+That gives the approver two pieces of context in a single decision: the
+objective they originally delegated, and the specific action now being requested
+against it several agents down. Neither one alone is enough to judge by. What
+the resulting authorization can actually _constrain_ is narrower, though: the
+named action, the resource it targets, and the `taskId` it is bound to. The
+objective is context for the person deciding, not a scope a resource server can
+evaluate — it is free-form prose, and nothing downstream can check a call
+against it.
 
 A2A §7.6.4 names three places where the meaning of that authorization may be
 defined: the agent's implementation, the credential issuer, or an A2A extension.
@@ -493,10 +479,14 @@ today.
 }
 ```
 
-_Existing standards supply reusable building blocks for structured
-authorization, delegation provenance, and proof of possession, but they do not
-define this task-scoped model. The profile work is to specify issuance and
-validation, how authority narrows through delegation, how the agent proves
+_The `act` chain follows RFC 8693 §4.1: `sub` is the person the work is for, the
+outer `act` the specialist presenting the credential, and the nested `act` the
+orchestrator that delegated to it, with the resource server deciding on the
+top-level claims and the current actor alone. Existing standards supply reusable
+building blocks for structured authorization, delegation provenance, and proof
+of possession, but they do not define this task-scoped model. The profile work is
+to specify issuance and validation, how authority narrows through delegation, how
+the agent proves
 possession of the authorized key, and how task-bound authority expires or is
 revoked._
 
@@ -551,7 +541,7 @@ protocol surface required.
 _Illustrative only. No such extension is registered, and the URI is a
 placeholder._
 
-The soundness of this depends on one rule. A declaration supplied by the caller
+This holds only under one rule. A declaration supplied by the caller
 is untrusted input, and per the extensions guide an extension must never become a
 way around the agent's primary security controls. A declared operation may
 therefore only _narrow_ what the caller was already permitted to do, never widen
@@ -667,9 +657,9 @@ MCP covers adjacent ground, though not in its core protocol: the [Tasks
 extension](https://modelcontextprotocol.io/extensions/tasks) carries a durable
 `taskId` and an `input_required` status, requires opt-in from both client and
 server, and reaches the core specification only if the roadmap work behind it
-lands. If it does, one approval decision would surface as `input_required` on one
-hop and `TASK_STATE_AUTH_REQUIRED` on the next — the same question asked twice,
-which is an argument for answering it once.
+lands. If it does, one approval decision would surface as `input_required` on
+one hop and `TASK_STATE_AUTH_REQUIRED` on the next: one decision under two
+names, which the profile would have to reconcile.
 
 What remains is the binding between them: connecting an approval decision to
 A2A's authorization-required state, defining what a task-scoped authorization
@@ -692,10 +682,10 @@ ignores it and behaves as it does today, while one that does gains a stable name
 to write policy against. This requires no protocol revision, which is the case
 §7.6.4 anticipates.
 
-A trust layer is only worth something if it is interoperable, and
-the mechanisms deciding whether one system should trust another have to be
-inspectable. That is why AGNTCY's components are built as open infrastructure,
-designed to complement existing protocols instead of replacing them:
+A trust layer has to be interoperable, and the mechanisms deciding whether one
+system should trust another have to be inspectable. AGNTCY's components are
+built as open infrastructure for that reason, designed to complement existing
+protocols instead of replacing them:
 
 - **[OASF](https://docs.agntcy.org/oasf/open-agentic-schema-framework/)** (Open Agentic Schema
   Framework), a standard schema for an agent's capabilities and metadata,
@@ -726,9 +716,9 @@ organizational boundaries — not because every party trusts every agent by
 default, but because provenance can be verified, and authority scoped,
 re-evaluated, and revoked.
 
-The future of AI won't depend solely on more capable agents. It will depend on
-agents whose identity and authorization can be checked, not assumed. A2A 1.0
-made that possible by defining exactly where the check belongs.
+What comes next depends less on more capable agents than on agents whose
+identity and authorization can be checked rather than assumed. A2A 1.0 made that
+possible by defining exactly where the check belongs.
 
 **Next steps:** the task authorization profile is being specified in the
 [AGNTCY Agent Identity Working
