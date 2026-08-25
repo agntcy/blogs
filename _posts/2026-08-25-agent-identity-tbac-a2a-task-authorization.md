@@ -73,7 +73,7 @@ In this post, you'll learn:
 - Why an A2A Task carries no declared intent, what that costs you when policy
   keys on tool names, and how an extension could close the gap without becoming
   a bypass.
-- What an end-to-end approval flow looks like, and precisely which two pieces
+- What an end-to-end approval flow looks like, and precisely which three pieces
   of it do not exist yet.
 
 ## Identity Is No Longer Just for Humans
