@@ -45,5 +45,8 @@ Use the `Taskfile` to manage common operations:
 
 ## Contributing
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose posts, submit pull
+requests, and work with maintainers.
+
 Please adhere to [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for all commit messages.
 Review `.github/CODEOWNERS` for repository maintainers.
