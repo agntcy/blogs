@@ -107,7 +107,8 @@ update a deck, preview it with the local workflow below.
 ## Local Development
 
 The site is built with [Jekyll](https://jekyllrb.com/) and managed with
-[Task](https://taskfile.dev/). You need Ruby 3.0 or higher, Bundler, and Task.
+[Task](https://taskfile.dev/). You need Ruby 3.0 or higher, Bundler, Task, and
+[Lychee](https://github.com/lycheeverse/lychee) to check links.
 
 ```bash
 task deps
@@ -116,6 +117,10 @@ task run
 
 The site will be available at [http://0.0.0.0:4000/](http://0.0.0.0:4000/).
 See the [README](README.md) for additional commands, including `task build`.
+
+Before opening a pull request, run `task lint` to check the built site for
+broken links. CI runs the same check. If a URL is valid but fails in CI (CAPTCHA,
+bot blocking, login wall), add it to the exclude list in `lychee.toml`.
 
 ## Sending Pull Requests
 

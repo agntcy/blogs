@@ -3,6 +3,10 @@ name: CI
 on:
   pull_request:
     branches: ["main"]
+  schedule:
+    # Catch link rot in published posts
+    - cron: "00 06 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -35,3 +39,21 @@ jobs:
         run: bundle exec jekyll build
         env:
           JEKYLL_ENV: production
+      - name: Restore lychee cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: .lycheecache
+          key: cache-lychee-${{ github.sha }}
+          restore-keys: |
+            cache-lychee-
+      - name: Check links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail: true
+          args: >-
+            --config lychee.toml
+            --root-dir ${{ github.workspace }}/_site
+            --exclude-all-private
+            --remap 'https://blogs.agntcy.org file://${{ github.workspace }}/_site'
+            _site

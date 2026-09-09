@@ -21,6 +21,7 @@ This site is built with [Jekyll](https://jekyllrb.com/) and managed with
 *   Ruby 3.0 or higher
 *   [Task](https://taskfile.dev/installation/)
 *   Bundler (`gem install bundler`)
+*   [Lychee](https://github.com/lycheeverse/lychee) (for link checking)
 
 ### Usage
 
@@ -42,6 +43,14 @@ Use the `Taskfile` to manage common operations:
     task build
     ```
     The output will be generated in the `_site/` directory.
+
+4.  Check for broken links:
+    ```bash
+    task lint
+    ```
+    This builds the site and runs [Lychee](https://github.com/lycheeverse/lychee)
+    against `_site/`. CI runs the same check on pull requests and daily on
+    `main`.
 
 ## Contributing
 
