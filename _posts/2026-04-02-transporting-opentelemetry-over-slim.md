@@ -54,14 +54,13 @@ Standard telemetry pipelines were designed for collectors and storage systems, n
 
 SLIM treats AI agents as channel participants. Agents receive live telemetry streams alongside collectors, eliminating polling latency. They can use the A2A protocol on separate SLIM channels to coordinate their analysis and share findings. Agents join and leave channels dynamically based on incident needs, with both telemetry and agent communication using the same MLS security model.
 
-
 ## Demo Scenario: Intelligent Incident Response
 
 The following demo demonstrates SLIM's capabilities for dynamic observability and AI-powered incident response.
 
 The monitor application starts up and creates a SLIM channel for telemetry. It invites two participants: the monitored application (which generates metrics using the SLIM OpenTelemetry SDK) and an OpenTelemetry Collector (configured with a SLIM receiver to export metrics to Prometheus and Grafana). The monitor app itself also joins the channel to watch the telemetry stream for anomalies.
 
-During normal operation, the monitored app continuously sends metrics—active connections and service latency. The collector stores these metrics for dashboards while the monitor app observes in the background. 
+During normal operation, the monitored app continuously sends metrics—active connections and service latency. The collector stores these metrics for dashboards while the monitor app observes in the background.
 
 When the application enters a high load period where the number of active connections increases and processing latency exceeds 200ms (the threshold used by the monitoring application), the monitor app triggers an alert.
 
@@ -111,7 +110,7 @@ graph TB
 
 The architecture shows: a single source (the monitored app) broadcasts telemetry to multiple consumers (collector and monitor app). The monitor app creates the channel and manages participant lifecycles. The special agent joins when needed, with no pre-configuration. LLM-powered diagnostics operate on live telemetry streams. Standard OpenTelemetry metrics flow through SLIM to Prometheus/Grafana. All communication is encrypted with MLS.
 
-The building blocks for observability over SLIM—including the SLIM receiver and exporter for collectors and SDK exporter for applications—are available in the [slim-otel repository](https://github.com/agntcy/slim-otel). 
+The building blocks for observability over SLIM—including the SLIM receiver and exporter for collectors and SDK exporter for applications—are available in the [slim-otel repository](https://github.com/agntcy/slim-otel).
 The complete working demo instead is available in the [agentic-apps repository](https://github.com/agntcy/agentic-apps/tree/main/observability_app) in the observability_app folder.
 
 ## Running the Demo
@@ -148,7 +147,7 @@ task infra:status
 ### Step 3: Configure Grafana Dashboard
 
 Import the pre-configured dashboard:
-1. Open http://localhost:3000 and login with `admin` / `admin`
+1. Open <http://localhost:3000> and login with `admin` / `admin`
 2. Navigate to Dashboards → Import
 3. Upload the `grafana-dashboard.json` file available in the repo
 
@@ -212,7 +211,7 @@ Watch the terminal outputs to see the incident response cycle:
 
 View real-time metrics in Grafana:
 
-1. Navigate to http://localhost:3000
+1. Navigate to <http://localhost:3000>
 2. Open the metrics on the imported dashboard
 
 ### Step 7: Clean Up

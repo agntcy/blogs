@@ -389,7 +389,7 @@ jobs:
 **Setup Steps:**
 
 1. **Create a GitHub Personal Access Token:**
-   - Go to: https://github.com/settings/tokens/new
+   - Go to: <https://github.com/settings/tokens/new>
    - Select scopes: `user:email` and `read:org`
    - Generate token and copy it immediately
 

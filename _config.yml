@@ -33,3 +33,25 @@ plugins:
   - jekyll-paginate
 paginate: 5
 paginate_path: "/page/:num/"
+
+# Keep repo tooling and docs out of the published site
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - Taskfile.yml
+  - README.md
+  - CONTRIBUTING.md
+  - CODE_OF_CONDUCT.md
+  - CONTRIBUTORS.md
+  - LICENSE.md
+  - package.json
+  - package-lock.json
+  - lychee.toml
+  - .pymarkdown
+  - .codespellrc
+  - scripts
+  - _post_template.md
+  - presentations/**/*.md
+

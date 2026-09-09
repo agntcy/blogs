@@ -107,7 +107,13 @@ update a deck, preview it with the local workflow below.
 ## Local Development
 
 The site is built with [Jekyll](https://jekyllrb.com/) and managed with
-[Task](https://taskfile.dev/). You need Ruby 3.0 or higher, Bundler, and Task.
+[Task](https://taskfile.dev/). You need Ruby 3.0 or higher, Bundler, Task,
+[Lychee](https://github.com/lycheeverse/lychee) to check links,
+[Codespell](https://github.com/codespell-project/codespell) (`pip install codespell`)
+to check spelling, and
+[PyMarkdown](https://github.com/jackdewinter/pymarkdown) (`pip install pymarkdownlnt`)
+to check Markdown. Building slide decks or running `task run` also needs
+Node.js 20.19.5 or higher.
 
 ```bash
 task deps
@@ -116,6 +122,13 @@ task run
 
 The site will be available at [http://0.0.0.0:4000/](http://0.0.0.0:4000/).
 See the [README](README.md) for additional commands, including `task build`.
+
+Before opening a pull request, run `task lint` to check spelling, Markdown, and
+the built site for broken links. Local lint does not build Slidev decks; CI does,
+using Node 20.19.5. If Codespell flags a valid word, add it to the ignore list in
+`.codespellrc`. If PyMarkdown flags a valid construct, adjust `.pymarkdown`. If a
+URL is valid but fails in CI (CAPTCHA, bot blocking, login wall), add it to the
+exclude list in `lychee.toml`.
 
 ## Sending Pull Requests
 

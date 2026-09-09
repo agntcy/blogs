@@ -10,3 +10,5 @@ vendor/
 presentations/*/*.html
 presentations/*/site/
 slides_ed25519*
+.lycheecache
+lychee/out.md
