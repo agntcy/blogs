@@ -181,7 +181,7 @@ Now that you have the static library (`.a` file) and Go bindings, you need to di
 
 **Solution:** Use GitHub Releases to host the pre-compiled static libraries, and provide a setup tool that downloads the appropriate library for the developer's platform.
 
-We cover this approach in detail in our blog post: [Distributing C Artifacts for Go Modules](/2026/01/16/distributing-c-artifacts-for-go-modules.html)
+We cover this approach in detail in our blog post: [Distributing C Artifacts for Go Modules](/technical/2026/01/20/distributing-c-artifacts-for-go-modules.html)
 
 Key points:
 - Host static libraries on GitHub Releases (not in the Git repository)
@@ -493,15 +493,15 @@ For a detailed analysis of CGO performance overhead, see Shane O'Neill's excelle
 For production use, you'll need to:
 
 1. **Cross-compile Rust libraries** for target platforms
-2. **Distribute static libraries** (see our [previous blog post](https://blog.agntcy.com/2026/01/16/distributing-c-artifacts-for-go-modules.html))
+2. **Distribute static libraries** (see our [previous blog post](/technical/2026/01/20/distributing-c-artifacts-for-go-modules.html))
 3. **Configure CGO** to link against the Rust library
 4. **Handle platform-specific differences**
 
-We cover this in detail in our blog post about [distributing C artifacts for Go modules](https://blog.agntcy.com/2026/01/16/distributing-c-artifacts-for-go-modules.html).
+We cover this in detail in our blog post about [distributing C artifacts for Go modules](/technical/2026/01/20/distributing-c-artifacts-for-go-modules.html).
 
 ## Automation and CI/CD
 
-Our release process automates the entire workflow for building Rust libraries, generating Go bindings, and distributing them across platforms. You can see our complete CI/CD setup in the [SLIM repository's release-bindings.yaml workflow](https://github.com/agntcy/slim/blob/main/.github/workflows/release-bindings.yaml).
+Our release process automates the entire workflow for building Rust libraries, generating Go bindings, and distributing them across platforms. You can see our complete CI/CD setup in the [SLIM bindings repository's release-bindings.yaml workflow](https://github.com/agntcy/slim-bindings/blob/main/.github/workflows/release-bindings.yaml).
 
 This workflow handles:
 - Cross-compilation for multiple platforms using Zig

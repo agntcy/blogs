@@ -700,12 +700,12 @@ The Directory MCP server is part of a broader vision for AI agent interoperabili
 
 The MCP server brings this infrastructure directly into developer workflows, reducing friction and enabling AI-assisted agent development.
 
-Check out the [Directory documentation](https://docs.agntcy.org/dir/overview/) for a complete walkthrough, and the [MCP server README](https://github.com/agntcy/dir/tree/main/mcp) for detailed configuration options.
+Check out the [Directory documentation](https://docs.agntcy.org/dir/overview/) for a complete walkthrough, and the [MCP server README](https://github.com/agntcy/dir-mcp) for detailed configuration options.
 
 ## References
 
 - [Directory GitHub Repository](https://github.com/agntcy/dir)
-- [Directory MCP Server README](https://github.com/agntcy/dir/tree/main/mcp)
+- [Directory MCP Server README](https://github.com/agntcy/dir-mcp)
 - [Directory Documentation](https://docs.agntcy.org/dir/overview/)
 - [OASF (Open Agentic Schema Framework)](https://github.com/agntcy/oasf)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
