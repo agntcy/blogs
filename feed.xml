@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-09-09T06:14:11+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together</title><link href="https://blogs.agntcy.org/technical/identity/2026/08/25/agent-identity-tbac-a2a-task-authorization.html" rel="alternate" type="text/html" title="Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together" /><published>2026-08-25T08:00:00+00:00</published><updated>2026-08-25T08:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/identity/2026/08/25/agent-identity-tbac-a2a-task-authorization</id><content type="html" xml:base="https://blogs.agntcy.org/technical/identity/2026/08/25/agent-identity-tbac-a2a-task-authorization.html"><![CDATA[<p><a href="https://a2a-protocol.org/v1.0.0/specification/">Agent2Agent (A2A)</a> reached
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/" rel="alternate" type="text/html" /><updated>2026-09-09T17:17:59+00:00</updated><id>https://blogs.agntcy.org/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together</title><link href="https://blogs.agntcy.org/technical/identity/2026/08/25/agent-identity-tbac-a2a-task-authorization.html" rel="alternate" type="text/html" title="Agent Identity and Task-Based Access Control: How A2A and AGNTCY Identity Work Together" /><published>2026-08-25T08:00:00+00:00</published><updated>2026-08-25T08:00:00+00:00</updated><id>https://blogs.agntcy.org/technical/identity/2026/08/25/agent-identity-tbac-a2a-task-authorization</id><content type="html" xml:base="https://blogs.agntcy.org/technical/identity/2026/08/25/agent-identity-tbac-a2a-task-authorization.html"><![CDATA[<p><a href="https://a2a-protocol.org/v1.0.0/specification/">Agent2Agent (A2A)</a> reached
 v1.0.0 in March 2026, with v1.0.1 following in May, and the
 <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> has become a common
 way for agents to reach tools. Between them they specify, in detail, how one
@@ -1838,21 +1838,21 @@ dirctl auth status
     participant U as User
     participant O as Application (Go/CLI)
     participant ADS as ADS node (ARD endpoint)
-	participant DHT as DHT federation layer
-	participant FADS as Federated ADS node
+    participant DHT as DHT federation layer
+    participant FADS as Federated ADS node
     participant P as Publisher
     participant T as Tool (MCP / A2A / REST)
 
-	P-&gt;&gt;ADS: push signed OASF record
-	ADS-&gt;&gt;DHT: announce capability + CID
-	DHT--&gt;&gt;ADS: discoverable in federation
+    P-&gt;&gt;ADS: push signed OASF record
+    ADS-&gt;&gt;DHT: announce capability + CID
+    DHT--&gt;&gt;ADS: discoverable in federation
 
     U-&gt;&gt;O: "Book a flight to Tokyo and file the expense"
     O-&gt;&gt;ADS: POST /search { text, filter: type in [a2a, mcp] }
-	ADS-&gt;&gt;DHT: federated lookup (capability -&gt; CID -&gt; providers)
-	DHT--&gt;&gt;ADS: provider nodes + matching CIDs
-	ADS-&gt;&gt;FADS: fetch federated records by CID
-	FADS--&gt;&gt;ADS: sync federated records
+    ADS-&gt;&gt;DHT: federated lookup (capability -&gt; CID -&gt; providers)
+    DHT--&gt;&gt;ADS: provider nodes + matching CIDs
+    ADS-&gt;&gt;FADS: fetch federated records by CID
+    FADS--&gt;&gt;ADS: sync federated records
     ADS--&gt;&gt;O: ranked CatalogEntries (type + url + score)
     O-&gt;&gt;O: select top entry per sub-task
     O-&gt;&gt;O: verify bindings + signature
@@ -2910,7 +2910,7 @@ of private, policy-heavy environments where they are actually needed.</p>]]></co
 
 <p>The architecture shows: a single source (the monitored app) broadcasts telemetry to multiple consumers (collector and monitor app). The monitor app creates the channel and manages participant lifecycles. The special agent joins when needed, with no pre-configuration. LLM-powered diagnostics operate on live telemetry streams. Standard OpenTelemetry metrics flow through SLIM to Prometheus/Grafana. All communication is encrypted with MLS.</p>
 
-<p>The building blocks for observability over SLIM—including the SLIM receiver and exporter for collectors and SDK exporter for applications—are available in the <a href="https://github.com/agntcy/slim-otel">slim-otel repository</a>. 
+<p>The building blocks for observability over SLIM—including the SLIM receiver and exporter for collectors and SDK exporter for applications—are available in the <a href="https://github.com/agntcy/slim-otel">slim-otel repository</a>.
 The complete working demo instead is available in the <a href="https://github.com/agntcy/agentic-apps/tree/main/observability_app">agentic-apps repository</a> in the observability_app folder.</p>
 
 <h2 id="running-the-demo">Running the Demo</h2>
@@ -2945,7 +2945,7 @@ task collector:docker:build
 
 <p>Import the pre-configured dashboard:</p>
 <ol>
-  <li>Open http://localhost:3000 and login with <code class="language-plaintext highlighter-rouge">admin</code> / <code class="language-plaintext highlighter-rouge">admin</code></li>
+  <li>Open <a href="http://localhost:3000">http://localhost:3000</a> and login with <code class="language-plaintext highlighter-rouge">admin</code> / <code class="language-plaintext highlighter-rouge">admin</code></li>
   <li>Navigate to Dashboards → Import</li>
   <li>Upload the <code class="language-plaintext highlighter-rouge">grafana-dashboard.json</code> file available in the repo</li>
 </ol>
@@ -3015,7 +3015,7 @@ This channel is used to distribute telemetry</p>
 <p>View real-time metrics in Grafana:</p>
 
 <ol>
-  <li>Navigate to http://localhost:3000</li>
+  <li>Navigate to <a href="http://localhost:3000">http://localhost:3000</a></li>
   <li>Open the metrics on the imported dashboard</li>
 </ol>
 

@@ -255,7 +255,7 @@ uniffi-bindgen-go <span class="se">\</span>
 
 <p><strong>Solution:</strong> Use GitHub Releases to host the pre-compiled static libraries, and provide a setup tool that downloads the appropriate library for the developer’s platform.</p>
 
-<p>We cover this approach in detail in our blog post: <a href="/2026/01/16/distributing-c-artifacts-for-go-modules.html">Distributing C Artifacts for Go Modules</a></p>
+<p>We cover this approach in detail in our blog post: <a href="/technical/2026/01/20/distributing-c-artifacts-for-go-modules.html">Distributing C Artifacts for Go Modules</a></p>
 
 <p>Key points:</p>
 <ul>
@@ -577,16 +577,16 @@ uniffi-bindgen-go <span class="se">\</span>
 
 <ol>
   <li><strong>Cross-compile Rust libraries</strong> for target platforms</li>
-  <li><strong>Distribute static libraries</strong> (see our <a href="https://blog.agntcy.com/2026/01/16/distributing-c-artifacts-for-go-modules.html">previous blog post</a>)</li>
+  <li><strong>Distribute static libraries</strong> (see our <a href="/technical/2026/01/20/distributing-c-artifacts-for-go-modules.html">previous blog post</a>)</li>
   <li><strong>Configure CGO</strong> to link against the Rust library</li>
   <li><strong>Handle platform-specific differences</strong></li>
 </ol>
 
-<p>We cover this in detail in our blog post about <a href="https://blog.agntcy.com/2026/01/16/distributing-c-artifacts-for-go-modules.html">distributing C artifacts for Go modules</a>.</p>
+<p>We cover this in detail in our blog post about <a href="/technical/2026/01/20/distributing-c-artifacts-for-go-modules.html">distributing C artifacts for Go modules</a>.</p>
 
 <h2 id="automation-and-cicd">Automation and CI/CD</h2>
 
-<p>Our release process automates the entire workflow for building Rust libraries, generating Go bindings, and distributing them across platforms. You can see our complete CI/CD setup in the <a href="https://github.com/agntcy/slim/blob/main/.github/workflows/release-bindings.yaml">SLIM repository’s release-bindings.yaml workflow</a>.</p>
+<p>Our release process automates the entire workflow for building Rust libraries, generating Go bindings, and distributing them across platforms. You can see our complete CI/CD setup in the <a href="https://github.com/agntcy/slim-bindings/blob/main/.github/workflows/release-bindings.yaml">SLIM bindings repository’s release-bindings.yaml workflow</a>.</p>
 
 <p>This workflow handles:</p>
 <ul>

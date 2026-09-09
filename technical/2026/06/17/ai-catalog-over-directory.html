@@ -286,21 +286,21 @@
     participant U as User
     participant O as Application (Go/CLI)
     participant ADS as ADS node (ARD endpoint)
-	participant DHT as DHT federation layer
-	participant FADS as Federated ADS node
+    participant DHT as DHT federation layer
+    participant FADS as Federated ADS node
     participant P as Publisher
     participant T as Tool (MCP / A2A / REST)
 
-	P-&gt;&gt;ADS: push signed OASF record
-	ADS-&gt;&gt;DHT: announce capability + CID
-	DHT--&gt;&gt;ADS: discoverable in federation
+    P-&gt;&gt;ADS: push signed OASF record
+    ADS-&gt;&gt;DHT: announce capability + CID
+    DHT--&gt;&gt;ADS: discoverable in federation
 
     U-&gt;&gt;O: "Book a flight to Tokyo and file the expense"
     O-&gt;&gt;ADS: POST /search { text, filter: type in [a2a, mcp] }
-	ADS-&gt;&gt;DHT: federated lookup (capability -&gt; CID -&gt; providers)
-	DHT--&gt;&gt;ADS: provider nodes + matching CIDs
-	ADS-&gt;&gt;FADS: fetch federated records by CID
-	FADS--&gt;&gt;ADS: sync federated records
+    ADS-&gt;&gt;DHT: federated lookup (capability -&gt; CID -&gt; providers)
+    DHT--&gt;&gt;ADS: provider nodes + matching CIDs
+    ADS-&gt;&gt;FADS: fetch federated records by CID
+    FADS--&gt;&gt;ADS: sync federated records
     ADS--&gt;&gt;O: ranked CatalogEntries (type + url + score)
     O-&gt;&gt;O: select top entry per sub-task
     O-&gt;&gt;O: verify bindings + signature
