@@ -21,6 +21,14 @@ jobs:
         uses: codespell-project/actions-codespell@e3258cca84ce02b0bb36a3d41f2c18f719a0cc1a # v2.4.3
         with:
           config: .codespellrc
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - name: Check Markdown
+        run: |
+          pip install pymarkdownlnt==0.9.39
+          pymarkdown --config .pymarkdown scan . _posts
       - name: Setup Node
         if: ${{ hashFiles('package.json') != '' }}
         uses: actions/setup-node@v4

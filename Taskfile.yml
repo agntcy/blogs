@@ -24,10 +24,27 @@ tasks:
 
   build:slides:
     desc: Build slide decks under presentations
-    deps:
-      - deps:slides
     cmds:
-      - node scripts/build-presentations.mjs
+      - |
+        set -euo pipefail
+        required="20.19.5"
+        skip() {
+          echo "Skipping slide build: $1 Jekyll will still run."
+          exit 0
+        }
+        command -v node >/dev/null 2>&1 || skip "Node ${required}+ is required (Slidev)."
+        if ! REQUIRED="$required" node -e '
+          const req = process.env.REQUIRED.split(".").map(Number);
+          const cur = process.versions.node.split(".").map(Number);
+          for (let i = 0; i < 3; i++) {
+            if ((cur[i] || 0) > req[i]) process.exit(0);
+            if ((cur[i] || 0) < req[i]) process.exit(1);
+          }
+        '; then
+          skip "Node $(node -v) is below ${required} (required by Slidev)."
+        fi
+        task deps:slides
+        node scripts/build-presentations.mjs
 
   run:
     desc: Run content website in live editing mode
@@ -52,6 +69,7 @@ tasks:
     desc: Run all linting checks
     cmds:
       - task: lint:spelling
+      - task: lint:markdown
       - task: lint:links
 
   lint:spelling:
@@ -62,10 +80,19 @@ tasks:
     cmds:
       - codespell --config .codespellrc
 
+  lint:markdown:
+    desc: Check Markdown syntax and style
+    preconditions:
+      - sh: python3 -c "import pymarkdown"
+        msg: "pymarkdown is required. Install it with: pip install pymarkdownlnt"
+    cmds:
+      - python3 -m pymarkdown --config .pymarkdown scan . _posts
+
   lint:fix:
     desc: Auto-fix lint issues where possible
     cmds:
       - task: lint:fix:spelling
+      - task: lint:fix:markdown
 
   lint:fix:spelling:
     desc: Auto-fix spelling issues
@@ -74,6 +101,14 @@ tasks:
         msg: "codespell is required. Install it with: pip install codespell"
     cmds:
       - codespell --config .codespellrc --write-changes
+
+  lint:fix:markdown:
+    desc: Auto-fix Markdown issues
+    preconditions:
+      - sh: python3 -c "import pymarkdown"
+        msg: "pymarkdown is required. Install it with: pip install pymarkdownlnt"
+    cmds:
+      - python3 -m pymarkdown --config .pymarkdown fix . _posts
 
   lint:links:
     desc: Check for broken links in the built site
@@ -90,8 +125,7 @@ tasks:
           GITHUB_TOKEN="$(gh auth token 2>/dev/null || true)"
           export GITHUB_TOKEN
         fi
-        # Slide decks need Node >= 20.19. Skip their generated site when it is absent
-        # so lint works without the Slidev toolchain. CI builds slides first and checks them.
+        # Local lint does not require Slidev. CI builds decks first and checks them.
         extra_exclude=()
         if ! find presentations -path 'presentations/*/site/index.html' -print -quit | grep -q .; then
           extra_exclude+=(--exclude '(^|/)presentations/.*/site')

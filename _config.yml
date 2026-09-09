@@ -49,6 +49,9 @@ exclude:
   - package.json
   - package-lock.json
   - lychee.toml
+  - .pymarkdown
+  - .codespellrc
   - scripts
   - _post_template.md
+  - presentations/**/*.md
 

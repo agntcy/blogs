@@ -1,6 +1,9 @@
 {
   "name": "agntcy-blogs",
   "private": true,
+  "engines": {
+    "node": ">=20.19.5"
+  },
   "scripts": {
     "build:slides": "node scripts/build-presentations.mjs"
   },

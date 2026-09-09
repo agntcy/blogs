@@ -195,7 +195,7 @@ AI Catalog maps the logical format onto OCI registries for content-addressed sto
 
 [ADS v1.5](https://github.com/agntcy/dir/releases/tag/v1.5.0) ships with a reference implementation of the ARD specification. A publisher can push an artifact to ADS and have it automatically available through any ARD client, regardless of whether the client speaks MCP, A2A, or any other protocol. The publisher does not need to implement multiple discovery protocols; they can rely on ADS to bridge the gap.
 
-Below is a sequence diagram showing a sample end-to-end flow, from discovery to invocation, across heterogeneous protocols. The idea is simple: an agentic application queries ADS over ARD, discovers capabilities, verifies trust, and dispatches work to the appropriate protocol based on its requirements. 
+Below is a sequence diagram showing a sample end-to-end flow, from discovery to invocation, across heterogeneous protocols. The idea is simple: an agentic application queries ADS over ARD, discovers capabilities, verifies trust, and dispatches work to the appropriate protocol based on its requirements.
 
 > Full code samples are available in [github.com/agntcy/dir](https://github.com/agntcy/dir/tree/main/samples) repository.
 
@@ -205,21 +205,21 @@ sequenceDiagram
     participant U as User
     participant O as Application (Go/CLI)
     participant ADS as ADS node (ARD endpoint)
-	participant DHT as DHT federation layer
-	participant FADS as Federated ADS node
+    participant DHT as DHT federation layer
+    participant FADS as Federated ADS node
     participant P as Publisher
     participant T as Tool (MCP / A2A / REST)
 
-	P->>ADS: push signed OASF record
-	ADS->>DHT: announce capability + CID
-	DHT-->>ADS: discoverable in federation
+    P->>ADS: push signed OASF record
+    ADS->>DHT: announce capability + CID
+    DHT-->>ADS: discoverable in federation
 
     U->>O: "Book a flight to Tokyo and file the expense"
     O->>ADS: POST /search { text, filter: type in [a2a, mcp] }
-	ADS->>DHT: federated lookup (capability -> CID -> providers)
-	DHT-->>ADS: provider nodes + matching CIDs
-	ADS->>FADS: fetch federated records by CID
-	FADS-->>ADS: sync federated records
+    ADS->>DHT: federated lookup (capability -> CID -> providers)
+    DHT-->>ADS: provider nodes + matching CIDs
+    ADS->>FADS: fetch federated records by CID
+    FADS-->>ADS: sync federated records
     ADS-->>O: ranked CatalogEntries (type + url + score)
     O->>O: select top entry per sub-task
     O->>O: verify bindings + signature
