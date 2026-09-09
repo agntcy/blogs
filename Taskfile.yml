@@ -51,27 +51,57 @@ tasks:
   lint:
     desc: Run all linting checks
     cmds:
+      - task: lint:spelling
       - task: lint:links
+
+  lint:spelling:
+    desc: Check spelling in posts and site source
+    preconditions:
+      - sh: command -v codespell
+        msg: "codespell is required. Install it with: pip install codespell"
+    cmds:
+      - codespell --config .codespellrc
+
+  lint:fix:
+    desc: Auto-fix lint issues where possible
+    cmds:
+      - task: lint:fix:spelling
+
+  lint:fix:spelling:
+    desc: Auto-fix spelling issues
+    preconditions:
+      - sh: command -v codespell
+        msg: "codespell is required. Install it with: pip install codespell"
+    cmds:
+      - codespell --config .codespellrc --write-changes
 
   lint:links:
     desc: Check for broken links in the built site
     deps:
-      - build
+      - deps
     preconditions:
       - sh: command -v lychee
         msg: "lychee is required. Install it from https://github.com/lycheeverse/lychee"
     cmds:
+      - bundle exec jekyll build
       - |
         set -euo pipefail
         if [ -z "${GITHUB_TOKEN:-}" ] && command -v gh >/dev/null 2>&1; then
           GITHUB_TOKEN="$(gh auth token 2>/dev/null || true)"
           export GITHUB_TOKEN
         fi
+        # Slide decks need Node >= 20.19. Skip their generated site when it is absent
+        # so lint works without the Slidev toolchain. CI builds slides first and checks them.
+        extra_exclude=()
+        if ! find presentations -path 'presentations/*/site/index.html' -print -quit | grep -q .; then
+          extra_exclude+=(--exclude '(^|/)presentations/.*/site')
+        fi
         lychee \
           --config lychee.toml \
           --root-dir "$PWD/_site" \
           --exclude-all-private \
           --remap "https://blogs.agntcy.org file://$PWD/_site" \
+          "${extra_exclude[@]}" \
           _site
 
   ##
@@ -89,5 +119,10 @@ tasks:
 
   deps:slides:
     desc: Install slide build dependencies
+    sources:
+      - package.json
+      - package-lock.json
+    generates:
+      - node_modules/.package-lock.json
     cmds:
       - if [ -f package-lock.json ]; then npm ci; else npm install; fi

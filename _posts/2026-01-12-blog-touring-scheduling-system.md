@@ -807,7 +807,7 @@ Sending demo traffic to running agents:
 - **Pending Tourist Requests:** 0
 - **Available Guides:** 1
 
-All tourist requests have been successfull...
+All tourist requests have been successfully...
 
 ✅ Batch 1 complete!
    Dashboard updates: 17 successful, 0 failed
@@ -843,7 +843,7 @@ All tourist requests have been successfull...
 - **Pending Tourist Requests**: 0
 - **Available Guides**: 2
 
-All tourist requests have been fulfilled, and ther...
+All tourist requests have been fulfilled, and there...
 
 ✅ Batch 2 complete!
    Dashboard updates: 17 successful, 0 failed

@@ -17,6 +17,7 @@ exclude = [
     'http://127\.0\.0\.1',
     'https://127\.0\.0\.1',
     'http://0\.0\.0\.0',
+    '0\.0\.0\.0',
     'host\.docker\.internal',
 
     # Example/placeholder URLs used in posts

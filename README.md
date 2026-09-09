@@ -22,6 +22,8 @@ This site is built with [Jekyll](https://jekyllrb.com/) and managed with
 *   [Task](https://taskfile.dev/installation/)
 *   Bundler (`gem install bundler`)
 *   [Lychee](https://github.com/lycheeverse/lychee) (for link checking)
+*   [Codespell](https://github.com/codespell-project/codespell) (for spelling; `pip install codespell`)
+*   Node.js 20.19.5 or higher (only for building slide decks under `presentations/`)
 
 ### Usage
 
@@ -44,13 +46,16 @@ Use the `Taskfile` to manage common operations:
     ```
     The output will be generated in the `_site/` directory.
 
-4.  Check for broken links:
+4.  Lint spelling and links:
     ```bash
     task lint
     ```
-    This builds the site and runs [Lychee](https://github.com/lycheeverse/lychee)
-    against `_site/`. CI runs the same check on pull requests and daily on
-    `main`.
+    This runs [Codespell](https://github.com/codespell-project/codespell) on the
+    source, then builds the Jekyll site and checks `_site/` with
+    [Lychee](https://github.com/lycheeverse/lychee). Slide decks are not required
+    for local lint; CI builds them and checks their links. Link checks also run
+    daily on `main`. Use `task lint:fix` to apply Codespell's automatic spelling
+    fixes.
 
 ## Contributing
 

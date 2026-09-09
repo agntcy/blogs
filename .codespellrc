@@ -1,0 +1,5 @@
+[codespell]
+skip = .git,_site,node_modules,vendor,.bundle,.task,.jekyll-cache,.sass-cache,.lycheecache,*.png,*.jpg,*.jpeg,*.svg,*.ico,*.lock,package-lock.json,Gemfile.lock,presentations/*/site,lychee
+# nd: Rouge syntax-highlight class (.nd). rouge: Jekyll's highlighter.
+ignore-words-list = nd,rouge
+count =
