@@ -489,6 +489,28 @@ hr { border-color: var(--border-color); margin-top: 2.5rem; margin-bottom: 2.5re
 
 .theme-toggle svg { width: 20px; height: 20px; }
 
+.error-page { text-align: center; padding: 4rem 1rem 5rem; }
+
+.error-page-code { margin: 0; font-size: 5rem; font-weight: 700; line-height: 1; letter-spacing: 0.04em; color: var(--accent-color); }
+
+.error-page-title { margin: 1rem 0 0.75rem; font-size: 1.75rem; }
+
+.error-page-copy { max-width: 32rem; margin: 0 auto 2rem; color: var(--text-color-lighter); }
+
+.error-page-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.75rem; margin: 0; }
+
+.error-page-button { display: inline-block; box-sizing: border-box; padding: 0.6rem 1.25rem; border: 2px solid var(--accent-color); border-radius: 0.25rem; font-weight: 600; text-decoration: none; color: var(--primary-fg-color); background-color: var(--accent-color); transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease; }
+
+.error-page-button:visited { color: var(--primary-fg-color); }
+
+.error-page-button:hover { color: var(--primary-fg-color); background-color: var(--link-hover-color); border-color: var(--link-hover-color); text-decoration: none; }
+
+.error-page-button-secondary { color: var(--accent-color); background-color: transparent; }
+
+.error-page-button-secondary:visited { color: var(--accent-color); }
+
+.error-page-button-secondary:hover { color: var(--primary-fg-color); background-color: var(--accent-color); border-color: var(--accent-color); }
+
 .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
 
 .pagination-link { padding: 0.5rem 1rem; border-radius: 0.25rem; text-decoration: none; color: var(--link-color); background-color: var(--bg-color-light); transition: background-color 0.2s ease; }
