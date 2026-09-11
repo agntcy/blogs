@@ -34,6 +34,15 @@ plugins:
 paginate: 5
 paginate_path: "/page/:num/"
 
+# Old URL -> new URL. Add an entry when a post is renamed or its date, slug,
+# or categories change. See CONTRIBUTING.md ("Moving or Renaming Posts").
+# Paths are site-absolute (as published), for example:
+# /technical/2026/01/12/old-slug.html: /technical/2026/02/01/new-slug.html
+redirects:
+  /technical/2026/02/12/dir-v1.html: /technical/2026/02/19/dir-v1.html
+  /technical/2026/04/04/mvp-ai-agents-multicluster.html: /technical/2026/04/21/mvp-ai-agents-multicluster.html
+
+
 # Keep repo tooling and docs out of the published site
 exclude:
   - Gemfile
