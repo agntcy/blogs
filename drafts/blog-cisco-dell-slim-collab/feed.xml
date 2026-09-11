@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://blogs.agntcy.org/drafts/blog-cisco-dell-slim-collab/feed.xml" rel="self" type="application/atom+xml" /><link href="https://blogs.agntcy.org/drafts/blog-cisco-dell-slim-collab/" rel="alternate" type="text/html" /><updated>2026-09-11T14:25:40+00:00</updated><id>https://blogs.agntcy.org/drafts/blog-cisco-dell-slim-collab/feed.xml</id><title type="html">AGNTCY Blogs</title><subtitle>Building infrastructure for the Internet of Agents</subtitle><entry><title type="html">Crossing Enterprise Boundaries with SLIM: A Dell and Cisco Co-Innovation</title><link href="https://blogs.agntcy.org/drafts/blog-cisco-dell-slim-collab/technical/2026/09/11/cisco-dell-slim-cross-enterprise-agents.html" rel="alternate" type="text/html" title="Crossing Enterprise Boundaries with SLIM: A Dell and Cisco Co-Innovation" /><published>2026-09-11T09:00:00+00:00</published><updated>2026-09-11T09:00:00+00:00</updated><id>https://blogs.agntcy.org/drafts/blog-cisco-dell-slim-collab/technical/2026/09/11/cisco-dell-slim-cross-enterprise-agents</id><content type="html" xml:base="https://blogs.agntcy.org/drafts/blog-cisco-dell-slim-collab/technical/2026/09/11/cisco-dell-slim-cross-enterprise-agents.html"><![CDATA[<p>Dell’s application of SLIM to a customer use case facilitating agentic interaction across enterprise boundaries.</p>
+
+<!--more-->
+
+<p>Dell was recently approached by a customer to engage in a co-innovation project related to agentic interoperability across enterprise boundaries. For this work we wanted to consider leading edge technologies to demonstrate the art of the possible in potentially validating new patterns of agentic architecture. Along with Cisco, Dell is a founding member of the <a href="https://agntcy.org/">AGNTCY project</a> whose goal is to redesign and reimplement the cross-cutting concerns necessary to support an “Internet of Agents (IoA)”. We chose to build our agents using the AGNTCY SDK and to facilitate their communication using the <a href="https://slim.agntcy.org/latest/">Secure Low-Latency Interactive Messaging (SLIM)</a> protocol, which will be the focus of this article.</p>
+
+<p>Dell chose SLIM as the communication layer for this project for several reasons:</p>
+
+<ul>
+  <li>Encryption via Message Layer Security (MLS) which doesn’t rely on TLS</li>
+  <li>SLIM’s semantics are analogous with gRPC allowing integration across several A2A-compatible agent SDKs</li>
+  <li>SLIM’s name-based routing for message passing is familiar from other event-driven efforts</li>
+  <li>SLIM’s integration with SPIRE allows for identity verification of connected applications</li>
+  <li>In a multi-tenant scenario a SPIRE Federation allows the SLIM control plane to validate the identity of any applications, such as tenant-resident Data Planes, that connect to it.</li>
+</ul>
+
+<p>Due to security constraints applicable to our respective customer networks, both parties agreed to host representative environments in a cloud provider where we could demonstrate the necessary interaction. In designing our approach we were inspired by the <a href="https://github.com/agntcy/slim/blob/98881353a0b21b8ddf7afed84f998497a9ca32e5/deployments/multicluster/multi_cluster_strategy.md">multi-cluster deployment strategy</a> offered by the SLIM project which showed end to end message security across multiple clusters participating in a SPIRE Federation.</p>
+
+<pre><code class="language-mermaid">graph TB
+    subgraph FED["SPIRE Federation"]
+      subgraph DMZ["DMZ / Interop K8s Cluster"]
+        subgraph DMZ_NS["namespace: slim"]
+          CP["control-plane"]
+          LB["load-balancer"]
+        end
+      end
+
+      subgraph DELL["Dell K8s Cluster"]
+        subgraph DELL_SLIM["namespace: slim"]
+          DELL_DP["data-plane"]
+        end
+        subgraph DELL_DEF["namespace: default"]
+          DELL_AGENT["agent"]
+        end
+      end
+
+      subgraph CUST["Customer K8s Cluster"]
+        subgraph CUST_SLIM["namespace: slim"]
+          CUST_DP["data-plane"]
+        end
+        subgraph CUST_DEF["namespace: default"]
+          CUST_AGENT["agent"]
+        end
+      end
+    end
+
+    IDP["Self-issued&lt;br/&gt;Identity Provider"]
+
+    DELL_AGENT --&gt; DELL_DP
+    CUST_AGENT --&gt; CUST_DP
+    DELL_DP --&gt;|mTLS| LB
+    CUST_DP --&gt;|mTLS| LB
+    DMZ --&gt;|OIDC| IDP
+</code></pre>
+
+<p><strong>Figure 1: SLIM connection across multiple clusters</strong></p>
+
+<p>The above diagram shows the two respective tenants for Dell and the customer, along with an “Interoperability” (Interop) tenant. Each tenant hosts a Kubernetes cluster that is a member of a SPIRE Federation. SPIRE allows unique cryptographic IDs to be assigned to each workload in the cluster. These IDs can be validated across tenant boundaries by virtue of shared “trust bundles”. This allows identity verification at every step for full end to end messaging security. Points at which trust is asserted include:</p>
+
+<ul>
+  <li>A local application attempts connection to a SLIM data plane and presents its assigned ID</li>
+  <li>A SLIM data plane in a given tenant attempts connection to the SLIM control plane in the Interop tenant and presents its assigned ID. This ID is verified by virtue of the SPIRE trust bundle.</li>
+  <li>A message from an application in the Dell tenant is sent to the Customer tenant, including its ID in a message header. The receiving application is able to verify that ID by virtue of the SPIRE trust bundle.</li>
+</ul>
+
+<p>The inclusion of the Interop cluster was an implementation requirement based on the interaction between SLIM’s control plane and data planes at the time the architecture was designed. However our conception of the role this tenant might play grew to possibly include a centralized authority of trust for interoperability services – like connection brokering, agent discovery, identity provider, etc. We perceived a possible advantage in having a third party intermediary who could independently attest to the trustworthiness of other parties participating in the Federation.</p>
+
+<h2 id="agentic-sdk-integration-with-slim-and-agent-communications">Agentic SDK Integration with SLIM and Agent Communications</h2>
+
+<p>A SLIM endpoint is identifiable by a name (for example, <code class="language-plaintext highlighter-rouge">local/acme/support_agent</code>) rather than a host and port. Applications dial the fabric (i.e., the data plane), announcing either their own name or addressing a recipient by name, and the fabric routes traffic accordingly. Because there is no ingress, no NAT traversal, no DNS configuration, and no per-tenant certificate requirement, the only prerequisites are the endpoint name and the data plane. The data plane functions analogous to pub-sub platforms, but provides a more streamlined, effective alternative to standard web-domain HTTPS routing. SLIM encrypts payloads end to end with Message Layer Security at the session layer, so traffic stays confidential even where TLS terminates at an intermediate hop. For us the practical consequence was operational: onboarding an agent from a second tenant required no certificate issuance, no SAN updates, and no per-partner TLS negotiation — only a name and a data plane endpoint.</p>
+
+<p>The entrypoint to our services is the gateway application which serves both native SLIM requests and traditional JSON-RPC over HTTPS, translating external calls into the SLIM protocol for intra-tenant communication. The request stays A2A end to end — the transport is swapped, not the protocol — and nothing is re-serialized, re-modelled, or downgraded on the way through. Trace context and the caller’s SPIFFE identity travel in message metadata, so identity propagates across the tenant boundary rather than terminating at the edge. On the receiving side an agent binds the same A2A service handler it would run behind HTTP, so agent business logic stays transport-agnostic.</p>
+
+<p>In our workflow, each agent uses a descriptive name that clearly identifies its purpose and the capabilities required to provide its service. Because agent cards are registered alongside their names in a central registry for discovery, external applications can discover and connect to them via the gateway application. We extended the standard A2A agent card with a <code class="language-plaintext highlighter-rouge">slim_topic</code> field, which is the routing key the gateway resolves against, along with SPIFFE identity, owning organization, and per-skill <code class="language-plaintext highlighter-rouge">inputs</code> and <code class="language-plaintext highlighter-rouge">outputs</code>. Agents self-register with a Discovery service at startup, so bringing an agent online and making it visible are a single act; liveness is then probed over SLIM itself, which exercises the real transport rather than a side-channel health port.</p>
+
+<pre><code class="language-mermaid">flowchart TB
+    subgraph External["External Clients &amp; 3rd Parties"]
+        EXT_A["External Application\n(JSON-RPC over HTTPS)"]
+        EXT_B["Standard MCP Client\n(Streamable HTTP)"]
+    end
+
+    subgraph Edge["Edge / Boundary"]
+        GW["Gateway &amp; Orchestrator\n• Transport Swapper (A2A preserved)\n• SPIFFE Identity Propagation"]
+        REG[("Central Agent Registry\n• Agent Cards &amp; Skills\n• slim_topic &amp; SPIFFE IDs\n• In-band Liveness Probing")]
+    end
+
+    subgraph Fabric["SLIM Fabric / Data Plane (MLS Encrypted)"]
+        direction TB
+        DP["Fabric Routing Plane\n• Name-based Addressing\n• End-to-End MLS Encryption\n• Anycast &amp; Unicast Routing Engine"]
+    end
+
+    subgraph TenantA["Tenant A (Production Mesh)"]
+        direction TB
+        A1["Agent Instance 1\ntenant-a/gke/support_agent/uuid-1"]
+        A2["Agent Instance 2\ntenant-a/gke/support_agent/uuid-2"]
+        MCP_SVC["Dual-Transport MCP Server\nslim-bindings + FastMCP"]
+    end
+
+    EXT_A --&gt;|"HTTPS / JSON-RPC"| GW
+    EXT_B --&gt;|"HTTP Stream + Bearer Token"| MCP_SVC
+    GW &lt;--&gt;|"Discovery &amp; Liveness"| REG
+    GW --&gt;|"A2A Dispatches (SLIM)"| DP
+    DP --&gt;|"Anycast / Unicast"| A1
+    DP --&gt;|"Anycast / Unicast"| A2
+    DP &lt;--&gt;|"In-Mesh Tool Calls"| MCP_SVC
+</code></pre>
+
+<p><strong>Figure 2: Handling an incoming request via the orchestrator and routed through SLIM</strong></p>
+
+<p>SLIM natively supports two delivery modes, Unicast and Anycast, distinguished by the presence of a fourth segment in the naming convention (e.g., <code class="language-plaintext highlighter-rouge">local/acme/support_agent/&lt;uuid&gt;</code>). Appending the fourth parameter routes traffic via Unicast, while omitting it enables Anycast routing. Our application code never writes that segment; the fabric supplies it. The request is published using the wildcard form and responders reply on a channel for their specific instance, so fan-out and reply affinity fall out of the naming scheme with no application involvement. The scaling model follows directly. Because throughput to a single agent is bounded, capacity could be added by registering additional replicas under the same naming pattern and letting the data plane route across them. This would require accounting for the need to share context between the agent replicas of course, but the protocol supports it.</p>
+
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    actor User as External Client
+    participant GW as Gateway / Planner
+    participant REG as Central Registry
+    participant DP as SLIM Data Plane
+    participant A1 as Agent A (Anycast)
+    participant A2 as Agent B (Anycast)
+    participant MCP as MCP A
+    participant MCPB as MCP B
+
+    User-&gt;&gt;GW: Request
+    GW-&gt;&gt;REG: Lookup agent cards, skills, and slim_topics
+    REG--&gt;&gt;GW: Registered endpoints &amp; schemas
+    Note over GW: Planning (Branches A &amp; B are independent)
+
+    par Parallel Intent Execution
+        GW-&gt;&gt;DP: Dispatch Intent A to local/acme/agent-a
+        DP-&gt;&gt;A1: Route payload + SPIFFE identity + trace context
+        A1-&gt;&gt;DP: Call Tool local/acme/mcp-a
+        DP-&gt;&gt;MCP: Execute MCP tool via slim-bindings
+        MCP--&gt;&gt;DP: Tool result stream
+        DP--&gt;&gt;A1: Tool result
+        A1--&gt;&gt;DP: Complete Intent A
+        DP--&gt;&gt;GW: Result A
+    and
+        GW-&gt;&gt;DP: Dispatch Intent B to local/acme/agent-b
+        DP-&gt;&gt;A2: Route payload + SPIFFE identity + trace context
+        A2-&gt;&gt;DP: Call Tool local/acme/mcp-b
+        DP-&gt;&gt;MCPB: Execute MCP tool via slim-bindings
+        MCPB--&gt;&gt;DP: Tool result stream
+        DP--&gt;&gt;A2: Tool result
+        A2--&gt;&gt;DP: Complete Intent B
+        DP--&gt;&gt;GW: Result B
+    end
+
+    Note over GW: Synthesize results into single A2A response
+    GW--&gt;&gt;User: A2A JSON-RPC response
+</code></pre>
+
+<p><strong>Figure 3: Handling of intent via delegation to internal agents and tooling routed by SLIM</strong></p>
+
+<p>Within our tenant the prototype gateway can decompose complex requests into granular intents that individual agents execute based on the capabilities advertised in their agent cards and published to the internal agent registry. The resulting plan is a validated, acyclic topological execution graph. Using SLIM we can parallelize independent calls across agents using Anycast delivery. Ultimately, name-based routing delivers cross-tenant reachability without complex network re-engineering—enabling a topology that widens as dynamically as the execution plan itself.</p>
+
+<p>All intra tenant communications go through a SLIM data-plane which natively supports MCP integration. The effort required to add slim-bindings is minimal – effectively a simple wrapper of the HTTPs based FastMCP server. This also provided us with multiple ways to interact with the MCP server itself, facilitating interactions with applications over both HTTPs and SLIM.</p>
+
+<h2 id="agent-to-mcp-proxy-luca">Agent-to-MCP Proxy (Luca)</h2>
+
+<p>TBD</p>
+
+<h2 id="conclusion">Conclusion</h2>
+
+<p>TBD</p>
+
+<p>I plan to say more in this section about the feedback we received from the customer and their desire to pivot to less cutting edge technology based on the need to integrate with an industry partner. I will also mention that we continue to use SLIM for the internal operations of the Dell tenant, just not for cross-tenant communication. (see <a href="https://github.com/agntcy/blogs">GitHub - agntcy/blogs: AGNTCY blogs website</a>)</p>]]></content><author><name>Trevor Conn</name></author><category term="technical" /><category term="slim" /><category term="mls" /><category term="spiffe" /><category term="spire" /><category term="a2a" /><category term="mcp" /><category term="kubernetes" /><category term="multi-cluster" /><summary type="html"><![CDATA[Dell’s application of SLIM to a customer use case facilitating agentic interaction across enterprise boundaries.]]></summary></entry></feed>
