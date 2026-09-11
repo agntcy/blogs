@@ -77,6 +77,8 @@ tags: [dir, slim, agents]
 - `categories` commonly include `technical`, `architecture`, `security`,
   `operations`, `announcements`, or `vision`.
 - Set `mermaid: true` in the front matter if the post contains Mermaid diagrams.
+- If this post replaces an older URL, add `redirect_from` (see
+  [Moving or Renaming Posts](#moving-or-renaming-posts)).
 
 ### Content
 
@@ -93,6 +95,40 @@ tags: [dir, slim, agents]
   ```html
   <img src="/assets/figures/your-figure.png" alt="Short description of the figure">
   ```
+
+## Moving or Renaming Posts
+
+If you move or rename a post (for example, changing its date, slug, or
+categories), **you must add a redirect** so bookmarks, external links, and
+search results keep working.
+
+Post URLs follow Jekyll's default permalink,
+`/:categories/:year/:month/:day/:title.html`. Changing the filename slug, the
+front matter `date`, or `categories` changes the published path.
+
+To add a redirect:
+
+1. Open [`_config.yml`](_config.yml).
+2. Add an entry to `redirects`. The key is the old published path; the value is
+   the new published path (or an external URL):
+
+    ```yaml
+    redirects:
+      /technical/2026/01/12/old-slug.html: /technical/2026/02/01/new-slug.html
+    ```
+
+   You can instead set `redirect_from` on the destination post:
+
+    ```yaml
+    redirect_from:
+      - /technical/2026/01/12/old-slug.html
+    ```
+
+3. Test locally with `task run` or `task build` and open the old URL. It should
+   send you to the new location.
+
+Failing to add redirects will result in broken links and a poor user
+experience. Always add redirects when moving content.
 
 ## Site and Infrastructure Changes
 
