@@ -11,9 +11,12 @@ on:
       - "package-lock.json"
       - "scripts/**"
 
+# This job builds pull request content, including content from forks, so it gets
+# a read-only token and never deploys. Publishing happens in
+# preview-deploy.yml, which runs in the base repository context.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
+  pull-requests: read
 
 jobs:
   preview:
@@ -28,7 +31,6 @@ jobs:
           BRANCH="${{ github.head_ref }}"
           SAFE=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
           echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
-          echo "url=https://blogs.agntcy.org/drafts/$SAFE/" >> "$GITHUB_OUTPUT"
 
       - name: Keep only PR-changed posts
         env:
@@ -69,87 +71,15 @@ jobs:
         if: ${{ hashFiles('package.json') != '' }}
         run: npm run build:slides
 
+      # --future so a draft dated ahead of today still shows up in its preview.
       - name: Build with Jekyll
-        run: bundle exec jekyll build --baseurl "/drafts/${{ steps.branch.outputs.safe }}"
+        run: bundle exec jekyll build --baseurl "/drafts/${{ steps.branch.outputs.safe }}" --future
         env:
           JEKYLL_ENV: production
 
-      - name: Deploy preview to gh-pages branch
-        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+      - name: Upload built preview
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./_site
-          destination_dir: drafts/${{ steps.branch.outputs.safe }}
-          keep_files: true
-
-      - name: Find existing preview comment
-        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3
-        id: find-comment
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: '<!-- pr-preview -->'
-
-      - name: Create or update preview comment
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
-        with:
-          comment-id: ${{ steps.find-comment.outputs.comment-id }}
-          issue-number: ${{ github.event.pull_request.number }}
-          edit-mode: replace
-          body: |
-            <!-- pr-preview -->
-            ## Blog preview
-
-            Preview deployed to: ${{ steps.branch.outputs.url }}
-
-            _Last updated: commit `${{ github.sha }}`_
-
-  update-index:
-    runs-on: ubuntu-latest
-    needs: preview
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          ref: ${{ github.base_ref }}
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
-        with:
-          ruby-version: '3.4'
-          bundler-cache: true
-          cache-version: 0
-
-      - name: Build themed drafts index
-        run: |
-          git fetch origin gh-pages --depth=1
-          # List only subdirectories of drafts/ (not index.html)
-          DIRS=$(git ls-tree -d --name-only origin/gh-pages -- drafts/ 2>/dev/null || true)
-
-          mkdir -p drafts
-          printf -- '---\nlayout: default\ntitle: PR Previews\n---\n\n' > drafts/index.md
-
-          if [ -z "$DIRS" ]; then
-            echo 'No active PR previews.' >> drafts/index.md
-          else
-            echo '<ul>' >> drafts/index.md
-            while IFS= read -r dir; do
-              NAME=$(basename "$dir")
-              printf '  <li><a href="/drafts/%s/">%s</a></li>\n' "$NAME" "$NAME" >> drafts/index.md
-            done <<< "$DIRS"
-            echo '</ul>' >> drafts/index.md
-          fi
-
-          bundle exec jekyll build
-          cp _site/drafts/index.html /tmp/drafts-index.html
-
-      - name: Push themed index to gh-pages
-        run: |
-          git fetch origin gh-pages
-          git checkout gh-pages
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          cp /tmp/drafts-index.html drafts/index.html
-          git add drafts/index.html
-          git diff --cached --quiet || git commit -m "chore: update drafts index for ${{ github.head_ref }}"
-          git push origin gh-pages
+          name: preview-site
+          path: _site
+          retention-days: 1

@@ -1,0 +1,137 @@
+name: PR Preview Deploy
+
+# Runs after "PR Preview" has built a pull request. That build may come from a
+# fork, where GITHUB_TOKEN is read-only and cannot push to gh-pages. This
+# workflow runs in the base repository context with write access, and only ever
+# handles the built artifact: it does not check out or execute pull request code.
+on:
+  workflow_run:
+    workflows: ["PR Preview"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      safe: ${{ steps.target.outputs.safe }}
+    steps:
+      # Both values come from the workflow_run payload, which GitHub sets, not
+      # from the artifact. The branch name is sanitized before it is used as a
+      # path, and the PR number is checked to be numeric.
+      - name: Resolve preview target
+        id: target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          SAFE=$(printf '%s' "$HEAD_BRANCH" | sed 's/[^a-zA-Z0-9._-]/-/g')
+          case "$SAFE" in
+            ""|*/*|.|..) echo "Refusing unusable branch name: $HEAD_BRANCH" >&2; exit 1 ;;
+          esac
+
+          PR=$(gh api "repos/${{ github.repository }}/pulls?state=open&per_page=100" \
+            | jq -r --arg sha "$HEAD_SHA" '[.[] | select(.head.sha == $sha) | .number] | first // empty')
+          if ! printf '%s' "$PR" | grep -Eq '^[0-9]+$'; then
+            echo "No open pull request found for $HEAD_SHA, nothing to publish." >&2
+            exit 1
+          fi
+
+          echo "safe=$SAFE" >> "$GITHUB_OUTPUT"
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          echo "url=https://blogs.agntcy.org/drafts/$SAFE/" >> "$GITHUB_OUTPUT"
+
+      - name: Download built preview
+        uses: actions/download-artifact@v4
+        with:
+          name: preview-site
+          path: _site
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy preview to gh-pages branch
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          destination_dir: drafts/${{ steps.target.outputs.safe }}
+          keep_files: true
+
+      - name: Find existing preview comment
+        uses: peter-evans/find-comment@3eae4d37986fb5a8592848f6a574fdf654e61f9e # v3
+        id: find-comment
+        with:
+          issue-number: ${{ steps.target.outputs.pr }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '<!-- pr-preview -->'
+
+      - name: Create or update preview comment
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ steps.target.outputs.pr }}
+          edit-mode: replace
+          body: |
+            <!-- pr-preview -->
+            ## Blog preview
+
+            Preview deployed to: ${{ steps.target.outputs.url }}
+
+            _Last updated: commit `${{ github.event.workflow_run.head_sha }}`_
+
+  update-index:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: main
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@3ff19f5e2baf30647122352b96108b1fbe250c64 # v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+          cache-version: 0
+
+      - name: Build themed drafts index
+        run: |
+          git fetch origin gh-pages --depth=1
+          # List only subdirectories of drafts/ (not index.html)
+          DIRS=$(git ls-tree -d --name-only origin/gh-pages -- drafts/ 2>/dev/null || true)
+
+          mkdir -p drafts
+          printf -- '---\nlayout: default\ntitle: PR Previews\n---\n\n' > drafts/index.md
+
+          if [ -z "$DIRS" ]; then
+            echo 'No active PR previews.' >> drafts/index.md
+          else
+            echo '<ul>' >> drafts/index.md
+            while IFS= read -r dir; do
+              NAME=$(basename "$dir")
+              printf '  <li><a href="/drafts/%s/">%s</a></li>\n' "$NAME" "$NAME" >> drafts/index.md
+            done <<< "$DIRS"
+            echo '</ul>' >> drafts/index.md
+          fi
+
+          bundle exec jekyll build
+          cp _site/drafts/index.html /tmp/drafts-index.html
+
+      - name: Push themed index to gh-pages
+        run: |
+          git fetch origin gh-pages
+          git checkout gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp /tmp/drafts-index.html drafts/index.html
+          git add drafts/index.html
+          git diff --cached --quiet || git commit -m "chore: update drafts index for ${{ needs.deploy.outputs.safe }}"
+          git push origin gh-pages

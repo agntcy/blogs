@@ -1,7 +1,10 @@
 name: PR Preview Cleanup
 
+# pull_request_target so cleanup also runs for pull requests from forks, where
+# GITHUB_TOKEN would otherwise be read-only. Safe here because this workflow
+# only checks out gh-pages and the base branch, never pull request content.
 on:
-  pull_request:
+  pull_request_target:
     branches: ["main"]
     types: [closed]
 
