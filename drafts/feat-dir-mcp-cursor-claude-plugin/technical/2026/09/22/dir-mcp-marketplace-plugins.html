@@ -3,20 +3,22 @@
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>Archive | AGNTCY Blogs</title>
+<title>dir-mcp Goes Native: Marketplace Plugins for Cursor and Claude Code | AGNTCY Blogs</title>
 <meta name="generator" content="Jekyll v4.3.4" />
-<meta property="og:title" content="Archive" />
+<meta property="og:title" content="dir-mcp Goes Native: Marketplace Plugins for Cursor and Claude Code" />
+<meta name="author" content="Árpád Csepi" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="Building infrastructure for the Internet of Agents" />
-<meta property="og:description" content="Building infrastructure for the Internet of Agents" />
-<link rel="canonical" href="https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/archive/" />
-<meta property="og:url" content="https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/archive/" />
+<meta name="description" content="TL;DR: dir-mcp is now installable as a first-class plugin from the AGNTCY Directory MCP repository. One command (or one click) wires your IDE straight into the AGNTCY Agent Directory with the power of MCP server like search, publish, validate, and generate OASF records without ever leaving the editor." />
+<meta property="og:description" content="TL;DR: dir-mcp is now installable as a first-class plugin from the AGNTCY Directory MCP repository. One command (or one click) wires your IDE straight into the AGNTCY Agent Directory with the power of MCP server like search, publish, validate, and generate OASF records without ever leaving the editor." />
+<link rel="canonical" href="https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/technical/2026/09/22/dir-mcp-marketplace-plugins.html" />
+<meta property="og:url" content="https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/technical/2026/09/22/dir-mcp-marketplace-plugins.html" />
 <meta property="og:site_name" content="AGNTCY Blogs" />
-<meta property="og:type" content="website" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-09-22T13:15:00+00:00" />
 <meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="Archive" />
+<meta property="twitter:title" content="dir-mcp Goes Native: Marketplace Plugins for Cursor and Claude Code" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebPage","description":"Building infrastructure for the Internet of Agents","headline":"Archive","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/assets/images/logo-light.svg"}},"url":"https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/archive/"}</script>
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"Árpád Csepi"},"dateModified":"2026-09-22T13:15:00+00:00","datePublished":"2026-09-22T13:15:00+00:00","description":"TL;DR: dir-mcp is now installable as a first-class plugin from the AGNTCY Directory MCP repository. One command (or one click) wires your IDE straight into the AGNTCY Agent Directory with the power of MCP server like search, publish, validate, and generate OASF records without ever leaving the editor.","headline":"dir-mcp Goes Native: Marketplace Plugins for Cursor and Claude Code","mainEntityOfPage":{"@type":"WebPage","@id":"https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/technical/2026/09/22/dir-mcp-marketplace-plugins.html"},"publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/assets/images/logo-light.svg"},"name":"Árpád Csepi"},"url":"https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/technical/2026/09/22/dir-mcp-marketplace-plugins.html"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="icon" type="image/x-icon" href="/drafts/feat-dir-mcp-cursor-claude-plugin/assets/images/favicon.ico">
   <link rel="stylesheet" href="/drafts/feat-dir-mcp-cursor-claude-plugin/assets/main.css"><link type="application/atom+xml" rel="alternate" href="https://blogs.agntcy.org/drafts/feat-dir-mcp-cursor-claude-plugin/feed.xml" title="AGNTCY Blogs" /><script>
@@ -53,15 +55,132 @@
 
 <main class="page-content" aria-label="Content">
       <div class="wrapper">
-        <div class="archive">
-  <h1 class="page-heading">Archive</h1>
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
-  
-<h2 class="archive-year">2026</h2>
-    <ul class="archive-list"><li>
-        <span class="archive-date">Sep 22</span>
-        <a class="archive-link" href="/drafts/feat-dir-mcp-cursor-claude-plugin/technical/2026/09/22/dir-mcp-marketplace-plugins.html">dir-mcp Goes Native: Marketplace Plugins for Cursor and Claude Code</a>
-      </li></ul></div>
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">dir-mcp Goes Native: Marketplace Plugins for Cursor and Claude Code</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2026-09-22T13:15:00+00:00" itemprop="datePublished">
+        September 22, 2026
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">Árpád Csepi</span></span>• 4 min read</p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p><strong>TL;DR</strong>: <code class="language-plaintext highlighter-rouge">dir-mcp</code> is now installable as a first-class plugin from the <a href="https://github.com/agntcy/dir-mcp">AGNTCY Directory MCP repository</a>. One command (or one click) wires your IDE straight into the AGNTCY Agent Directory with the power of MCP server like search, publish, validate, and generate OASF records without ever leaving the editor.</p>
+
+<!--more-->
+
+<h2 id="the-problem-wiring-up-an-mcp-server-by-hand-gets-old-fast">The problem: wiring up an MCP server by hand gets old fast</h2>
+
+<p>If you’ve worked with the <a href="https://github.com/agntcy/dir">AGNTCY Directory</a> before, you know the drill: describe your agent as an OASF record, validate it against the schema, push it to a Directory instance, and search for others’ records when you need to compose something new. <code class="language-plaintext highlighter-rouge">dir-mcp</code> exposes all of that as MCP tools so an AI assistant can do it for you but until now, getting it running meant downloading the right <code class="language-plaintext highlighter-rouge">dir-mcp</code> and <code class="language-plaintext highlighter-rouge">dirctl</code> binaries for your platform, hand-editing an <code class="language-plaintext highlighter-rouge">mcp.json</code>, and hoping the paths lined up.</p>
+
+<p>That’s a lot of ceremony for “I just want my assistant to talk to the Directory.”</p>
+
+<pre><code class="language-mermaid">flowchart LR
+    subgraph IDE["Your IDE"]
+        A["AI assistant&lt;br/&gt;(Claude Code / Cursor)"]
+        P["agntcy-dir plugin"]
+    end
+
+    W["@agntcy/dir-mcp&lt;br/&gt;npm wrapper"]
+    B["dir-mcp binary"]
+    D["dirctl binary"]
+    S["AGNTCY Directory&lt;br/&gt;instance"]
+
+    A --&gt;|MCP tool calls| P
+    P --&gt; W
+    W --&gt;|postinstall download| B
+    W --&gt;|postinstall download| D
+    B --&gt;|search / push / pull / verify| S
+    D --&gt;|record validation| S
+</code></pre>
+
+<h2 id="whats-new-real-marketplace-plugins">What’s new: real marketplace plugins</h2>
+
+<p><code class="language-plaintext highlighter-rouge">dir-mcp</code> now ships two purpose-built plugin packages, one per IDE, each using that IDE’s native mechanism instead of a generic MCP config blob:</p>
+
+<ul>
+  <li><strong>Claude Code</strong>: a <code class="language-plaintext highlighter-rouge">.claude-plugin/marketplace.json</code> at the repo root registers the <code class="language-plaintext highlighter-rouge">agntcy-dir</code> plugin, backed by <code class="language-plaintext highlighter-rouge">dir-mcp-plugins/claude</code>.</li>
+  <li><strong>Cursor</strong>: a matching <code class="language-plaintext highlighter-rouge">.cursor-plugin/marketplace.json</code> registers the equivalent plugin from <code class="language-plaintext highlighter-rouge">dir-mcp-plugins/cursor</code>.</li>
+</ul>
+
+<p>Both plugins bundle the same set of MCP tools, a set of ready-made skills, and the wiring needed to talk to a Directory instance. Behind the scenes, a new <code class="language-plaintext highlighter-rouge">@agntcy/dir-mcp</code> npm wrapper package handles the part that used to be manual: its <code class="language-plaintext highlighter-rouge">postinstall</code> step downloads the correct <code class="language-plaintext highlighter-rouge">dir-mcp</code> and <code class="language-plaintext highlighter-rouge">dirctl</code> binaries for your OS and architecture, so the plugin works out of the box on macOS, Linux, or Windows without you touching a download page.</p>
+
+<h2 id="installing-in-claude-code">Installing in Claude Code</h2>
+
+<p>You can install the plugin from the terminal or entirely through the UI whichever fits your workflow.</p>
+
+<h3 id="option-a-the-cli">Option A: the CLI</h3>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>claude plugin marketplace add https://github.com/agntcy/dir-mcp
+claude plugin <span class="nb">install </span>agntcy-dir@agntcy-dir-mcp
+</code></pre></div></div>
+
+<h3 id="option-b-the-ui-vs-code-extension-or-desktop-app">Option B: the UI (VS Code extension or desktop app)</h3>
+
+<p><strong>In the VS Code extension:</strong></p>
+
+<ol>
+  <li>Type <code class="language-plaintext highlighter-rouge">/plugins</code> in the prompt box to open the <strong>Manage plugins</strong> panel.</li>
+  <li>Switch to the <strong>Marketplaces</strong> tab.</li>
+  <li>Enter the GitHub repo <code class="language-plaintext highlighter-rouge">agntcy/dir-mcp</code> (a full Git URL or local path also works) and press Enter to register it.</li>
+  <li>Switch to the <strong>Plugins</strong> tab and search for <code class="language-plaintext highlighter-rouge">agntcy-dir</code>.</li>
+  <li>Click <strong>Install</strong>, then pick a scope: <strong>Install for you</strong>, <strong>Install for this project</strong>, or <strong>Install locally</strong>.</li>
+</ol>
+
+<p><strong>In the desktop app:</strong></p>
+
+<ol>
+  <li>Click the <strong>+</strong> button and select <strong>Plugins</strong> to open the plugin browser.</li>
+  <li>Add the <code class="language-plaintext highlighter-rouge">agntcy/dir-mcp</code> GitHub repo as a marketplace from the same dialog.</li>
+  <li>Select the <code class="language-plaintext highlighter-rouge">agntcy-dir</code> plugin and choose an installation scope.</li>
+</ol>
+
+<h2 id="installing-in-cursor">Installing in Cursor</h2>
+
+<p>Cursor users install the same functionality by adding the <code class="language-plaintext highlighter-rouge">agntcy/dir-mcp</code> GitHub repository as a marketplace:</p>
+
+<ol>
+  <li>Open Cursor’s <strong>Settings</strong> and go to the <strong>Plugins</strong> (Marketplace) panel.</li>
+  <li>Add a new marketplace and point it at the <code class="language-plaintext highlighter-rouge">agntcy/dir-mcp</code> GitHub repo (a full Git URL or local path also works).</li>
+  <li>Search for <code class="language-plaintext highlighter-rouge">agntcy-dir</code> in the newly added marketplace and install it.</li>
+</ol>
+
+<p>The plugin drops its MCP wiring into <code class="language-plaintext highlighter-rouge">~/.cursor/mcp.json</code> (or a project-local <code class="language-plaintext highlighter-rouge">.cursor/mcp.json</code>), plus <code class="language-plaintext highlighter-rouge">.mdc</code> rules files so Cursor’s agent knows when to reach for the Directory tools automatically.</p>
+
+<h2 id="what-you-actually-get">What you actually get</h2>
+
+<p>Once installed, either IDE exposes the same underlying toolset:</p>
+
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">agntcy_dir_search_local</code>, <code class="language-plaintext highlighter-rouge">agntcy_dir_pull_record</code>, <code class="language-plaintext highlighter-rouge">agntcy_dir_push_record</code> — search, fetch, and publish OASF records</li>
+  <li><code class="language-plaintext highlighter-rouge">agntcy_dir_verify_record</code>, <code class="language-plaintext highlighter-rouge">agntcy_dir_verify_name</code> — verify record authenticity and provenance</li>
+  <li><code class="language-plaintext highlighter-rouge">agntcy_oasf_validate_record</code> — validate a record against the OASF schema</li>
+  <li><code class="language-plaintext highlighter-rouge">agntcy_oasf_import_record</code> / <code class="language-plaintext highlighter-rouge">agntcy_oasf_export_record</code> — convert to and from other agent-description formats (A2A, MCP, GitHub Copilot agent files, Agent Skills)</li>
+  <li><code class="language-plaintext highlighter-rouge">agntcy_oasf_get_schema</code>, <code class="language-plaintext highlighter-rouge">agntcy_oasf_get_schema_skills</code>, <code class="language-plaintext highlighter-rouge">agntcy_oasf_get_schema_domains</code>, <code class="language-plaintext highlighter-rouge">agntcy_oasf_list_versions</code> — browse the OASF taxonomy and schema versions directly from your editor</li>
+</ul>
+
+<p>Both plugins read their runtime configuration from <code class="language-plaintext highlighter-rouge">~/.config/dir-mcp/config.json</code> and hot-reload it on change, so switching between a local Directory server and a hosted one doesn’t require restarting your IDE.</p>
+
+<h2 id="why-this-matters">Why this matters</h2>
+
+<p>Packaging <code class="language-plaintext highlighter-rouge">dir-mcp</code> as a native marketplace plugin turns “connect my AI assistant to the Agent Directory” from a multi-step setup task into a one-line install. It also puts the Directory’s discovery and publishing workflow directly in the loop of everyday agent development: describe an agent, validate it, publish it, and find others’ agents to compose with — all as skills your assistant already knows how to invoke.</p>
+
+<p>If you maintain agents that others might want to discover, or you’re building something that composes existing agents, give the plugin a try and publish your first OASF record straight from your editor.</p>
+
+<hr />
+
+<p><em>Have questions? Join our <a href="https://join.slack.com/t/agntcy/shared_invite/zt-3hb4p7bo0-5H2otGjxGt9OQ1g5jzK_GQ">Slack community</a> or check out our <a href="https://github.com/agntcy">GitHub</a>.</em></p>
+
+  </div>
+
+  <nav class="post-navigation">
+    <div class="post-nav-prev"></div>
+    <div class="post-nav-next"></div>
+  </nav>
+
+  <a class="u-url" href="/drafts/feat-dir-mcp-cursor-claude-plugin/technical/2026/09/22/dir-mcp-marketplace-plugins.html" hidden></a>
+</article>
 
 
       </div>
