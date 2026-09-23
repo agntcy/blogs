@@ -62,7 +62,7 @@
     <p class="post-meta">
       <time class="dt-published" datetime="2026-09-22T13:15:00+00:00" itemprop="datePublished">
         September 22, 2026
-      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">Árpád Csepi</span></span>• 4 min read</p>
+      </time>• <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span class="p-author h-card" itemprop="name">Árpád Csepi</span></span>• 5 min read</p>
   </header>
 
   <div class="post-content e-content" itemprop="articleBody">
@@ -153,11 +153,9 @@ claude plugin <span class="nb">install </span>agntcy-dir@agntcy-dir-mcp
 <p>Once installed, either IDE exposes the same underlying toolset:</p>
 
 <ul>
-  <li><code class="language-plaintext highlighter-rouge">agntcy_dir_search_local</code>, <code class="language-plaintext highlighter-rouge">agntcy_dir_pull_record</code>, <code class="language-plaintext highlighter-rouge">agntcy_dir_push_record</code> — search, fetch, and publish OASF records</li>
-  <li><code class="language-plaintext highlighter-rouge">agntcy_dir_verify_record</code>, <code class="language-plaintext highlighter-rouge">agntcy_dir_verify_name</code> — verify record authenticity and provenance</li>
-  <li><code class="language-plaintext highlighter-rouge">agntcy_oasf_validate_record</code> — validate a record against the OASF schema</li>
-  <li><code class="language-plaintext highlighter-rouge">agntcy_oasf_import_record</code> / <code class="language-plaintext highlighter-rouge">agntcy_oasf_export_record</code> — convert to and from other agent-description formats (A2A, MCP, GitHub Copilot agent files, Agent Skills)</li>
-  <li><code class="language-plaintext highlighter-rouge">agntcy_oasf_get_schema</code>, <code class="language-plaintext highlighter-rouge">agntcy_oasf_get_schema_skills</code>, <code class="language-plaintext highlighter-rouge">agntcy_oasf_get_schema_domains</code>, <code class="language-plaintext highlighter-rouge">agntcy_oasf_list_versions</code> — browse the OASF taxonomy and schema versions directly from your editor</li>
+  <li><strong>Search by capabilities</strong>: find and fetch agent records from the Directory based on what they can do, and publish your own, without leaving the editor</li>
+  <li><strong>Verify and validate by policies</strong>: check a record’s authenticity and provenance, and confirm it conforms to the OASF schema, before you trust or ship it</li>
+  <li><strong>Interoperability between standards and specifications</strong>: convert agent descriptions to and from other formats (A2A, MCP, GitHub Copilot agent files, Agent Skills), and browse the OASF taxonomy and schema versions directly from your editor</li>
 </ul>
 
 <p>Both plugins read their runtime configuration from <code class="language-plaintext highlighter-rouge">~/.config/dir-mcp/config.json</code> and hot-reload it on change, so switching between a local Directory server and a hosted one doesn’t require restarting your IDE.</p>
