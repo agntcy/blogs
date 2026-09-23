@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "dir-mcp Goes Native: Marketplace Plugins for Cursor and Claude Code"
+title: "Native Directory Marketplace Plugins for Cursor and Claude Code"
 date: 2026-09-22 13:15:00 +0000
 author: Árpád Csepi
 categories: technical
