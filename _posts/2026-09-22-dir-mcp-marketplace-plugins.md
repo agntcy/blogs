@@ -88,11 +88,9 @@ The plugin drops its MCP wiring into `~/.cursor/mcp.json` (or a project-local `.
 
 Once installed, either IDE exposes the same underlying toolset:
 
-- `agntcy_dir_search_local`, `agntcy_dir_pull_record`, `agntcy_dir_push_record` — search, fetch, and publish OASF records
-- `agntcy_dir_verify_record`, `agntcy_dir_verify_name` — verify record authenticity and provenance
-- `agntcy_oasf_validate_record` — validate a record against the OASF schema
-- `agntcy_oasf_import_record` / `agntcy_oasf_export_record` — convert to and from other agent-description formats (A2A, MCP, GitHub Copilot agent files, Agent Skills)
-- `agntcy_oasf_get_schema`, `agntcy_oasf_get_schema_skills`, `agntcy_oasf_get_schema_domains`, `agntcy_oasf_list_versions` — browse the OASF taxonomy and schema versions directly from your editor
+- **Search by capabilities**: find and fetch agent records from the Directory based on what they can do, and publish your own, without leaving the editor
+- **Verify and validate by policies**: check a record's authenticity and provenance, and confirm it conforms to the OASF schema, before you trust or ship it
+- **Interoperability between standards and specifications**: convert agent descriptions to and from other formats (A2A, MCP, GitHub Copilot agent files, Agent Skills), and browse the OASF taxonomy and schema versions directly from your editor
 
 Both plugins read their runtime configuration from `~/.config/dir-mcp/config.json` and hot-reload it on change, so switching between a local Directory server and a hosted one doesn't require restarting your IDE.
 
