@@ -18,10 +18,10 @@ When you are building an agent, the hard part is often not writing another tool.
 
 The [AGNTCY Directory](https://github.com/agntcy/dir) is designed for that workflow. It gives agents a shared catalog of capabilities, described as [OASF](https://github.com/agntcy/oasf) records. With `dir-mcp`, your AI assistant can use that catalog while you work:
 
-- search for agents by capability when you need to compose a solution;
-- verify an agent's authenticity and provenance before relying on it;
-- validate descriptions against the OASF schema and policies; and
-- publish your own agent so other builders can find it.
+- Search for agents by capability when you need to compose a solution;
+- Verify an agent's authenticity and provenance before relying on it;
+- Validate descriptions against the OASF schema and policies
+- Publish your own agent so other builders can find it.
 
 That turns the Directory from a separate registry you remember to visit into part of the development loop: discover, inspect, compose, and publish from the same place where you build.
 
