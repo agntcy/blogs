@@ -44,6 +44,36 @@ You can also add `agntcy/dir-mcp` from Claude Code's **Manage plugins** panel, t
 
 In Cursor, open **Settings**, go to the **Plugins** marketplace, add `agntcy/dir-mcp` as a marketplace, and install `agntcy-dir`.
 
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/assets/images/2026-09-22-dir-mcp-marketplace-plugins/1-open-plugins.png' | relative_url }}" alt="Cursor command palette showing Open Plugins" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Open the Plugins panel from Cursor's command palette.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/assets/images/2026-09-22-dir-mcp-marketplace-plugins/2-browse-marketplace.png' | relative_url }}" alt="Cursor Plugins panel with the Browse Marketplace button" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">From the Plugins panel, browse the marketplace to add a new source.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/assets/images/2026-09-22-dir-mcp-marketplace-plugins/3-add-from-github.png' | relative_url }}" alt="Add Marketplace menu with the Import from GitHub option" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Add a marketplace by importing it directly from a GitHub repository.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/assets/images/2026-09-22-dir-mcp-marketplace-plugins/4-import-dialog.png' | relative_url }}" alt="Import Marketplace dialog pointed at the dir-mcp repository" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Point the import dialog at <code>github.com/agntcy/dir-mcp</code>.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/assets/images/2026-09-22-dir-mcp-marketplace-plugins/5-add-plugin.png' | relative_url }}" alt="Personal marketplace listing the AGNTCY Agent Directory plugin" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">Install the <code>agntcy-dir</code> plugin from the newly added marketplace.</figcaption>
+</figure>
+
+<figure style="margin: 1.5em 0;">
+  <img src="{{ '/assets/images/2026-09-22-dir-mcp-marketplace-plugins/6-plugin-details.png' | relative_url }}" alt="AGNTCY Agent Directory plugin details page in Cursor" style="width:100%; border-radius:6px; border:1px solid #d7dbe0;">
+  <figcaption style="font-size:0.95em; margin-top:0.5em; color:#5b6470;">The installed plugin bundles the <code>agntcy-dir</code> MCP server with ready-made skills and rules.</figcaption>
+</figure>
+
 After installation, the plugin connects to the Directory configured for your environment. You can switch between a local Directory server and a hosted one through the shared `dir-mcp` configuration without changing your editor workflow.
 
 If you maintain agents that others might want to discover, or you are building something that composes existing agents, install the plugin and publish your first OASF record straight from your editor.
