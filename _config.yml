@@ -34,6 +34,11 @@ plugins:
 paginate: 5
 paginate_path: "/page/:num/"
 
+# jekyll-feed defaults to the 10 most recent posts. The AGNTCY website builds
+# its Articles page from this feed, so it has to list every post.
+feed:
+  posts_limit: 1000
+
 # Old URL -> new URL. Add an entry when a post is renamed or its date, slug,
 # or categories change. See CONTRIBUTING.md ("Moving or Renaming Posts").
 # Paths are site-absolute (as published), for example:
