@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 640" width="880" height="640" role="img" aria-labelledby="t d" font-family="Roboto, Helvetica, Arial, sans-serif">
+  <title id="t">How a step passes two checks: kyvvu-engine, then the SHADI sandbox</title>
+  <desc id="d">The agent code wants to run a step. Check 1, kyvvu-engine, reads the Kyvvu policy and decides whether the step may run given the earlier steps. If not, nothing runs. If so, the step runs and may start generated code. Check 2, the SHADI sandbox, reads the sandbox policy and decides whether that process may write a file or reach a host. Writes inside agent-out succeed. Writes to my-agent and all network access are refused by the kernel.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1c1e21"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#0251af"/></marker>
+  </defs>
+  <rect width="880" height="640" rx="8" fill="#f5f8fd"/>
+
+  <!-- column headings -->
+  <g font-size="12" fill="#5a6270" text-anchor="middle" letter-spacing="0.6">
+    <text x="130" y="30">POLICY FILE</text>
+    <text x="440" y="30">WHAT HAPPENS, TOP TO BOTTOM</text>
+    <text x="750" y="30">IF THE ANSWER IS NO</text>
+  </g>
+
+  <!-- middle column: the flow -->
+  <g text-anchor="middle">
+    <rect x="300" y="50" width="280" height="72" rx="6" fill="#cfe1fb" stroke="#0251af"/>
+    <text x="440" y="79" font-size="15" font-weight="700" fill="#1c1e21">Agent code (agent.py)</text>
+    <text x="440" y="102" font-size="13.5" fill="#1c1e21">wants to run write_code or run_code</text>
+
+    <rect x="300" y="166" width="280" height="88" rx="6" fill="#0251af"/>
+    <text x="440" y="194" font-size="15" font-weight="700" fill="#f3f6fd">Check 1: kyvvu-engine</text>
+    <text x="440" y="217" font-size="13.5" fill="#f3f6fd">May this step run,</text>
+    <text x="440" y="236" font-size="13.5" fill="#f3f6fd">given the steps before it?</text>
+
+    <rect x="300" y="298" width="280" height="72" rx="6" fill="#cfe1fb" stroke="#0251af"/>
+    <text x="440" y="327" font-size="15" font-weight="700" fill="#1c1e21">The step runs</text>
+    <text x="440" y="350" font-size="13.5" fill="#1c1e21">run_code starts the generated code</text>
+
+    <rect x="300" y="414" width="280" height="88" rx="6" fill="#0251af"/>
+    <text x="440" y="442" font-size="15" font-weight="700" fill="#f3f6fd">Check 2: SHADI sandbox</text>
+    <text x="440" y="465" font-size="13.5" fill="#f3f6fd">May this process write this file</text>
+    <text x="440" y="484" font-size="13.5" fill="#f3f6fd">or reach this host?</text>
+
+    <rect x="300" y="546" width="280" height="72" rx="6" fill="#e3f3e9" stroke="#1f7a46"/>
+    <text x="440" y="575" font-size="15" font-weight="700" fill="#1c1e21">The write succeeds</text>
+    <text x="440" y="598" font-size="13.5" fill="#1c1e21">only inside agent-out/</text>
+  </g>
+
+  <!-- arrows down the middle -->
+  <g stroke="#1c1e21" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M440 122V164"/>
+    <path d="M440 254V296"/>
+    <path d="M440 370V412"/>
+    <path d="M440 502V544"/>
+  </g>
+  <g font-size="12.5" fill="#1c1e21">
+    <text x="450" y="280">yes</text>
+    <text x="450" y="396">it writes a file or opens a connection</text>
+    <text x="450" y="528">yes</text>
+  </g>
+
+  <!-- left column: policy files -->
+  <g text-anchor="middle">
+    <rect x="30" y="174" width="200" height="72" rx="6" fill="#ffffff" stroke="#0251af" stroke-dasharray="5 4"/>
+    <text x="130" y="203" font-size="14" font-weight="700" fill="#1c1e21">Kyvvu policy</text>
+    <text x="130" y="225" font-size="13" fill="#1c1e21">demo-manifest.yaml</text>
+
+    <rect x="30" y="422" width="200" height="72" rx="6" fill="#ffffff" stroke="#0251af" stroke-dasharray="5 4"/>
+    <text x="130" y="451" font-size="14" font-weight="700" fill="#1c1e21">Sandbox policy</text>
+    <text x="130" y="473" font-size="13" fill="#1c1e21">sandbox.json</text>
+  </g>
+  <g stroke="#0251af" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#b)">
+    <path d="M230 210H298"/>
+    <path d="M230 458H298"/>
+  </g>
+  <g font-size="12" fill="#0251af" text-anchor="middle">
+    <text x="264" y="202">rules</text>
+    <text x="264" y="450">rules</text>
+  </g>
+
+  <!-- right column: refusals -->
+  <g text-anchor="middle">
+    <rect x="650" y="174" width="200" height="72" rx="6" fill="#fbe9e7" stroke="#b3261e"/>
+    <text x="750" y="203" font-size="14" font-weight="700" fill="#1c1e21">The step is refused</text>
+    <text x="750" y="225" font-size="13" fill="#1c1e21">Nothing runs.</text>
+
+    <rect x="650" y="404" width="200" height="108" rx="6" fill="#fbe9e7" stroke="#b3261e"/>
+    <text x="750" y="431" font-size="14" font-weight="700" fill="#1c1e21">The kernel refuses it</text>
+    <text x="750" y="453" font-size="12.5" fill="#1c1e21">Writes to my-agent/, which</text>
+    <text x="750" y="470" font-size="12.5" fill="#1c1e21">holds agent.py, the Kyvvu</text>
+    <text x="750" y="487" font-size="12.5" fill="#1c1e21">policy and kyvvu-engine.</text>
+    <text x="750" y="504" font-size="12.5" fill="#1c1e21">All network access.</text>
+  </g>
+  <g stroke="#1c1e21" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M580 210H648"/>
+    <path d="M580 458H648"/>
+  </g>
+  <g font-size="12.5" fill="#1c1e21" text-anchor="middle">
+    <text x="614" y="202">no</text>
+    <text x="614" y="450">no</text>
+  </g>
+</svg>
