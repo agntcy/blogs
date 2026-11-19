@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SHADI and Kyvvu replay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Roboto+Mono&display=swap">
+<script>
+  // Follow the AGNTCY blog's theme: same origin, same localStorage key as _includes/head.html.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem('theme-preference'); } catch (e) {}
+    if (!t) { t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<style>
+  /* Tokens copied from agntcy/blogs assets/main.scss */
+  :root {
+    --accent-color: #0251af; --on-accent: #f3f6fd;
+    --text-color: #1c1e21; --text-muted: rgba(0, 0, 0, 0.58);
+    --bg-color: #eff3fc; --bg-color-light: #e8eefb; --bg-color-lightest: #f5f8fd;
+    --code-bg-color: #f6f8fa; --code-fg-color: #1c1e21;
+    --link-color: #0251af; --link-hover-color: #023d82;
+    --border-color: #dce2ee; --ok: #1f7a46; --no: #b3261e;
+    --json-key: #0251af; --json-str: #1f7a46; --json-num: #8a4b00;
+  }
+  [data-theme="dark"] {
+    --accent-color: #fbaf46; --on-accent: #03142b;
+    --text-color: #e3e3e3; --text-muted: rgba(227, 227, 227, 0.68);
+    --bg-color: #03142b; --bg-color-light: #002a4d; --bg-color-lightest: #051a30;
+    --code-bg-color: #002a4d; --code-fg-color: #f8f8f2;
+    --link-color: #fbaf46; --link-hover-color: #fcc570;
+    --border-color: #0c1f36; --ok: #5cc98a; --no: #ff8a80;
+    --json-key: #fbaf46; --json-str: #9fe0b5; --json-num: #ffd08a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: "Roboto", sans-serif; font-size: 16px; line-height: 1.5; background: var(--bg-color); color: var(--text-color); padding: 16px; }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 1.25rem; font-weight: 700; margin: 0 0 0.25rem; }
+  h2 { font-size: 0.95rem; font-weight: 700; margin: 1rem 0 0.4rem; }
+  p { margin: 0 0 0.6rem; }
+  p.note { font-size: 14px; color: var(--text-muted); }
+  a { color: var(--link-color); } a:hover { color: var(--link-hover-color); }
+  code, .mono { font-family: "Roboto Mono", monospace; font-size: 0.86em; }
+  code { background: var(--code-bg-color); color: var(--code-fg-color); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 1px 4px; }
+  .layers { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0.5rem 0 1rem; }
+  .layer { background: var(--bg-color-light); border-radius: 0.25rem; padding: 0.5rem 0.75rem; font-size: 14px; }
+  .layer b { display: block; font-size: 13px; }
+  @media (max-width: 560px) { .layers { grid-template-columns: 1fr; } }
+  .tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+  button { font: inherit; font-size: 14px; cursor: pointer; border: 1px solid var(--accent-color); border-radius: 0.25rem; background: transparent; color: var(--accent-color); padding: 0.4rem 0.75rem; transition: opacity 0.2s ease; }
+  button:hover { opacity: 0.8; }
+  .tabs button.on { background: var(--accent-color); color: var(--on-accent); }
+  .cfg { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 13px; margin-bottom: 0.75rem; }
+  .pill { padding: 2px 10px; border-radius: 999px; border: 1px solid var(--border-color); background: var(--bg-color-lightest); color: var(--text-muted); }
+  .pill.on { background: var(--bg-color-light); color: var(--text-color); border-color: var(--accent-color); }
+  pre { font-family: "Roboto Mono", monospace; font-size: 12.5px; background: var(--code-bg-color); color: var(--code-fg-color); border: 1px solid var(--border-color); border-radius: 0.25rem; padding: 0.6rem 0.9rem; margin: 0 0 0.75rem; overflow-x: auto; }
+  .steps { display: flex; flex-direction: column; gap: 0.375rem; }
+  .step { background: var(--bg-color-light); border-left: 3px solid var(--border-color); border-radius: 0 0.25rem 0.25rem 0; padding: 0.45rem 0.75rem; opacity: 0.2; transition: opacity 0.3s ease; }
+  .step.show { opacity: 1; }
+  .step.info { border-left-color: var(--accent-color); } .step.ok { border-left-color: var(--ok); } .step.no { border-left-color: var(--no); }
+  .row { display: flex; gap: 0.75rem; align-items: baseline; flex-wrap: wrap; }
+  .who { font-weight: 700; font-size: 13px; min-width: 52px; }
+  .step.ok .who { color: var(--ok); } .step.no .who { color: var(--no); }
+  .txt { font-size: 14px; flex: 1 1 260px; }
+  .txt .mono { font-size: 13px; }
+  .jbtn { font-size: 12px; padding: 1px 8px; margin-left: auto; }
+  .json { margin: 0.5rem 0 0.1rem; max-height: 320px; overflow: auto; white-space: pre; }
+  .json .k { color: var(--json-key); } .json .s { color: var(--json-str); } .json .n { color: var(--json-num); }
+  .ctrl { margin: 0.75rem 0; }
+  .res { padding: 0.5rem 1rem; font-size: 14px; border-left: 3px solid var(--accent-color); background: var(--bg-color-light); border-radius: 0 0.25rem 0.25rem 0; visibility: hidden; }
+  .res.show { visibility: visible; }
+</style></head><body><div class="wrap">
+<h1>A coding agent under SHADI and Kyvvu</h1>
+<p class="note">A replay of the four scenarios in <a href="https://github.com/Kyvvu/shadi-kyvvu-demo" target="_blank" rel="noopener">Kyvvu/shadi-kyvvu-demo</a>. The agent writes generated Python to a scratch file (<span class="mono">write_code</span>) and runs it (<span class="mono">run_code</span>). The JSON under each step is the record Kyvvu wrote to <span class="mono">agent-out/kyvvu-trace.jsonl</span> in a real run with kyvvu 1.1.0 and shadictl 0.2.0 on Linux; only the paths are shortened.</p>
+<div class="layers">
+  <div class="layer"><b>Kyvvu policy (demo-manifest.yaml)</b>A <span class="mono">step.exec</span> needs a preceding <span class="mono">step.gate</span> whose decision is <span class="mono">pass</span>.</div>
+  <div class="layer"><b>SHADI sandbox policy (sandbox.json)</b>Read <span class="mono">my-agent/</span>, write only <span class="mono">agent-out/</span>, no network.</div>
+</div>
+<div class="tabs" id="tabs" role="tablist"></div>
+<div class="cfg"><span class="pill" id="pk"></span><span class="pill" id="ps"></span></div>
+<pre id="cmd"></pre>
+<div class="steps" id="steps" aria-live="polite"></div>
+<div class="ctrl"><button id="replay" type="button">Replay</button></div>
+<div class="res" id="res"></div>
+</div>
+<script>
+const REC = [{"agent_id": "agent_shadi_coding_demo", "task_id": "6b2e8a2a-07db-45af-8e93-726ea47f043a", "aag_version": "0.7.0", "seq": 1, "kind": "task.start", "step_name": "task.start", "properties": {"agent": {"risk_classification": "minimal", "environment": "production"}}, "timestamp": "2026-11-18T14:50:05.484785Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "6b2e8a2a-07db-45af-8e93-726ea47f043a", "action_id": "e4258b1cc37c43dc96d77d888baa0728", "seq": 2, "kind": "step.resource", "verb": "POST", "step_name": "write_code", "properties": {"target": {"resource_type": "unknown"}}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "input": {"path": "~/shadi-kyvvu-demo/agent-out/scratch.py", "code": "me = '~/shadi-kyvvu-demo/my-agent/agent.py'\nopen(me, 'a').write('\\n# tampered by generated code\\n')\nprint('agent.py modified')\n"}, "output": {"status": "success", "execution_time_seconds": 0.0001, "result": "wrote 138 bytes to ~/shadi-kyvvu-demo/agent-out/scratch.py"}, "timestamp": "2026-11-18T14:50:05.488084Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "6b2e8a2a-07db-45af-8e93-726ea47f043a", "action_id": "7b02a28640fa4168a2846cafc30cc959", "seq": 3, "kind": "step.gate", "step_name": "human_approval", "properties": {"kind": "human"}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "output": {"decision": "pass"}, "timestamp": "2026-11-18T14:50:05.488532Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "6b2e8a2a-07db-45af-8e93-726ea47f043a", "action_id": "8cb65ad14ced4cf6bd7d334ce270aa8f", "seq": 4, "kind": "step.exec", "step_name": "run_code", "properties": {}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "input": {"path": "~/shadi-kyvvu-demo/agent-out/scratch.py"}, "output": {"status": "success", "execution_time_seconds": 0.0184, "result": "agent.py modified"}, "timestamp": "2026-11-18T14:50:05.488893Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "6b2e8a2a-07db-45af-8e93-726ea47f043a", "seq": 5, "kind": "task.end", "step_name": "task.end", "properties": {}, "timestamp": "2026-11-18T14:50:05.507650Z"}, {"agent_id": "agent_shadi_coding_demo", "enforcement_point": "step_execution", "task_id": "e0a0491a-8ab0-4ba8-a19d-f49f3beaa714", "action_id": "02fb42a5dabc4a21b8306c94d2db1a2e", "step_name": "run_code", "kind": "step.exec", "action": "block", "risk_score": 1.0, "violations": [{"policy_name": "Code execution requires a preceding gate", "manifest_name": "SHADI demo: code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "details": null}], "timestamp": "2026-11-18T14:50:05.812481Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "4d7734ee-7dbe-4a1f-acaf-ab2db11cdcc5", "aag_version": "0.7.0", "seq": 1, "kind": "task.start", "step_name": "task.start", "properties": {"agent": {"risk_classification": "minimal", "environment": "production"}}, "timestamp": "2026-11-18T14:50:06.181777Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "4d7734ee-7dbe-4a1f-acaf-ab2db11cdcc5", "action_id": "5e50ac27910c474d816519a9b5f53de9", "seq": 2, "kind": "step.resource", "verb": "POST", "step_name": "write_code", "properties": {"target": {"resource_type": "unknown"}}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "input": {"path": "~/shadi-kyvvu-demo/agent-out/scratch.py", "code": "open('~/shadi-kyvvu-demo/agent-out/result.txt', 'w').write('42\\n')\nprint('result written')\n"}, "output": {"status": "success", "execution_time_seconds": 0.0007, "result": "wrote 102 bytes to ~/shadi-kyvvu-demo/agent-out/scratch.py"}, "timestamp": "2026-11-18T14:50:06.186239Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "4d7734ee-7dbe-4a1f-acaf-ab2db11cdcc5", "action_id": "cd602759668d4453a9e3bbba52bb4b5d", "seq": 3, "kind": "step.gate", "step_name": "human_approval", "properties": {"kind": "human"}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "output": {"decision": "pass"}, "timestamp": "2026-11-18T14:50:06.187814Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "4d7734ee-7dbe-4a1f-acaf-ab2db11cdcc5", "action_id": "1d213f536d1a419bb6c7358284a906f0", "seq": 4, "kind": "step.exec", "step_name": "run_code", "properties": {}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "input": {"path": "~/shadi-kyvvu-demo/agent-out/scratch.py"}, "output": {"status": "success", "execution_time_seconds": 0.0158, "result": "result written"}, "timestamp": "2026-11-18T14:50:06.188472Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "4d7734ee-7dbe-4a1f-acaf-ab2db11cdcc5", "seq": 5, "kind": "task.end", "step_name": "task.end", "properties": {}, "timestamp": "2026-11-18T14:50:06.204894Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "7cbf6679-9976-4784-97e8-adcb5b49a133", "aag_version": "0.7.0", "seq": 1, "kind": "task.start", "step_name": "task.start", "properties": {"agent": {"risk_classification": "minimal", "environment": "production"}}, "timestamp": "2026-11-18T14:50:06.546839Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "7cbf6679-9976-4784-97e8-adcb5b49a133", "action_id": "d79951542c4445708fcc23f4137b34a4", "seq": 2, "kind": "step.resource", "verb": "POST", "step_name": "write_code", "properties": {"target": {"resource_type": "unknown"}}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "input": {"path": "~/shadi-kyvvu-demo/agent-out/scratch.py", "code": "me = '~/shadi-kyvvu-demo/my-agent/agent.py'\nopen(me, 'a').write('\\n# tampered by generated code\\n')\nprint('agent.py modified')\n"}, "output": {"status": "success", "execution_time_seconds": 0.0006, "result": "wrote 138 bytes to ~/shadi-kyvvu-demo/agent-out/scratch.py"}, "timestamp": "2026-11-18T14:50:06.549776Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "7cbf6679-9976-4784-97e8-adcb5b49a133", "action_id": "7bbf1c3795f5403c95e236051ae56f20", "seq": 3, "kind": "step.gate", "step_name": "human_approval", "properties": {"kind": "human"}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "output": {"decision": "pass"}, "timestamp": "2026-11-18T14:50:06.550827Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "7cbf6679-9976-4784-97e8-adcb5b49a133", "action_id": "24c918be03e6419993799906612ef691", "seq": 4, "kind": "step.exec", "step_name": "run_code", "properties": {}, "meta": {"kyvvu.eval": {"action": "allow", "risk_score": 0.0, "policies": [{"name": "Code execution requires a preceding gate", "rule_type": "step_requires_gate", "severity": "critical", "violated": false, "manifest_name": "SHADI demo: code execution requires a preceding gate"}]}}, "input": {"path": "~/shadi-kyvvu-demo/agent-out/scratch.py"}, "output": {"status": "success", "execution_time_seconds": 0.0437, "result": "Traceback (most recent call last):\n  File \"~/shadi-kyvvu-demo/agent-out/scratch.py\", line 2, in <module>\n    open(me, 'a').write('\\n# tampered by generated code\\n')\n    ~~~~^^^^^^^^^\nPermissionError: [Errno 13] Permission denied: '~/shadi-kyvvu-demo/my-agent/agent.py'"}, "timestamp": "2026-11-18T14:50:06.551136Z"}, {"agent_id": "agent_shadi_coding_demo", "task_id": "7cbf6679-9976-4784-97e8-adcb5b49a133", "seq": 5, "kind": "task.end", "step_name": "task.end", "properties": {}, "timestamp": "2026-11-18T14:50:06.595226Z"}];
+const SANDBOX = {"read": ["~/shadi-kyvvu-demo/my-agent", "/usr/local"], "write": ["~/shadi-kyvvu-demo/agent-out"], "net_block": true};
+// [who, text, class, json, json-label]
+const S = {
+  "1": { label: "1 · No sandbox, approved", gate: true, shadi: false, cmd: "python agent.py tamper",
+    steps: [
+      ["Kyvvu", "allows task.start", "ok", REC[0], "AAG action"],
+      ["Kyvvu", "allows step.resource write_code; the generated code would append to agent.py", "ok", REC[1], "AAG action"],
+      ["agent", "records the approval as step.gate human_approval, decision pass", "info", REC[2], "AAG action"],
+      ["Kyvvu", "allows step.exec run_code, because a passing gate came before it", "ok", REC[3], "AAG action"],
+      ["code", "the generated code appends a line to agent.py", "no"],
+      ["Kyvvu", "records task.end", "ok", REC[4], "AAG action"]],
+    res: "Kyvvu checks the path, and the path is fine: the step was approved. Nothing stops the approved code from rewriting the agent, and git status shows M agent.py." },
+  "2": { label: "2 · No sandbox, no approval", gate: false, shadi: false, cmd: "python agent.py tamper --no-gate",
+    steps: [
+      ["Kyvvu", "allows task.start", "ok"],
+      ["Kyvvu", "allows step.resource write_code", "ok"],
+      ["agent", "skips the approval, so no step.gate is recorded", "info"],
+      ["Kyvvu", "blocks step.exec run_code: \"Code execution requires a preceding gate\"", "no", REC[5], "Kyvvu block record"]],
+    res: "Kyvvu refused run_code before it executed, because no passing gate came before it. The generated code never ran." },
+  "3a": { label: "3a · Sandbox, harmless code", gate: true, shadi: true, cmd: "shadictl --policy sandbox.json -- python agent.py benign",
+    steps: [
+      ["SHADI", "pins the sandbox on the whole process tree before the agent starts", "info", SANDBOX, "sandbox.json"],
+      ["Kyvvu", "allows task.start", "ok", REC[6], "AAG action"],
+      ["Kyvvu", "allows step.resource write_code; the generated code writes result.txt", "ok", REC[7], "AAG action"],
+      ["agent", "records the approval as step.gate human_approval, decision pass", "info", REC[8], "AAG action"],
+      ["Kyvvu", "allows step.exec run_code", "ok", REC[9], "AAG action"],
+      ["code", "writes agent-out/result.txt = 42, inside the writable directory", "ok"],
+      ["Kyvvu", "records task.end", "ok", REC[10], "AAG action"]],
+    res: "The path is approved and the code stays inside agent-out/, so both layers allow it." },
+  "3b": { label: "3b · Sandbox, tampering code", gate: true, shadi: true, cmd: "shadictl --policy sandbox.json -- python agent.py tamper",
+    steps: [
+      ["SHADI", "pins the sandbox on the whole process tree before the agent starts", "info", SANDBOX, "sandbox.json"],
+      ["Kyvvu", "allows task.start", "ok", REC[11], "AAG action"],
+      ["Kyvvu", "allows step.resource write_code; the generated code would append to agent.py", "ok", REC[12], "AAG action"],
+      ["agent", "records the approval as step.gate human_approval, decision pass", "info", REC[13], "AAG action"],
+      ["Kyvvu", "allows step.exec run_code; its output carries the traceback from the next row", "ok", REC[14], "AAG action"],
+      ["SHADI", "the kernel refuses the write to agent.py with a PermissionError", "no"],
+      ["Kyvvu", "records task.end", "ok", REC[15], "AAG action"]],
+    res: "The step was approved, so Kyvvu let it run. agent.py is outside the writable directory, so SHADI refused the write, and the agent is unchanged." }
+};
+let cur = "1", timers = [];
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const mono = t => esc(t).replace(/(task\.start|task\.end|step\.\w+|write_code|run_code|human_approval|agent-out\/[\w.]*|my-agent\/|agent\.py|result\.txt|PermissionError)/g, '<span class="mono">$1</span>');
+function hl(obj) {
+  return esc(JSON.stringify(obj, null, 2))
+    .replace(/(&quot;|")((?:\\.|[^"\\])*?)"(\s*:)/g, '<span class="k">"$2"</span>$3')
+    .replace(/:\s"((?:\\.|[^"\\])*)"/g, ': <span class="s">"$1"</span>')
+    .replace(/:\s(-?\d+(?:\.\d+)?|true|false|null)/g, ': <span class="n">$1</span>');
+}
+function render() {
+  timers.forEach(clearTimeout); timers = [];
+  const s = S[cur];
+  document.querySelectorAll('.tabs button').forEach(b => { const on = b.dataset.k === cur; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  $('pk').textContent = 'Approval gate: ' + (s.gate ? 'recorded' : 'skipped'); $('pk').classList.toggle('on', s.gate);
+  $('ps').textContent = 'SHADI sandbox: ' + (s.shadi ? 'on' : 'off'); $('ps').classList.toggle('on', s.shadi);
+  $('cmd').textContent = '$ ' + s.cmd;
+  $('steps').innerHTML = s.steps.map(([w, t, c, j, lab], i) =>
+    `<div class="step ${c}"><div class="row"><span class="who">${esc(w)}</span><span class="txt">${mono(t)}</span>` +
+    (j ? `<button class="jbtn" type="button" data-i="${i}" aria-expanded="false">${esc(lab)}</button>` : '') +
+    `</div>` + (j ? `<pre class="json" hidden>${hl(j)}</pre>` : '') + `</div>`).join('');
+  document.querySelectorAll('.jbtn').forEach(b => b.onclick = () => {
+    const p = b.closest('.step').querySelector('.json'); p.hidden = !p.hidden; b.setAttribute('aria-expanded', !p.hidden);
+  });
+  $('res').classList.remove('show'); $('res').textContent = s.res;
+  const els = [...document.querySelectorAll('.step')];
+  els.forEach((e, i) => timers.push(setTimeout(() => e.classList.add('show'), 500 * (i + 1))));
+  timers.push(setTimeout(() => $('res').classList.add('show'), 500 * (els.length + 1)));
+}
+Object.keys(S).forEach(k => { const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.textContent = S[k].label; b.dataset.k = k; b.onclick = () => { cur = k; render(); }; $('tabs').appendChild(b); });
+$('replay').onclick = render;
+render();
+// Report the page height to the blog post, which resizes its iframe to fit.
+function reportHeight() {
+  try { window.parent.postMessage({ shadiKyvvuReplayHeight: document.body.offsetHeight }, '*'); } catch (e) {}
+}
+if (window.ResizeObserver) { new ResizeObserver(reportHeight).observe(document.body); }
+window.addEventListener('load', reportHeight);
+</script></body></html>
